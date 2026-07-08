@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, ShoppingCart, User } from "lucide-react";
 import { navigation } from "@/config/navigation";
 import { company } from "@/config/company";
+import { useCart } from "@/context/cart-context";
+import { useWishlist } from "@/context/wishlist-context";
 import { MobileNav } from "./mobile-nav";
 
 function isActivePath(pathname: string, href: string) {
@@ -14,6 +18,8 @@ function isActivePath(pathname: string, href: string) {
 
 export function Header() {
   const pathname = usePathname();
+  const { count: cartCount } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
@@ -24,9 +30,7 @@ export function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
+  const closeMobileNav = () => setIsMobileOpen(false);
 
   const quoteLink = useMemo(
     () => navigation.find((item) => item.href === "/quote"),
@@ -88,7 +92,41 @@ export function Header() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/account/wishlist"
+            className="relative hidden rounded-md p-2 text-slate-600 transition hover:bg-slate-50 sm:inline-flex"
+            aria-label="Wishlist"
+          >
+            <Heart className="h-5 w-5" />
+            {wishlistItems.length > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+                {wishlistItems.length}
+              </span>
+            )}
+          </Link>
+
+          <Link
+            href="/account/cart"
+            className="relative rounded-md p-2 text-slate-600 transition hover:bg-slate-50"
+            aria-label="Cart"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {cartCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+
+          <Link
+            href="/account"
+            className="hidden rounded-md p-2 text-slate-600 transition hover:bg-slate-50 sm:inline-flex"
+            aria-label="Account"
+          >
+            <User className="h-5 w-5" />
+          </Link>
+
           {quoteLink ? (
             <Link
               href={quoteLink.href}
@@ -118,7 +156,22 @@ export function Header() {
         </div>
       </div>
 
-      <MobileNav isOpen={isMobileOpen} pathname={pathname} />
+      <AnimatePresence>
+        {isMobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <MobileNav
+              isOpen={isMobileOpen}
+              pathname={pathname}
+              onNavigate={closeMobileNav}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

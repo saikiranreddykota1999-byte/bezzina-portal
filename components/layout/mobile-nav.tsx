@@ -4,6 +4,7 @@ import { navigation } from "@/config/navigation";
 type MobileNavProps = {
   isOpen: boolean;
   pathname: string;
+  onNavigate?: () => void;
 };
 
 function isActivePath(pathname: string, href: string) {
@@ -11,7 +12,7 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function MobileNav({ isOpen, pathname }: MobileNavProps) {
+export function MobileNav({ isOpen, pathname, onNavigate }: MobileNavProps) {
   if (!isOpen) return null;
 
   return (
@@ -29,6 +30,7 @@ export function MobileNav({ isOpen, pathname }: MobileNavProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               className={[
                 "rounded-md px-3 py-3 text-sm font-medium transition-colors",
