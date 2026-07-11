@@ -2,47 +2,32 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { MessageCircle, Trash2, Minus, Plus } from 'lucide-react';
+import { Trash2, Minus, Plus } from 'lucide-react';
 import { useQuoteCart } from '@/context/quote-cart-context';
-import { submitQuoteRequest } from '@/actions/quotes';
-import { buildMultiQuoteMessage, buildWhatsAppUrl } from '@/lib/whatsapp';
+import { QuoteSubmitForm } from '@/components/quote/QuoteSubmitForm';
 import { RippleButton } from '@/components/ui/ripple-button';
 
 export function QuoteCartContent() {
   const { items, count, updateQuantity, removeItem, clear } = useQuoteCart();
   const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [reference, setReference] = useState<string | null>(null);
-  const [error, setError] = useState('');
 
-  const whatsappHref = buildWhatsAppUrl(
-    buildMultiQuoteMessage(
-      items.map((i) => ({ name: i.name, sku: i.sku, quantity: i.quantity })),
-    ),
-  );
-
-  async function handleSubmit() {
-    setSubmitting(true);
-    setError('');
-    const result = await submitQuoteRequest(items, notes, 'web');
-    if (result.success && result.data) {
-      setReference(result.data.reference);
-      clear();
-    } else {
-      setError(result.success ? '' : result.error);
-    }
-    setSubmitting(false);
+  function handleSuccess(nextReference: string) {
+    setReference(nextReference);
+    setShowForm(false);
+    clear();
   }
 
   if (reference) {
     return (
       <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
-        <h2 className="text-xl font-bold text-green-900">Quote Submitted</h2>
+        <h2 className="text-xl font-bold text-green-900">Quote request received</h2>
         <p className="mt-2 text-green-800">
-          Reference: <strong>{reference}</strong>
+          Thank you. Your quote reference is <strong>{reference}</strong>.
         </p>
         <p className="mt-4 text-sm text-green-700">
-          Our sales team will review your request and respond shortly.
+          Our sales team will review your products and contact you shortly.
         </p>
         <Link
           href="/account/quotes"
@@ -68,6 +53,22 @@ export function QuoteCartContent() {
     );
   }
 
+  if (showForm) {
+    return (
+      <div className="space-y-6">
+        <p className="text-sm text-slate-600">
+          {count} item{count !== 1 ? 's' : ''} ready to submit
+        </p>
+        <QuoteSubmitForm
+          items={items}
+          notes={notes}
+          onBack={() => setShowForm(false)}
+          onSuccess={handleSuccess}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <p className="text-sm text-slate-600">{count} item{count !== 1 ? 's' : ''} in quote cart</p>
@@ -79,7 +80,9 @@ export function QuoteCartContent() {
               <p className="font-semibold text-slate-900">{item.name}</p>
               <p className="text-xs text-slate-600">{item.sku}</p>
               {item.price != null && (
-                <p className="mt-1 text-sm text-slate-700">€{item.price.toFixed(2)} / {item.unit}</p>
+                <p className="mt-1 text-sm text-slate-700">
+                  €{item.price.toFixed(2)} / {item.unit}
+                </p>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -123,36 +126,16 @@ export function QuoteCartContent() {
         <textarea
           id="quote-notes"
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          onChange={(event) => setNotes(event.target.value)}
           rows={3}
           className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
           placeholder="Delivery requirements, specifications, quantities..."
         />
       </div>
 
-      {error && (
-        <p className="text-sm text-red-600" role="alert">{error}</p>
-      )}
-
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <RippleButton
-          type="button"
-          onClick={handleSubmit}
-          className="flex-1"
-          variant="primary"
-        >
-          {submitting ? 'Submitting…' : 'Submit Quote Request'}
-        </RippleButton>
-        <a
-          href={whatsappHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1da851]"
-        >
-          <MessageCircle className="h-4 w-4" />
-          Send via WhatsApp
-        </a>
-      </div>
+      <RippleButton type="button" onClick={() => setShowForm(true)} className="w-full sm:w-auto" variant="primary">
+        Submit Quote Request
+      </RippleButton>
 
       <p className="text-xs text-slate-600">
         <Link href="/account/login" className="text-orange-600 hover:underline">

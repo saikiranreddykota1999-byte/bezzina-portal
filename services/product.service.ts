@@ -211,3 +211,41 @@ export async function getFeaturedProducts(limit = 6): Promise<Product[]> {
     return [];
   }
 }
+
+function shuffleProducts<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+export async function getRandomProducts(limit = 12): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_SELECT)
+      .eq('is_active', true)
+      .limit(Math.max(limit * 4, 48));
+
+    if (error) throw error;
+
+    const products = ((data ?? []) as unknown as Product[]).map(normalizeProduct);
+    return shuffleProducts(products).slice(0, limit);
+  } catch (error) {
+    console.error('getRandomProducts error:', error);
+    try {
+      const { data } = await supabase
+        .from('products')
+        .select(PRODUCT_SELECT_FALLBACK)
+        .eq('is_active', true)
+        .limit(Math.max(limit * 4, 48));
+
+      const products = ((data ?? []) as unknown as Product[]).map(normalizeProduct);
+      return shuffleProducts(products).slice(0, limit);
+    } catch {
+      return [];
+    }
+  }
+}

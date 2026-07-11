@@ -3,16 +3,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Heart, ShoppingCart } from 'lucide-react';
+import { Heart, ClipboardList } from 'lucide-react';
 import { Product } from '@/types/product';
 import { LiftCard } from '@/components/motion/lift-card';
-import { useCart } from '@/context/cart-context';
+import { useQuoteCart } from '@/context/quote-cart-context';
 import { useWishlist } from '@/context/wishlist-context';
 import { formatPrice, resolveProductPrice } from '@/lib/pricing';
 import { ProductCartActions } from './ProductCartActions';
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { addItem } = useCart();
+  const { addItem } = useQuoteCart();
   const { toggle, has } = useWishlist();
   const wished = has(product.id);
   const unitPrice = resolveProductPrice(product.price);
@@ -41,7 +41,7 @@ export default function ProductCard({ product }: { product: Product }) {
           </button>
           <button
             type="button"
-            aria-label="Add to cart"
+            aria-label="Add to quote"
             onClick={(e) => {
               e.preventDefault();
               addItem({
@@ -54,9 +54,9 @@ export default function ProductCard({ product }: { product: Product }) {
                 image_url: product.image_url,
               });
             }}
-            className="rounded-full bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
+            className="rounded-full bg-white p-2 text-slate-700 shadow-sm hover:bg-orange-50 hover:text-orange-600"
           >
-            <ShoppingCart className="h-4 w-4" />
+            <ClipboardList className="h-4 w-4" />
           </button>
         </div>
 

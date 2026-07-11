@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { company } from '@/config/company';
 import { RippleButton } from '@/components/ui/ripple-button';
+import { SearchBar } from '@/components/SearchBar';
 import { staggerContainer, fadeIn, defaultTransition } from '@/lib/motion';
 
 const features = [
@@ -75,8 +76,17 @@ export function Hero() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45, ...defaultTransition }}
+            className="mt-8 max-w-2xl"
+          >
+            <SearchBar variant="hero" />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, ...defaultTransition }}
-            className="mt-10 flex flex-col gap-4 sm:flex-row"
+            className="mt-6 flex flex-col gap-4 sm:flex-row"
           >
             <RippleButton href="/products" variant="secondary" className="!bg-white !text-slate-950 hover:!bg-slate-100">
               Browse Products

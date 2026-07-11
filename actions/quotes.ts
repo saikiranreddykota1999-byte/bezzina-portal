@@ -2,10 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 import { getAuthenticatedUser, requireStaffUser } from '@/lib/auth/server-session';
-import { createClient } from '@/lib/supabase/server';
+import { submitQuoteCustomerSchema } from '@/lib/validators/quote';
 import type { QuoteCartItem } from '@/types/quote';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
+
+export type QuoteCustomerPrefill = {
+  name: string;
+  email: string;
+  phone: string;
+};
 
 function generateQuoteReference(): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -13,19 +19,83 @@ function generateQuoteReference(): string {
   return `QR-${date}-${rand}`;
 }
 
+function resolveCustomerEmail(
+  contactEmail: string | null | undefined,
+  profileEmail: string | null | undefined,
+  authEmail: string | null | undefined,
+): string {
+  const candidates = [contactEmail, profileEmail, authEmail];
+  for (const value of candidates) {
+    const trimmed = value?.trim();
+    if (trimmed && !trimmed.includes('@phone.otp.bezzina')) {
+      return trimmed;
+    }
+  }
+  return '';
+}
+
+export async function getQuoteCustomerPrefillAction(): Promise<
+  ActionResult<QuoteCustomerPrefill>
+> {
+  try {
+    const session = await getAuthenticatedUser();
+    const { user, profile } = session;
+
+    if (!user) {
+      return { success: true, data: { name: '', email: '', phone: '' } };
+    }
+
+    const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+
+    return {
+      success: true,
+      data: {
+        name:
+          profile?.full_name ??
+          (typeof metadata.full_name === 'string' ? metadata.full_name : '') ??
+          '',
+        email: resolveCustomerEmail(
+          profile?.contact_email,
+          profile?.email,
+          user.email,
+        ),
+        phone:
+          profile?.phone ??
+          user.phone ??
+          (typeof metadata.phone === 'string' ? metadata.phone : '') ??
+          '',
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to load your details',
+    };
+  }
+}
+
 export async function submitQuoteRequest(
   items: QuoteCartItem[],
+  customerInput: unknown,
   notes?: string,
-  channel: 'web' | 'whatsapp' = 'web',
 ): Promise<ActionResult<{ reference: string }>> {
   if (items.length === 0) {
     return { success: false, error: 'Quote cart is empty' };
+  }
+
+  const parsed = submitQuoteCustomerSchema.safeParse(customerInput);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? 'Invalid contact details',
+    };
   }
 
   try {
     const session = await getAuthenticatedUser();
     const supabase = session.supabase;
     const reference = generateQuoteReference();
+    const customer = parsed.data;
 
     const { data: quote, error: quoteError } = await supabase
       .from('quote_requests')
@@ -33,10 +103,11 @@ export async function submitQuoteRequest(
         user_id: session.user?.id ?? null,
         reference,
         status: 'pending',
-        notes: notes ?? null,
-        channel,
-        customer_email: session.user?.email ?? null,
-        customer_name: session.profile?.full_name ?? null,
+        notes: notes?.trim() || null,
+        channel: 'web',
+        customer_email: customer.email,
+        customer_name: customer.name,
+        customer_phone: customer.phone,
       })
       .select('id')
       .single();
