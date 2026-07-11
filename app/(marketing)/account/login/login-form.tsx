@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { sendEmailOtpAction, verifyEmailOtpAction } from '@/actions/email-otp';
 import { sendPhoneOtpAction, verifyPhoneOtpAction } from '@/actions/phone-otp';
 import { sanitizeRedirectPath } from '@/lib/auth/redirect';
 import { loginSchema } from '@/lib/validators/auth';
@@ -12,13 +13,15 @@ import { RippleButton } from '@/components/ui/ripple-button';
 const inputClassName =
   'w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500';
 
-type AuthMode = 'email' | 'phone';
+type AuthMode = 'email-otp' | 'phone-otp' | 'password';
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = sanitizeRedirectPath(searchParams.get('redirect'));
-  const [mode, setMode] = useState<AuthMode>('email');
+  const initialMode = searchParams.get('mode') === 'phone' ? 'phone-otp' : 'email-otp';
+
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
@@ -31,7 +34,21 @@ export default function LoginForm() {
 
   const supabase = createClient();
 
-  async function handleEmailSubmit(e: React.FormEvent) {
+  function resetOtpState() {
+    setOtpSent(false);
+    setOtp('');
+    setDemoCode('');
+    setError('');
+  }
+
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    resetOtpState();
+    setError('');
+    setFieldErrors({});
+  }
+
+  async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -80,7 +97,11 @@ export default function LoginForm() {
     setError('');
     setDemoCode('');
 
-    const result = await sendPhoneOtpAction({ phone });
+    const result =
+      mode === 'email-otp'
+        ? await sendEmailOtpAction({ email })
+        : await sendPhoneOtpAction({ phone });
+
     if (!result.success) {
       setError(result.error);
       setLoading(false);
@@ -99,7 +120,11 @@ export default function LoginForm() {
     setLoading(true);
     setError('');
 
-    const result = await verifyPhoneOtpAction({ phone, code: otp });
+    const result =
+      mode === 'email-otp'
+        ? await verifyEmailOtpAction({ email, code: otp })
+        : await verifyPhoneOtpAction({ phone, code: otp });
+
     if (!result.success) {
       setError(result.error);
       setLoading(false);
@@ -114,32 +139,32 @@ export default function LoginForm() {
     <div className="mx-auto max-w-md">
       <h1 className="text-2xl font-bold text-slate-900">Login</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Access your account, quote history, and orders.
+        Sign in or create your account with a 6-digit code sent to your email or phone.
       </p>
 
       <div className="mt-6 flex gap-2 rounded-xl bg-slate-100 p-1">
         <button
           type="button"
-          onClick={() => setMode('email')}
+          onClick={() => switchMode('email-otp')}
           className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
-            mode === 'email' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            mode === 'email-otp' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
           }`}
         >
-          Email
+          Mail OTP
         </button>
         <button
           type="button"
-          onClick={() => setMode('phone')}
+          onClick={() => switchMode('phone-otp')}
           className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
-            mode === 'phone' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            mode === 'phone-otp' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
           }`}
         >
           Phone OTP
         </button>
       </div>
 
-      {mode === 'email' ? (
-        <form onSubmit={handleEmailSubmit} className="mt-6 space-y-4" noValidate>
+      {mode === 'password' ? (
+        <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-4" noValidate>
           <div>
             <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-slate-700">
               Email
@@ -176,6 +201,13 @@ export default function LoginForm() {
           <RippleButton type="submit" className="w-full" variant="primary">
             {loading ? 'Signing in…' : 'Sign In'}
           </RippleButton>
+          <button
+            type="button"
+            onClick={() => switchMode('email-otp')}
+            className="text-sm text-orange-600 hover:underline"
+          >
+            Use OTP instead
+          </button>
         </form>
       ) : (
         <form
@@ -184,24 +216,45 @@ export default function LoginForm() {
           noValidate
         >
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-            We send a <strong>6-digit code</strong> to your phone. Enter it below to sign in or
-            create an account automatically.
+            We send a <strong>6-digit code</strong> to your{' '}
+            {mode === 'email-otp' ? 'email' : 'phone'}. Enter it below to sign in or create your
+            account automatically.
           </div>
-          <div>
-            <label htmlFor="login-phone" className="mb-1.5 block text-sm font-medium text-slate-700">
-              Phone number
-            </label>
-            <input
-              id="login-phone"
-              type="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              disabled={otpSent}
-              placeholder="+356 7757 6721"
-              className={inputClassName}
-            />
-          </div>
+
+          {mode === 'email-otp' ? (
+            <div>
+              <label htmlFor="login-email-otp" className="mb-1.5 block text-sm font-medium text-slate-700">
+                Mail ID
+              </label>
+              <input
+                id="login-email-otp"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={otpSent}
+                placeholder="you@company.com"
+                className={inputClassName}
+              />
+            </div>
+          ) : (
+            <div>
+              <label htmlFor="login-phone" className="mb-1.5 block text-sm font-medium text-slate-700">
+                Phone number
+              </label>
+              <input
+                id="login-phone"
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={otpSent}
+                placeholder="+356 7757 6721"
+                className={inputClassName}
+              />
+            </div>
+          )}
+
           {otpSent && (
             <div>
               <label htmlFor="login-otp" className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -220,29 +273,38 @@ export default function LoginForm() {
               />
               {demoCode && (
                 <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                  SMS not configured (dev mode). Your code:{' '}
+                  Delivery not configured (dev mode). Your code:{' '}
                   <span className="font-mono font-bold">{demoCode}</span>
                 </p>
               )}
               <button
                 type="button"
-                onClick={() => {
-                  setOtpSent(false);
-                  setOtp('');
-                  setDemoCode('');
-                  setError('');
-                }}
+                onClick={resetOtpState}
                 className="mt-2 text-sm text-orange-600 hover:underline"
               >
-                Use a different number
+                {mode === 'email-otp' ? 'Use a different email' : 'Use a different number'}
               </button>
             </div>
           )}
+
           {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
           <RippleButton type="submit" className="w-full" variant="primary">
             {loading ? 'Please wait…' : otpSent ? 'Verify & Sign In' : 'Send 6-digit code'}
           </RippleButton>
         </form>
+      )}
+
+      {mode !== 'password' && (
+        <p className="mt-4 text-center text-sm text-slate-600">
+          Have a password?{' '}
+          <button
+            type="button"
+            onClick={() => switchMode('password')}
+            className="font-medium text-orange-600 hover:underline"
+          >
+            Sign in with password
+          </button>
+        </p>
       )}
 
       <div className="relative my-8">
@@ -274,10 +336,8 @@ export default function LoginForm() {
       </div>
 
       <p className="mt-6 text-center text-sm text-slate-600">
-        No account?{' '}
-        <Link href="/account/register" className="font-medium text-orange-600 hover:underline">
-          Create account
-        </Link>
+        New customer? Use <strong>Mail OTP</strong> or <strong>Phone OTP</strong> above — your account
+        is created automatically when you verify the code.
       </p>
     </div>
   );

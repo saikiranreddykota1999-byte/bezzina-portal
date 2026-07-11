@@ -1,11 +1,5 @@
-import {
-  generateOtpCode,
-  getOtpExpiryDate,
-  getSendWindowStart,
-  hashOtpCode,
-  normalizePhone,
-  otpConfig,
-} from '@/lib/otp/phone';
+import { buildOtpForStorage as buildCoreOtpForStorage } from '@/lib/otp/core';
+import { normalizePhone } from '@/lib/otp/phone-helpers';
 
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID?.trim() ?? '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN?.trim() ?? '';
@@ -23,7 +17,7 @@ export async function sendOtpSms(
     return { sent: false, channel: 'demo' };
   }
 
-  const body = `Your Bezzina login code is ${code}. Valid for ${otpConfig.OTP_TTL_MINUTES} minutes.`;
+  const body = `Your Bezzina login code is ${code}. Valid for 10 minutes.`;
   const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
 
   const response = await fetch(
@@ -51,11 +45,9 @@ export async function sendOtpSms(
 }
 
 export function buildOtpForStorage(phone: string) {
-  const code = generateOtpCode();
-  return {
-    code,
-    codeHash: hashOtpCode(phone, code),
-    expiresAt: getOtpExpiryDate(),
-    sendWindowStart: getSendWindowStart(),
-  };
+  const normalized = normalizePhone(phone);
+  if (!normalized) {
+    throw new Error('Invalid phone number');
+  }
+  return buildCoreOtpForStorage(normalized);
 }

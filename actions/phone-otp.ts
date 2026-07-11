@@ -3,13 +3,14 @@
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
+  buildOtpForStorage,
   hashOtpCode,
   normalizePhone,
   otpConfig,
   phoneToSyntheticEmail,
 } from '@/lib/otp/phone';
 import { sendPhoneOtpSchema, verifyPhoneOtpSchema } from '@/lib/validators/phone-otp';
-import { buildOtpForStorage, isSmsConfigured, sendOtpSms } from '@/services/sms.service';
+import { isSmsConfigured, sendOtpSms } from '@/services/sms.service';
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -209,7 +210,7 @@ export async function verifyPhoneOtpAction(
       return { success: false, error: 'Incorrect code. Try again.' };
     }
 
-    const { email } = await ensurePhoneUser(admin, phone);
+    const { userId, email } = await ensurePhoneUser(admin, phone);
 
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'magiclink',
@@ -235,7 +236,7 @@ export async function verifyPhoneOtpAction(
       .update({ verified_at: new Date().toISOString() })
       .eq('id', otpRow.id);
 
-    await admin.from('profiles').update({ phone }).eq('email', email);
+    await admin.from('profiles').update({ phone }).eq('id', userId);
 
     return { success: true };
   } catch (error) {

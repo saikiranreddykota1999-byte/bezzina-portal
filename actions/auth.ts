@@ -92,6 +92,7 @@ export async function customerOAuthLogin(provider: 'google' | 'facebook') {
 }
 
 import { sendPhoneOtpAction, verifyPhoneOtpAction } from '@/actions/phone-otp';
+import { sendEmailOtpAction, verifyEmailOtpAction } from '@/actions/email-otp';
 
 export async function sendPhoneOtp(phone: string) {
   return sendPhoneOtpAction({ phone });
@@ -99,4 +100,12 @@ export async function sendPhoneOtp(phone: string) {
 
 export async function verifyPhoneOtp(phone: string, token: string) {
   return verifyPhoneOtpAction({ phone, code: token });
+}
+
+export async function sendEmailOtp(email: string) {
+  return sendEmailOtpAction({ email });
+}
+
+export async function verifyEmailOtp(email: string, token: string) {
+  return verifyEmailOtpAction({ email, code: token });
 }
