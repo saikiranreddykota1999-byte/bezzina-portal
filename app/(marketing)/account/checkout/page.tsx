@@ -6,8 +6,10 @@ import { useCart } from '@/context/cart-context';
 import { useCheckout } from '@/context/checkout-context';
 import { DemoModeBanner } from '@/components/account/demo-mode-banner';
 import { FulfillmentSelector } from '@/components/checkout/fulfillment-selector';
+import { DeliveryAddressForm } from '@/components/checkout/delivery-address-form';
 import { PickupScheduler } from '@/components/checkout/pickup-scheduler';
 import { calculateOrderTotals } from '@/lib/checkout';
+import { resolveProductPrice, formatPrice } from '@/lib/pricing';
 import { RippleButton } from '@/components/ui/ripple-button';
 
 export default function CheckoutPage() {
@@ -16,18 +18,23 @@ export default function CheckoutPage() {
   const {
     fulfillmentMethod,
     pickup,
+    deliveryAddress,
     setFulfillmentMethod,
     setPickupSelection,
+    setDeliveryAddress,
     isPickupComplete,
+    isDeliveryComplete,
+    isFulfillmentComplete,
   } = useCheckout();
 
-  const subtotal = items.reduce((sum, item) => sum + (item.price ?? 0) * item.quantity, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + resolveProductPrice(item.price) * item.quantity,
+    0,
+  );
   const { shipping, total } = calculateOrderTotals(subtotal, fulfillmentMethod, items.length);
 
   function handleContinue() {
-    if (fulfillmentMethod === 'store_pickup' && !isPickupComplete) {
-      return;
-    }
+    if (!isFulfillmentComplete) return;
     router.push('/account/payment');
   }
 
@@ -64,6 +71,18 @@ export default function CheckoutPage() {
             <PickupScheduler value={pickup} onChange={setPickupSelection} />
           )}
 
+          {fulfillmentMethod === 'delivery' && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+              <h2 className="font-semibold text-slate-900">Delivery address</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Confirm where we should deliver your order.
+              </p>
+              <div className="mt-4">
+                <DeliveryAddressForm value={deliveryAddress} onChange={setDeliveryAddress} />
+              </div>
+            </div>
+          )}
+
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <h2 className="font-semibold text-slate-900">Order items</h2>
             <ul className="mt-4 divide-y divide-slate-100">
@@ -72,9 +91,9 @@ export default function CheckoutPage() {
                   <span>
                     {item.quantity}× {item.name}
                   </span>
-                  {item.price != null && (
-                    <span className="font-medium">€{(item.price * item.quantity).toFixed(2)}</span>
-                  )}
+                  <span className="font-medium">
+                    {formatPrice(resolveProductPrice(item.price) * item.quantity)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -86,7 +105,7 @@ export default function CheckoutPage() {
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <dt className="text-slate-500">Subtotal</dt>
-              <dd>{subtotal > 0 ? `€${subtotal.toFixed(2)}` : 'Quote on request'}</dd>
+              <dd>{formatPrice(subtotal)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-500">
@@ -96,7 +115,7 @@ export default function CheckoutPage() {
             </div>
             <div className="flex justify-between border-t border-slate-100 pt-2 text-lg font-bold">
               <dt>Total</dt>
-              <dd>{subtotal > 0 ? `€${total.toFixed(2)}` : `€${shipping.toFixed(2)}`}</dd>
+              <dd>{formatPrice(total)}</dd>
             </div>
           </dl>
 
@@ -111,6 +130,12 @@ export default function CheckoutPage() {
           {!isPickupComplete && fulfillmentMethod === 'store_pickup' && (
             <p className="mt-2 text-center text-xs text-red-600">
               Select a branch, date, and time slot to continue.
+            </p>
+          )}
+
+          {!isDeliveryComplete && fulfillmentMethod === 'delivery' && (
+            <p className="mt-2 text-center text-xs text-red-600">
+              Confirm your delivery address to continue.
             </p>
           )}
 

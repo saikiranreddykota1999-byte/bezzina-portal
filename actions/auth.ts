@@ -91,20 +91,12 @@ export async function customerOAuthLogin(provider: 'google' | 'facebook') {
   return { success: true as const, url: data.url };
 }
 
+import { sendPhoneOtpAction, verifyPhoneOtpAction } from '@/actions/phone-otp';
+
 export async function sendPhoneOtp(phone: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({ phone });
-  if (error) return { success: false as const, error: error.message };
-  return { success: true as const };
+  return sendPhoneOtpAction({ phone });
 }
 
 export async function verifyPhoneOtp(phone: string, token: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({
-    phone,
-    token,
-    type: 'sms',
-  });
-  if (error) return { success: false as const, error: error.message };
-  return { success: true as const };
+  return verifyPhoneOtpAction({ phone, code: token });
 }

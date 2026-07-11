@@ -11,6 +11,8 @@ import {
   updatePickupStatusSchema,
 } from '@/lib/validators/pickup';
 import { calculateOrderTotals } from '@/lib/checkout';
+import { DEFAULT_PRODUCT_PRICE, resolveProductPrice } from '@/lib/pricing';
+import { isStripeEnabled } from '@/lib/stripe/config';
 import {
   computeAvailableSlots,
   formatIsoDate,
@@ -19,7 +21,9 @@ import {
   isLocationOpenOnDate,
 } from '@/lib/pickup/slots';
 import { generateOrderNumber, generatePickupCode, normalizeTimeValue } from '@/lib/pickup/code';
+import { verifyStripePaymentIntent } from '@/actions/stripe-payment';
 import { sendPickupConfirmationEmail } from '@/services/pickup-email.service';
+import { resolveContactEmail, resolveReceiptCustomer } from '@/lib/receipt';
 import type {
   ActionResult,
   AvailablePickupSlot,
@@ -117,11 +121,31 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
     const { supabase, user, profile } = await requireAuthenticatedUser();
     const payload = parsed.data;
-    const subtotal = payload.items.reduce(
-      (sum, item) => sum + (item.price ?? 0) * item.quantity,
+
+    const productIds = payload.items.map((item) => item.productId);
+    const { data: dbProducts, error: priceError } = await supabase
+      .from('products')
+      .select('id, price')
+      .in('id', productIds);
+
+    if (priceError) {
+      return { success: false, error: priceError.message };
+    }
+
+    const priceMap = new Map(
+      (dbProducts ?? []).map((product) => [product.id, resolveProductPrice(product.price)]),
+    );
+
+    const validatedItems = payload.items.map((item) => ({
+      ...item,
+      price: priceMap.get(item.productId) ?? DEFAULT_PRODUCT_PRICE,
+    }));
+
+    const subtotal = validatedItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
       0,
     );
-    const totals = calculateOrderTotals(subtotal, payload.fulfillmentMethod, payload.items.length);
+    const totals = calculateOrderTotals(subtotal, payload.fulfillmentMethod, validatedItems.length);
     const orderNumber = generateOrderNumber();
     const pickupCode =
       payload.fulfillmentMethod === 'store_pickup' ? generatePickupCode() : null;
@@ -151,27 +175,86 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
       }
     }
 
+    let paymentMethod = 'card';
+    let paymentReference = '';
+    let paymentStatus: 'paid' | 'pending' = 'paid';
+
+    if (payload.payment.method === 'stripe') {
+      if (!isStripeEnabled) {
+        return { success: false, error: 'Stripe payments are not enabled' };
+      }
+
+      const verification = await verifyStripePaymentIntent(
+        payload.payment.paymentIntentId,
+        totals.total,
+        user!.id,
+      );
+
+      if (!verification.ok) {
+        return { success: false, error: verification.error };
+      }
+
+      paymentMethod = 'stripe';
+      paymentReference = verification.reference;
+      paymentStatus = 'paid';
+    } else if (payload.payment.method === 'cash_on_pickup') {
+      if (payload.fulfillmentMethod !== 'store_pickup') {
+        return { success: false, error: 'Cash on pickup is only available for store pickup orders' };
+      }
+
+      paymentMethod = 'cash_on_pickup';
+      paymentReference = `COD-${orderNumber}`;
+      paymentStatus = 'pending';
+    } else if (payload.payment.method === 'demo') {
+      paymentReference = `PAY-${orderNumber}-${payload.payment.cardLast4}`;
+    } else {
+      return { success: false, error: 'Unsupported payment method' };
+    }
+
+    const orderInsert: Record<string, unknown> = {
+      user_id: user!.id,
+      order_number: orderNumber,
+      status:
+        payload.fulfillmentMethod === 'store_pickup' ? 'confirmed' : 'confirmed',
+      fulfillment_method: payload.fulfillmentMethod,
+      subtotal: totals.subtotal,
+      shipping_cost: totals.shipping,
+      total: totals.total,
+      pickup_location_id:
+        payload.fulfillmentMethod === 'store_pickup' ? payload.pickup.locationId : null,
+      pickup_date:
+        payload.fulfillmentMethod === 'store_pickup' ? payload.pickup.pickupDate : null,
+      pickup_time:
+        payload.fulfillmentMethod === 'store_pickup'
+          ? normalizeTimeValue(payload.pickup.pickupTime)
+          : null,
+      pickup_code: pickupCode,
+      pickup_status: payload.fulfillmentMethod === 'store_pickup' ? 'scheduled' : null,
+      payment_status: paymentStatus,
+      payment_method: paymentMethod,
+      payment_reference: paymentReference,
+      customer_name: profile?.full_name ?? user!.user_metadata?.full_name ?? null,
+      customer_phone: profile?.phone ?? user!.phone ?? user!.user_metadata?.phone ?? null,
+      customer_email: resolveContactEmail(profile?.contact_email, profile?.email) || null,
+      customer_company_name: profile?.company_name ?? null,
+      customer_vat_number: profile?.vat_number ?? null,
+      customer_address: profile?.billing_address ?? null,
+    };
+
+    if (payload.fulfillmentMethod === 'delivery') {
+      orderInsert.shipping_line1 = payload.deliveryAddress.line1;
+      orderInsert.shipping_line2 = payload.deliveryAddress.line2 ?? null;
+      orderInsert.shipping_city = payload.deliveryAddress.city;
+      orderInsert.shipping_postal_code = payload.deliveryAddress.postalCode;
+      orderInsert.shipping_country = payload.deliveryAddress.country;
+      orderInsert.shipping_lat = payload.deliveryAddress.lat;
+      orderInsert.shipping_lng = payload.deliveryAddress.lng;
+      orderInsert.shipping_formatted_address = payload.deliveryAddress.formattedAddress;
+    }
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert({
-        user_id: user!.id,
-        order_number: orderNumber,
-        status: payload.fulfillmentMethod === 'store_pickup' ? 'confirmed' : 'pending',
-        fulfillment_method: payload.fulfillmentMethod,
-        subtotal: totals.subtotal,
-        shipping_cost: totals.shipping,
-        total: totals.total,
-        pickup_location_id:
-          payload.fulfillmentMethod === 'store_pickup' ? payload.pickup.locationId : null,
-        pickup_date:
-          payload.fulfillmentMethod === 'store_pickup' ? payload.pickup.pickupDate : null,
-        pickup_time:
-          payload.fulfillmentMethod === 'store_pickup'
-            ? normalizeTimeValue(payload.pickup.pickupTime)
-            : null,
-        pickup_code: pickupCode,
-        pickup_status: payload.fulfillmentMethod === 'store_pickup' ? 'scheduled' : null,
-      })
+      .insert(orderInsert)
       .select('id, order_number, pickup_code')
       .single();
 
@@ -179,7 +262,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
       return { success: false, error: orderError?.message ?? 'Failed to create order' };
     }
 
-    const orderItems = payload.items.map((item) => ({
+    const orderItems = validatedItems.map((item) => ({
       order_id: order.id,
       product_id: item.productId,
       sku: item.sku,
@@ -278,17 +361,27 @@ export async function getCustomerOrderByNumber(
   orderNumber: string,
 ): Promise<ActionResult<OrderWithPickup>> {
   try {
-    const { supabase, user } = await requireAuthenticatedUser();
+    const { supabase, user, profile } = await requireAuthenticatedUser();
     const { data, error } = await supabase
       .from('orders')
-      .select('*, pickup_location:pickup_locations(*)')
+      .select('*, pickup_location:pickup_locations(*), items:order_items(*)')
       .eq('user_id', user!.id)
       .eq('order_number', orderNumber)
       .maybeSingle();
 
     if (error) return { success: false, error: error.message };
     if (!data) return { success: false, error: 'Order not found' };
-    return { success: true, data: data as OrderWithPickup };
+
+    const { data: freshProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('full_name, phone, contact_email, email, billing_address, company_name, vat_number')
+      .eq('id', user!.id)
+      .maybeSingle();
+
+    if (profileError) return { success: false, error: profileError.message };
+
+    const customer = resolveReceiptCustomer(data, freshProfile ?? profile, user);
+    return { success: true, data: { ...data, customer } as OrderWithPickup };
   } catch (error) {
     return {
       success: false,

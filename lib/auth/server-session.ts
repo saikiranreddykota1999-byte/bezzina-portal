@@ -14,7 +14,7 @@ export async function getAuthenticatedUser() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, email, role, full_name')
+    .select('id, email, role, full_name, phone, contact_email, billing_address, company_name, vat_number')
     .eq('id', user.id)
     .maybeSingle();
 

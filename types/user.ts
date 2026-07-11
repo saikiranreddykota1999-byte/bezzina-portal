@@ -5,6 +5,10 @@ export interface Profile {
   email: string;
   full_name: string | null;
   phone: string | null;
+  contact_email: string | null;
+  billing_address: string | null;
+  company_name: string | null;
+  vat_number: string | null;
   avatar_url: string | null;
   role: UserRole;
   created_at: string;

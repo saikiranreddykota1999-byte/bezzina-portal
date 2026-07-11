@@ -31,7 +31,7 @@ export function ProductForm({ categories, product }: Props) {
   const [slug, setSlug] = useState(product?.slug ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
   const [categoryId, setCategoryId] = useState(product?.category_id ?? '');
-  const [price, setPrice] = useState(product?.price?.toString() ?? '');
+  const [price, setPrice] = useState(product?.price?.toString() ?? '1.00');
   const [unit, setUnit] = useState(product?.unit ?? 'each');
   const [inStock, setInStock] = useState(product?.in_stock ?? true);
   const [stockQty, setStockQty] = useState(product?.stock_quantity?.toString() ?? '0');
@@ -53,7 +53,7 @@ export function ProductForm({ categories, product }: Props) {
       slug,
       description,
       category_id: categoryId,
-      price: price ? Number(price) : null,
+      price: price ? Number(price) : 1.0,
       unit,
       in_stock: inStock,
       stock_quantity: Number(stockQty) || 0,

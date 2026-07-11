@@ -27,4 +27,14 @@ export const company = {
     title: "Joseph Bezzina & Co. Ltd",
     description: "Industrial, Marine & Engineering Supplies in Malta since 1969.",
   },
+  logoUrl: "/bezzina-logo.png",
+  watermarkUrl: "/bezzina-watermark.png",
+  invoice: {
+    tagline: "MARINE SUPPLIES",
+    vatNumber: "MT 1234 5678",
+    eoriNumber: "MT000000000",
+    accountsEmail: "accounts@jbezzina.com",
+    vatRate: 0.18,
+    currency: "EUR",
+  },
 };

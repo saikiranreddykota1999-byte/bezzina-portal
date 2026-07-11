@@ -21,7 +21,6 @@ const WishlistContext = createContext<WishlistContextValue | null>(null);
 const STORAGE_KEY = 'bezzina-wishlist';
 
 function readStoredWishlist(): WishlistItem[] {
-  if (typeof window === 'undefined') return [];
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -31,11 +30,18 @@ function readStoredWishlist(): WishlistItem[] {
 }
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<WishlistItem[]>(readStoredWishlist);
+  const [items, setItems] = useState<WishlistItem[]>([]);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    setItems(readStoredWishlist());
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+  }, [items, hydrated]);
 
   const toggle = useCallback((item: Omit<WishlistItem, 'addedAt'>) => {
     setItems((prev) => {

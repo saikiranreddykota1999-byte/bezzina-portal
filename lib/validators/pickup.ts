@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { deliveryAddressSchema, orderItemSchema, paymentDetailsSchema } from '@/lib/validators/checkout';
 
 export const fulfillmentMethodSchema = z.enum(['delivery', 'store_pickup']);
 
@@ -59,36 +60,15 @@ export const pickupUnavailableDateSchema = z.object({
 export const placeOrderSchema = z.discriminatedUnion('fulfillmentMethod', [
   z.object({
     fulfillmentMethod: z.literal('delivery'),
-    items: z
-      .array(
-        z.object({
-          productId: z.string().min(1),
-          slug: z.string().min(1),
-          name: z.string().min(1),
-          sku: z.string().min(1),
-          price: z.number().nullable(),
-          unit: z.string().min(1),
-          quantity: z.number().int().min(1),
-        }),
-      )
-      .min(1),
+    deliveryAddress: deliveryAddressSchema,
+    payment: paymentDetailsSchema,
+    items: z.array(orderItemSchema).min(1),
   }),
   z.object({
     fulfillmentMethod: z.literal('store_pickup'),
     pickup: pickupSelectionSchema,
-    items: z
-      .array(
-        z.object({
-          productId: z.string().min(1),
-          slug: z.string().min(1),
-          name: z.string().min(1),
-          sku: z.string().min(1),
-          price: z.number().nullable(),
-          unit: z.string().min(1),
-          quantity: z.number().int().min(1),
-        }),
-      )
-      .min(1),
+    payment: paymentDetailsSchema,
+    items: z.array(orderItemSchema).min(1),
   }),
 ]);
 

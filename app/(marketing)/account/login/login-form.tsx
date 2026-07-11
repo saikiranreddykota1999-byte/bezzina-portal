@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { sendPhoneOtpAction, verifyPhoneOtpAction } from '@/actions/phone-otp';
 import { sanitizeRedirectPath } from '@/lib/auth/redirect';
 import { loginSchema } from '@/lib/validators/auth';
 import { RippleButton } from '@/components/ui/ripple-button';
@@ -23,6 +24,7 @@ export default function LoginForm() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [demoCode, setDemoCode] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,21 +78,19 @@ export default function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setDemoCode('');
 
-    if (!phone.trim()) {
-      setError('Enter your phone number with country code (e.g. +356...)');
-      setLoading(false);
-      return;
-    }
-
-    const { error: authError } = await supabase.auth.signInWithOtp({ phone: phone.trim() });
-    if (authError) {
-      setError(authError.message);
+    const result = await sendPhoneOtpAction({ phone });
+    if (!result.success) {
+      setError(result.error);
       setLoading(false);
       return;
     }
 
     setOtpSent(true);
+    if (result.data?.demoCode) {
+      setDemoCode(result.data.demoCode);
+    }
     setLoading(false);
   }
 
@@ -99,14 +99,9 @@ export default function LoginForm() {
     setLoading(true);
     setError('');
 
-    const { error: authError } = await supabase.auth.verifyOtp({
-      phone: phone.trim(),
-      token: otp.trim(),
-      type: 'sms',
-    });
-
-    if (authError) {
-      setError(authError.message);
+    const result = await verifyPhoneOtpAction({ phone, code: otp });
+    if (!result.success) {
+      setError(result.error);
       setLoading(false);
       return;
     }
@@ -188,9 +183,9 @@ export default function LoginForm() {
           className="mt-6 space-y-4"
           noValidate
         >
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-            WhatsApp is not a standard OAuth provider. Phone OTP via SMS is used instead.
-            See <code className="text-amber-800">docs/CLIENT-CONFIRMATIONS.md</code> for details.
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            We send a <strong>6-digit code</strong> to your phone. Enter it below to sign in or
+            create an account automatically.
           </div>
           <div>
             <label htmlFor="login-phone" className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -203,29 +198,49 @@ export default function LoginForm() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               disabled={otpSent}
-              placeholder="+356 9912 3456"
+              placeholder="+356 7757 6721"
               className={inputClassName}
             />
           </div>
           {otpSent && (
             <div>
               <label htmlFor="login-otp" className="mb-1.5 block text-sm font-medium text-slate-700">
-                Verification code
+                6-digit code
               </label>
               <input
                 id="login-otp"
                 type="text"
                 inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="123456"
-                className={inputClassName}
+                className={`${inputClassName} text-center text-lg tracking-[0.3em]`}
               />
+              {demoCode && (
+                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  SMS not configured (dev mode). Your code:{' '}
+                  <span className="font-mono font-bold">{demoCode}</span>
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setOtpSent(false);
+                  setOtp('');
+                  setDemoCode('');
+                  setError('');
+                }}
+                className="mt-2 text-sm text-orange-600 hover:underline"
+              >
+                Use a different number
+              </button>
             </div>
           )}
           {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
           <RippleButton type="submit" className="w-full" variant="primary">
-            {loading ? 'Please wait…' : otpSent ? 'Verify & Sign In' : 'Send OTP'}
+            {loading ? 'Please wait…' : otpSent ? 'Verify & Sign In' : 'Send 6-digit code'}
           </RippleButton>
         </form>
       )}

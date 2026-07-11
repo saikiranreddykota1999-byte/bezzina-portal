@@ -56,6 +56,14 @@ export default async function OrdersPage() {
                       : order.status}
                   </p>
                 </div>
+                {order.order_number && (
+                  <RippleButton
+                    href={`/account/orders/${encodeURIComponent(order.order_number)}/receipt`}
+                    variant="ghost"
+                  >
+                    Receipt
+                  </RippleButton>
+                )}
                 {order.fulfillment_method === 'delivery' && order.order_number && (
                   <RippleButton
                     href={`/account/tracking?order=${encodeURIComponent(order.order_number)}`}

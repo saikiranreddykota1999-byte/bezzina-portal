@@ -4,9 +4,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/cart-context';
 import { RippleButton } from '@/components/ui/ripple-button';
+import { formatPrice, resolveProductPrice } from '@/lib/pricing';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart } = useCart();
+
+  const subtotal = items.reduce(
+    (sum, item) => sum + resolveProductPrice(item.price) * item.quantity,
+    0,
+  );
 
   if (items.length === 0) {
     return (
@@ -53,14 +59,18 @@ export default function CartPage() {
                 </button>
               </div>
             </div>
-            {item.price != null && (
-              <p className="font-semibold text-slate-900">€{(item.price * item.quantity).toFixed(2)}</p>
-            )}
+            <p className="font-semibold text-slate-900">
+              {formatPrice(resolveProductPrice(item.price) * item.quantity)}
+            </p>
           </li>
         ))}
       </ul>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col items-end gap-4 border-t border-slate-200 pt-6">
+        <div className="text-right">
+          <p className="text-sm text-slate-500">Subtotal</p>
+          <p className="text-2xl font-bold text-slate-900">{formatPrice(subtotal)}</p>
+        </div>
         <RippleButton href="/account/checkout">Proceed to Checkout</RippleButton>
       </div>
     </div>

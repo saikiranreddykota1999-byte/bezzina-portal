@@ -10,8 +10,7 @@ export function DemoModeBanner() {
     >
       <p className="font-semibold">Demo mode</p>
       <p className="mt-1 text-amber-800">
-        Payments and orders are simulated for demonstration only. No real charges
-        are made and no orders are stored.
+        Stripe keys are not configured. Payments are simulated for demonstration only.
       </p>
     </div>
   );

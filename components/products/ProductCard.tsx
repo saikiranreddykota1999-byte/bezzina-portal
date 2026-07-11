@@ -8,12 +8,14 @@ import { Product } from '@/types/product';
 import { LiftCard } from '@/components/motion/lift-card';
 import { useCart } from '@/context/cart-context';
 import { useWishlist } from '@/context/wishlist-context';
-import { ProductQuoteActions } from './ProductQuoteActions';
+import { formatPrice, resolveProductPrice } from '@/lib/pricing';
+import { ProductCartActions } from './ProductCartActions';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
   const { toggle, has } = useWishlist();
   const wished = has(product.id);
+  const unitPrice = resolveProductPrice(product.price);
 
   return (
     <LiftCard>
@@ -29,7 +31,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 slug: product.slug,
                 name: product.name,
                 sku: product.sku,
-                price: product.price,
+                price: unitPrice,
                 image_url: product.image_url,
               });
             }}
@@ -47,7 +49,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 slug: product.slug,
                 name: product.name,
                 sku: product.sku,
-                price: product.price,
+                price: unitPrice,
                 unit: product.unit,
                 image_url: product.image_url,
               });
@@ -105,17 +107,15 @@ export default function ProductCard({ product }: { product: Product }) {
               {product.material && <span>{product.material}</span>}
             </div>
 
-            {product.price != null && (
-              <p className="mt-3 font-semibold text-slate-900">
-                €{product.price.toFixed(2)}{' '}
-                <span className="text-xs font-normal text-slate-600">/ {product.unit}</span>
-              </p>
-            )}
+            <p className="mt-3 font-semibold text-slate-900">
+              {formatPrice(unitPrice)}{' '}
+              <span className="text-xs font-normal text-slate-600">/ {product.unit}</span>
+            </p>
           </div>
         </Link>
 
-        <div className="border-t border-slate-100 px-4 pb-4">
-          <ProductQuoteActions product={product} layout="card" />
+        <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+          <ProductCartActions product={product} layout="card" />
         </div>
       </div>
     </LiftCard>

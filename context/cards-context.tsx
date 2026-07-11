@@ -41,11 +41,18 @@ export function formatCardNumber(value: string) {
 }
 
 export function CardsProvider({ children }: { children: React.ReactNode }) {
-  const [cards, setCards] = useState<PaymentCard[]>(readStoredCards);
+  const [cards, setCards] = useState<PaymentCard[]>([]);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    setCards(readStoredCards());
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
-  }, [cards]);
+  }, [cards, hydrated]);
 
   const addCard = useCallback(
     (card: Omit<PaymentCard, 'id' | 'addedAt' | 'isDefault'> & { isDefault?: boolean }) => {

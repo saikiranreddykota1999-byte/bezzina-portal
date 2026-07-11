@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ShoppingCart } from 'lucide-react';
 import { Product } from '@/types/product';
-import { ProductQuoteActions } from './ProductQuoteActions';
+import { useCart } from '@/context/cart-context';
+import { formatPrice, resolveProductPrice } from '@/lib/pricing';
 
 type SpecRow = { label: string; value: string };
 
@@ -50,6 +52,9 @@ function buildBreadcrumb(product: Product): { label: string; href?: string }[] {
 }
 
 export default function ProductDetail({ product }: { product: Product }) {
+  const { addItem } = useCart();
+  const [added, setAdded] = useState(false);
+  const unitPrice = resolveProductPrice(product.price);
   const images =
     product.images && product.images.length > 0
       ? product.images
@@ -159,18 +164,42 @@ export default function ProductDetail({ product }: { product: Product }) {
             )}
           </div>
 
-          {product.price != null && (
-            <p className="mt-6 text-3xl font-bold text-slate-900">
-              €{product.price.toFixed(2)}
-              <span className="text-base font-normal text-slate-600">
-                {' '}
-                / {product.unit}
-              </span>
-            </p>
-          )}
+          <p className="mt-6 text-3xl font-bold text-slate-900">
+            {formatPrice(unitPrice)}
+            <span className="text-base font-normal text-slate-600">
+              {' '}
+              / {product.unit}
+            </span>
+          </p>
 
-          <div className="mt-8">
-            <ProductQuoteActions product={product} layout="detail" />
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              disabled={!product.in_stock}
+              onClick={() => {
+                addItem({
+                  productId: product.id,
+                  slug: product.slug,
+                  name: product.name,
+                  sku: product.sku,
+                  price: unitPrice,
+                  unit: product.unit,
+                  image_url: product.image_url,
+                });
+                setAdded(true);
+                setTimeout(() => setAdded(false), 2000);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              {added ? 'Added to cart' : 'Add to cart'}
+            </button>
+            <Link
+              href="/account/cart"
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+            >
+              View cart
+            </Link>
           </div>
 
           <Link

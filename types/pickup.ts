@@ -110,6 +110,36 @@ export interface PickupUnavailableDateInput {
   reason?: string | null;
 }
 
+export interface DeliveryAddress {
+  formattedAddress: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  lat: number;
+  lng: number;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  sku: string;
+  name: string;
+  quantity: number;
+  unit_price: number | null;
+}
+
+export interface ReceiptCustomer {
+  full_name: string | null;
+  phone: string | null;
+  email: string;
+  address: string | null;
+  company_name: string | null;
+  vat_number: string | null;
+}
+
 export interface OrderWithPickup {
   id: string;
   order_number: string | null;
@@ -124,8 +154,27 @@ export interface OrderWithPickup {
   pickup_time: string | null;
   pickup_code: string | null;
   pickup_status: PickupStatus | null;
+  shipping_line1?: string | null;
+  shipping_line2?: string | null;
+  shipping_city?: string | null;
+  shipping_postal_code?: string | null;
+  shipping_country?: string | null;
+  shipping_lat?: number | null;
+  shipping_lng?: number | null;
+  shipping_formatted_address?: string | null;
+  payment_status?: string | null;
+  payment_method?: string | null;
+  payment_reference?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  customer_company_name?: string | null;
+  customer_vat_number?: string | null;
+  customer_address?: string | null;
   created_at: string;
   pickup_location?: PickupLocation | null;
+  items?: OrderItem[];
+  customer?: ReceiptCustomer | null;
 }
 
 export interface PlaceOrderResult {

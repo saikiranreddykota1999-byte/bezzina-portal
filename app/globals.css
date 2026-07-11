@@ -61,3 +61,70 @@ textarea::placeholder {
     scroll-behavior: auto;
   }
 }
+
+/* Receipt print / save-as-PDF — only #order-receipt is visible */
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: A4;
+  }
+
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  header,
+  footer,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #order-receipt,
+  #order-receipt * {
+    visibility: visible;
+  }
+
+  #order-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .receipt-watermark-layer {
+    visibility: visible !important;
+    opacity: 0.55 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Receipt watermark — visible but keeps bill text readable */
+.receipt-watermark-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("/bezzina-watermark.png");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: min(92%, 520px);
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+}
