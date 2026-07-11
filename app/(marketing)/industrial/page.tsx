@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import ProductCatalogue from '@/components/products/ProductCatalogue';
-import { getAllProducts, getCategoriesByDivision } from '@/services/product.service';
+import { getAllProducts, getCategories } from '@/services/product.service';
 
 export const metadata = {
   title: 'Industrial Equipment | Joseph Bezzina & Co Ltd',
@@ -8,10 +8,12 @@ export const metadata = {
     'Full industrial equipment catalogue — tools, hydraulics, electrical, safety, and more.',
 };
 
+export const revalidate = 60;
+
 export default async function IndustrialPage() {
   const [products, categories] = await Promise.all([
     getAllProducts(),
-    getCategoriesByDivision('industrial'),
+    getCategories(),
   ]);
 
   return (

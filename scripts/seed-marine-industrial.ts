@@ -1,47 +1,77 @@
 /**
  * Seed Marine Supplies and Industrial Equipment catalogues.
- * Run: npx tsx scripts/seed-marine-industrial.ts
+ * Run: npm run seed:catalogue
  */
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import { MARINE_CATALOGUE } from '../config/catalogue/marine';
 import { INDUSTRIAL_CATALOGUE } from '../config/catalogue/industrial';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-if (!supabaseUrl || !serviceKey) {
-  console.error('Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
-  process.exit(1);
+function loadEnvFile() {
+  const envPath = resolve(__dirname, '../.env.local');
+  const content = readFileSync(envPath, 'utf-8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim();
+    if (!process.env[key]) process.env[key] = value;
+  }
 }
 
-const supabase = createClient(supabaseUrl, serviceKey);
+loadEnvFile();
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
 type Division = 'marine' | 'industrial';
 
-async function upsertParent(division: Division) {
-  const name = division === 'marine' ? 'Marine Supplies' : 'Industrial Equipment';
-  const slug = division === 'marine' ? 'marine-supplies' : 'industrial-equipment';
+type SchemaFlags = {
+  categoryDivision: boolean;
+  categoryParentId: boolean;
+  productTags: boolean;
+};
+
+async function detectSchema(): Promise<SchemaFlags> {
+  const [{ error: divErr }, { error: parentErr }, { error: tagsErr }] = await Promise.all([
+    supabase.from('categories').select('division').limit(1),
+    supabase.from('categories').select('parent_id').limit(1),
+    supabase.from('products').select('tags').limit(1),
+  ]);
+
+  const flags = {
+    categoryDivision: !divErr,
+    categoryParentId: !parentErr,
+    productTags: !tagsErr,
+  };
+
+  console.log('Schema:', flags);
+  return flags;
+}
+
+async function upsertCategory(
+  row: Record<string, unknown>,
+  flags: SchemaFlags,
+): Promise<string> {
+  const payload: Record<string, unknown> = { ...row };
+  if (!flags.categoryDivision) delete payload.division;
+  if (!flags.categoryParentId) delete payload.parent_id;
 
   const { data, error } = await supabase
     .from('categories')
-    .upsert(
-      {
-        name,
-        slug,
-        description: `${name} catalogue`,
-        sort_order: division === 'marine' ? 1 : 2,
-        division,
-        parent_id: null,
-      },
-      { onConflict: 'slug' },
-    )
+    .upsert(payload, { onConflict: 'slug' })
     .select('id')
     .single();
 
@@ -49,10 +79,31 @@ async function upsertParent(division: Division) {
   return data.id as string;
 }
 
+async function upsertProducts(
+  products: Record<string, unknown>[],
+  flags: SchemaFlags,
+) {
+  const batchSize = 50;
+  for (let i = 0; i < products.length; i += batchSize) {
+    const batch = products.slice(i, i + batchSize).map((p) => {
+      const row = { ...p };
+      if (!flags.productTags) delete row.tags;
+      return row;
+    });
+
+    let { error } = await supabase.from('products').upsert(batch, { onConflict: 'sku' });
+    if (error) {
+      ({ error } = await supabase.from('products').upsert(batch, { onConflict: 'slug' }));
+    }
+    if (error) throw error;
+    console.log(`  Upserted ${Math.min(i + batchSize, products.length)}/${products.length}`);
+  }
+}
+
 async function seedDivision(
   division: Division,
   catalogue: typeof MARINE_CATALOGUE,
-  parentId: string,
+  flags: SchemaFlags,
 ) {
   let sortOrder = 0;
   const products: Record<string, unknown>[] = [];
@@ -61,38 +112,25 @@ async function seedDivision(
     sortOrder += 1;
     const subSlug = `${division}-${slugify(entry.subcategory)}`;
 
-    const { data: subcategory, error: catError } = await supabase
-      .from('categories')
-      .upsert(
-        {
-          name: entry.subcategory,
-          slug: subSlug,
-          description: `${entry.subcategory} — ${division === 'marine' ? 'Marine' : 'Industrial'}`,
-          sort_order: sortOrder,
-          division,
-          parent_id: parentId,
-        },
-        { onConflict: 'slug' },
-      )
-      .select('id')
-      .single();
+    const categoryRow: Record<string, unknown> = {
+      name: entry.subcategory,
+      slug: subSlug,
+      description: `${entry.subcategory} — ${division}`,
+      sort_order: sortOrder,
+    };
+    if (flags.categoryDivision) categoryRow.division = division;
 
-    if (catError) throw catError;
-
-    const categoryId = subcategory.id as string;
+    const categoryId = await upsertCategory(categoryRow, flags);
     const prefix = division === 'marine' ? 'MS' : 'IE';
 
     entry.products.forEach((productName, index) => {
       const baseSlug = slugify(`${division}-${entry.subcategory}-${productName}`);
-      const sku = `${prefix}-${entry.letter}-${String(sortOrder).padStart(3, '0')}-${String(index + 1).padStart(2, '0')}`;
-
       products.push({
-        sku,
+        sku: `${prefix}-${entry.letter}-${String(sortOrder).padStart(3, '0')}-${String(index + 1).padStart(2, '0')}`,
         name: productName,
         slug: `${baseSlug}-${index + 1}`,
-        description: `${productName} — professional grade ${entry.subcategory.toLowerCase()} for ${division === 'marine' ? 'marine' : 'industrial'} applications.`,
+        description: `${productName} — ${entry.subcategory} for ${division} applications.`,
         category_id: categoryId,
-        price: null,
         unit: 'each',
         in_stock: true,
         stock_quantity: 0,
@@ -103,29 +141,28 @@ async function seedDivision(
     });
   }
 
-  const batchSize = 100;
-  for (let i = 0; i < products.length; i += batchSize) {
-    const batch = products.slice(i, i + batchSize);
-    const { error } = await supabase.from('products').upsert(batch, { onConflict: 'sku' });
-    if (error) throw error;
-    console.log(`  Upserted products ${i + 1}–${Math.min(i + batchSize, products.length)}`);
-  }
-
+  await upsertProducts(products, flags);
   return products.length;
 }
 
 async function main() {
+  const flags = await detectSchema();
+
   console.log('Seeding Marine Supplies...');
-  const marineParent = await upsertParent('marine');
-  const marineCount = await seedDivision('marine', MARINE_CATALOGUE, marineParent);
-  console.log(`Marine: ${marineCount} products`);
+  const marineCount = await seedDivision('marine', MARINE_CATALOGUE, flags);
+  console.log(`✓ Marine: ${marineCount} products`);
 
   console.log('Seeding Industrial Equipment...');
-  const industrialParent = await upsertParent('industrial');
-  const industrialCount = await seedDivision('industrial', INDUSTRIAL_CATALOGUE, industrialParent);
-  console.log(`Industrial: ${industrialCount} products`);
+  const industrialCount = await seedDivision('industrial', INDUSTRIAL_CATALOGUE, flags);
+  console.log(`✓ Industrial: ${industrialCount} products`);
 
-  console.log('Done.');
+  const { count } = await supabase
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true);
+
+  console.log(`\nDone. Seeded ${marineCount + industrialCount} catalogue products.`);
+  console.log(`Active products in database: ${count ?? 'unknown'}`);
 }
 
 main().catch((err) => {

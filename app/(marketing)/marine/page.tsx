@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import ProductCatalogue from '@/components/products/ProductCatalogue';
-import { getAllProducts, getCategoriesByDivision } from '@/services/product.service';
+import { getAllProducts, getCategories } from '@/services/product.service';
 
 export const metadata = {
   title: 'Marine Supplies | Joseph Bezzina & Co Ltd',
@@ -8,10 +8,12 @@ export const metadata = {
     'Full marine supplies catalogue — anchors, pumps, safety equipment, navigation, and more.',
 };
 
+export const revalidate = 60;
+
 export default async function MarinePage() {
   const [products, categories] = await Promise.all([
     getAllProducts(),
-    getCategoriesByDivision('marine'),
+    getCategories(),
   ]);
 
   return (

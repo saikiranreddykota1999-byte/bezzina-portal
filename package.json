@@ -17,7 +17,8 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "seed": "tsx scripts/seed-catalog.ts",
-    "seed:catalogue": "tsx scripts/seed-marine-industrial.ts"
+    "seed:catalogue": "tsx scripts/seed-marine-industrial.ts",
+    "seed:catalogue:sql": "tsx scripts/generate-catalogue-sql.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

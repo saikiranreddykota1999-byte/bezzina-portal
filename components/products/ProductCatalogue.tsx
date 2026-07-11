@@ -47,16 +47,25 @@ export default function ProductCatalogue({
   const [showFilters, setShowFilters] = useState(false);
 
   const scopedCategories = useMemo(() => {
-    if (!division) return categories.filter((c) => c.parent_id);
-    return categories.filter((c) => c.division === division && c.parent_id);
+    if (!division) return categories.filter((c) => c.parent_id || c.slug.includes('-'));
+    return categories.filter(
+      (c) =>
+        c.slug.startsWith(`${division}-`) &&
+        !c.slug.endsWith('-supplies') &&
+        !c.slug.endsWith('-equipment'),
+    );
   }, [categories, division]);
 
   const scopedProducts = useMemo(() => {
     if (!division) return products;
     const divisionCategoryIds = new Set(
-      categories.filter((c) => c.division === division).map((c) => c.id),
+      categories
+        .filter((c) => c.slug.startsWith(`${division}-`))
+        .map((c) => c.id),
     );
-    return products.filter((p) => p.category_id && divisionCategoryIds.has(p.category_id));
+    return products.filter(
+      (p) => p.category_id && divisionCategoryIds.has(p.category_id),
+    );
   }, [products, categories, division]);
 
   const resolvedCategoryId = useMemo(() => {
