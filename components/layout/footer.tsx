@@ -15,7 +15,7 @@ export function Footer() {
           <p className="mt-3 max-w-sm text-sm leading-6 text-slate-300">
             {company.tagline}
           </p>
-          <p className="mt-4 text-sm text-slate-400">
+          <p className="mt-4 text-sm text-slate-300">
             Serving Malta with industrial, marine, and engineering supplies
             since {company.founded}.
           </p>
@@ -73,7 +73,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-slate-800">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-sm text-slate-400 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-sm text-slate-300 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <p>
             © {new Date().getFullYear()} {company.name}. All rights reserved.
           </p>

@@ -65,7 +65,7 @@ export function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3, ...defaultTransition }}
-            className="mt-6 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg"
+            className="mt-6 max-w-3xl text-base leading-8 text-slate-200 sm:text-lg"
           >
             Joseph Bezzina & Co. Ltd is Malta&apos;s trusted marine and
             industrial supplier, delivering dependable products, practical
@@ -101,7 +101,7 @@ export function Hero() {
               className="rounded-2xl border border-white/10 bg-white/8 p-6 shadow-lg shadow-slate-950/20 backdrop-blur-sm"
             >
               <h2 className="text-xl font-semibold text-white">{feature.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-300">{feature.description}</p>
+              <p className="mt-3 text-sm leading-7 text-slate-200">{feature.description}</p>
             </motion.article>
           ))}
         </motion.div>

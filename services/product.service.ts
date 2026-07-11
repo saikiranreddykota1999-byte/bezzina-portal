@@ -6,9 +6,12 @@ import {
   ProductFilters,
   PaginatedProducts,
   SortOption,
+  CategoryDivision,
+  ProductImage,
 } from '@/types/product';
 
-const PRODUCT_SELECT = '*, category:categories(*), brand:brands(*)';
+const PRODUCT_SELECT = '*, category:categories(*), images:product_images(*)';
+const PRODUCT_SELECT_FALLBACK = '*, category:categories(*)';
 
 function normalizeImageUrl(url: string | null): string | null {
   if (!url) return null;
@@ -20,14 +23,41 @@ function normalizeImageUrl(url: string | null): string | null {
 }
 
 function normalizeProduct(product: Product): Product {
+  const images = (product.images ?? []).sort(
+    (a: ProductImage, b: ProductImage) => a.sort_order - b.sort_order,
+  );
+  const primaryImage = images.find((i) => i.is_primary) ?? images[0];
+
   return {
     ...product,
-    image_url: normalizeImageUrl(product.image_url),
+    image_url: normalizeImageUrl(primaryImage?.url ?? product.image_url),
+    images,
     fast_selling: product.fast_selling ?? false,
     upcoming: product.upcoming ?? false,
     future_product: product.future_product ?? false,
     tags: product.tags ?? null,
   };
+}
+
+export async function getCategoriesByDivision(
+  division: CategoryDivision,
+): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('division', division)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('getCategoriesByDivision error:', error.message);
+    const { data: fallback } = await supabase
+      .from('categories')
+      .select('*')
+      .ilike('slug', `${division}%`)
+      .order('sort_order', { ascending: true });
+    return fallback ?? [];
+  }
+  return data ?? [];
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -73,7 +103,7 @@ export async function getAllProducts(): Promise<Product[]> {
   } catch (error) {
     console.error('getAllProducts error:', error);
     try {
-      return await fetchProducts('*, category:categories(*)');
+      return await fetchProducts(PRODUCT_SELECT_FALLBACK);
     } catch {
       return [];
     }
@@ -171,7 +201,6 @@ export function filterProducts(
         p.material,
         p.standard,
         p.category?.name,
-        p.brand?.name,
         ...(p.tags ?? []),
       ]
         .filter(Boolean)

@@ -1,26 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --muted: #475569;
+  --muted-light: #64748b;
+  --primary: #0b1f3a;
+  --secondary: #1f5e99;
+  --accent: #f58220;
+  --border: #cbd5e1;
+  --surface: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-light: var(--muted-light);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 html {
   scroll-behavior: smooth;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 html.dark {
@@ -32,6 +39,21 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* WCAG AA accessible text utilities */
+.text-muted {
+  color: var(--muted);
+}
+
+.text-muted-light {
+  color: var(--muted-light);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted-light);
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

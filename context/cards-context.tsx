@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { detectCardBrand } from '@/lib/payment';
 import type { PaymentCard } from '@/types/payment';
 
 type CardsContextValue = {
@@ -31,12 +32,12 @@ function readStoredCards(): PaymentCard[] {
   }
 }
 
-function detectBrand(number: string): PaymentCard['brand'] {
-  const n = number.replace(/\s/g, '');
-  if (n.startsWith('4')) return 'visa';
-  if (/^5[1-5]/.test(n) || /^2[2-7]/.test(n)) return 'mastercard';
-  if (/^3[47]/.test(n)) return 'amex';
-  return 'other';
+export function maskCardNumber(value: string) {
+  return value.replace(/\D/g, '').slice(0, 16);
+}
+
+export function formatCardNumber(value: string) {
+  return maskCardNumber(value).replace(/(.{4})/g, '$1 ').trim();
 }
 
 export function CardsProvider({ children }: { children: React.ReactNode }) {
@@ -56,7 +57,7 @@ export function CardsProvider({ children }: { children: React.ReactNode }) {
           {
             ...card,
             id: crypto.randomUUID(),
-            brand: card.brand || detectBrand(card.last4),
+            brand: card.brand || detectCardBrand(card.last4),
             addedAt: new Date().toISOString(),
             isDefault,
           },
@@ -96,10 +97,3 @@ export function useCards() {
   return ctx;
 }
 
-export function maskCardNumber(value: string) {
-  return value.replace(/\D/g, '').slice(0, 16);
-}
-
-export function formatCardNumber(value: string) {
-  return maskCardNumber(value).replace(/(.{4})/g, '$1 ').trim();
-}

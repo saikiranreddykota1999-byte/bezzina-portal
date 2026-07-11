@@ -1,16 +1,12 @@
 import Link from "next/link";
 import { navigation } from "@/config/navigation";
+import { isActivePath } from "@/lib/navigation";
 
 type MobileNavProps = {
   isOpen: boolean;
   pathname: string;
   onNavigate?: () => void;
 };
-
-function isActivePath(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 export function MobileNav({ isOpen, pathname, onNavigate }: MobileNavProps) {
   if (!isOpen) return null;

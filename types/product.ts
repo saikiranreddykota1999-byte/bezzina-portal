@@ -1,3 +1,5 @@
+export type CategoryDivision = 'marine' | 'industrial';
+
 export interface Category {
   id: string;
   name: string;
@@ -5,6 +7,16 @@ export interface Category {
   description: string | null;
   sort_order: number;
   parent_id?: string | null;
+  division?: CategoryDivision | null;
+}
+
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  url: string;
+  thumbnail_url: string | null;
+  sort_order: number;
+  is_primary: boolean;
 }
 
 export interface Brand {
@@ -50,7 +62,23 @@ export interface Product {
   // populated via join
   category?: Category | null;
   brand?: Brand | null;
+  images?: ProductImage[];
 }
+
+export type ProductFormData = {
+  sku: string;
+  name: string;
+  slug: string;
+  description: string;
+  category_id: string;
+  price: number | null;
+  unit: string;
+  in_stock: boolean;
+  stock_quantity: number;
+  is_active: boolean;
+  material?: string;
+  standard?: string;
+};
 
 export type SortOption =
   | 'name-asc'
@@ -63,6 +91,7 @@ export type ProductFilters = {
   query?: string;
   categoryId?: string;
   brandId?: string;
+  division?: CategoryDivision;
   inStockOnly?: boolean;
   material?: string;
   standard?: string;

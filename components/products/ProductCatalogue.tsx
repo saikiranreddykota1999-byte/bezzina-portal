@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
-import { Product, Category, Brand, SortOption } from '@/types/product';
+import { Product, Category, SortOption, CategoryDivision } from '@/types/product';
 import {
   filterProducts,
   getUniqueMaterials,
@@ -16,7 +16,8 @@ import { staggerContainer, fadeIn, defaultTransition } from '@/lib/motion';
 interface Props {
   products: Product[];
   categories: Category[];
-  brands: Brand[];
+  division?: CategoryDivision;
+  title?: string;
 }
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
@@ -27,31 +28,48 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest' },
 ];
 
-export default function ProductCatalogue({ products, categories, brands }: Props) {
+export default function ProductCatalogue({
+  products,
+  categories,
+  division,
+  title,
+}: Props) {
   const searchParams = useSearchParams();
   const categorySlug = searchParams.get('category');
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [categoryId, setCategoryId] = useState('all');
-  const [brandId, setBrandId] = useState('all');
   const [material, setMaterial] = useState('all');
   const [standard, setStandard] = useState('all');
   const [inStockOnly, setInStockOnly] = useState(false);
   const [sort, setSort] = useState<SortOption>('name-asc');
   const [showFilters, setShowFilters] = useState(false);
 
+  const scopedCategories = useMemo(() => {
+    if (!division) return categories.filter((c) => c.parent_id);
+    return categories.filter((c) => c.division === division && c.parent_id);
+  }, [categories, division]);
+
+  const scopedProducts = useMemo(() => {
+    if (!division) return products;
+    const divisionCategoryIds = new Set(
+      categories.filter((c) => c.division === division).map((c) => c.id),
+    );
+    return products.filter((p) => p.category_id && divisionCategoryIds.has(p.category_id));
+  }, [products, categories, division]);
+
   const resolvedCategoryId = useMemo(() => {
     if (categorySlug) {
-      return categories.find((c) => c.slug === categorySlug)?.id ?? categoryId;
+      return scopedCategories.find((c) => c.slug === categorySlug)?.id ?? categoryId;
     }
     return categoryId;
-  }, [categorySlug, categories, categoryId]);
+  }, [categorySlug, scopedCategories, categoryId]);
 
-  const materials = useMemo(() => getUniqueMaterials(products), [products]);
-  const standards = useMemo(() => getUniqueStandards(products), [products]);
+  const materials = useMemo(() => getUniqueMaterials(scopedProducts), [scopedProducts]);
+  const standards = useMemo(() => getUniqueStandards(scopedProducts), [scopedProducts]);
 
-  const filterSignature = `${debouncedQuery}|${resolvedCategoryId}|${brandId}|${material}|${standard}|${inStockOnly}|${sort}`;
+  const filterSignature = `${debouncedQuery}|${resolvedCategoryId}|${material}|${standard}|${inStockOnly}|${sort}|${division}`;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 200);
@@ -71,10 +89,9 @@ export default function ProductCatalogue({ products, categories, brands }: Props
 
   const result = useMemo(
     () =>
-      filterProducts(products, {
+      filterProducts(scopedProducts, {
         query: debouncedQuery,
         categoryId: resolvedCategoryId,
-        brandId,
         material,
         standard,
         inStockOnly,
@@ -82,20 +99,24 @@ export default function ProductCatalogue({ products, categories, brands }: Props
         page,
         pageSize: 24,
       }),
-    [products, debouncedQuery, resolvedCategoryId, brandId, material, standard, inStockOnly, sort, page],
+    [scopedProducts, debouncedQuery, resolvedCategoryId, material, standard, inStockOnly, sort, page],
   );
 
   return (
     <div>
+      {title && (
+        <h2 className="mb-6 text-2xl font-bold text-slate-900">{title}</h2>
+      )}
+
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative flex-1 max-w-xl">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <div className="relative max-w-xl flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Smart search: name, SKU, brand, specs, tags..."
-            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            placeholder="Search by name, SKU, specs, tags..."
+            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
@@ -103,7 +124,7 @@ export default function ProductCatalogue({ products, categories, brands }: Props
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortOption)}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -113,7 +134,7 @@ export default function ProductCatalogue({ products, categories, brands }: Props
           <button
             type="button"
             onClick={() => setShowFilters((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium hover:bg-slate-50 lg:hidden"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 lg:hidden"
           >
             <SlidersHorizontal className="h-4 w-4" />
             Filters
@@ -123,28 +144,15 @@ export default function ProductCatalogue({ products, categories, brands }: Props
 
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
         <aside className={`space-y-5 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-          <FilterGroup label="Category">
+          <FilterGroup label="Subcategory">
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
             >
-              <option value="all">All categories</option>
-              {categories.map((cat) => (
+              <option value="all">All subcategories</option>
+              {scopedCategories.map((cat) => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </FilterGroup>
-
-          <FilterGroup label="Brand">
-            <select
-              value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value="all">All brands</option>
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
           </FilterGroup>
@@ -153,7 +161,7 @@ export default function ProductCatalogue({ products, categories, brands }: Props
             <select
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
             >
               <option value="all">All materials</option>
               {materials.map((m) => (
@@ -166,7 +174,7 @@ export default function ProductCatalogue({ products, categories, brands }: Props
             <select
               value={standard}
               onChange={(e) => setStandard(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
             >
               <option value="all">All standards</option>
               {standards.map((s) => (
@@ -187,7 +195,7 @@ export default function ProductCatalogue({ products, categories, brands }: Props
         </aside>
 
         <div>
-          <p className="mb-4 text-sm text-slate-500">
+          <p className="mb-4 text-sm text-slate-600">
             {result.total} product{result.total !== 1 ? 's' : ''}
             {debouncedQuery ? ` matching "${debouncedQuery}"` : ''}
           </p>
@@ -196,13 +204,13 @@ export default function ProductCatalogue({ products, categories, brands }: Props
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="py-16 text-center text-slate-400"
+              className="py-16 text-center text-slate-600"
             >
               No products match your filters.
             </motion.div>
           ) : (
             <motion.div
-              key={`${resolvedCategoryId}-${brandId}-${page}-${debouncedQuery}`}
+              key={`${resolvedCategoryId}-${page}-${debouncedQuery}`}
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
@@ -224,18 +232,18 @@ export default function ProductCatalogue({ products, categories, brands }: Props
                 type="button"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-800 disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" /> Previous
               </button>
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-slate-700">
                 Page {result.page} of {result.totalPages}
               </span>
               <button
                 type="button"
                 disabled={page >= result.totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-800 disabled:opacity-40"
               >
                 Next <ChevronRight className="h-4 w-4" />
               </button>
@@ -250,7 +258,7 @@ export default function ProductCatalogue({ products, categories, brands }: Props
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">{label}</p>
       {children}
     </div>
   );

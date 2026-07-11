@@ -8,17 +8,18 @@ import {
   Award, Warehouse, Percent, Clock, Calendar, TrendingUp, FileText,
   Newspaper, Images, Image, Mail, Truck, MapPin, UserCog, Shield, Key,
   Settings, BarChart3, Activity, MessageSquare, Search, Database, Terminal,
-  LogOut, Moon, Sun, Menu, X,
+  LogOut, Moon, Sun, Menu, X, Store,
 } from 'lucide-react';
 import { useState } from 'react';
 import { ADMIN_NAV } from '@/config/admin-nav';
 import { ThemeProvider, useTheme } from '@/context/theme-context';
 import { company } from '@/config/company';
+import { SignOutButton } from '@/components/auth/sign-out-button';
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, ShoppingBag, Users, Package, FolderTree, GitBranch,
   Award, Warehouse, Percent, Clock, Calendar, TrendingUp, FileText,
-  Newspaper, Images, Image, Mail, Truck, MapPin, UserCog, Shield, Key,
+  Newspaper, Images, Image, Mail, Truck, MapPin, Store, UserCog, Shield, Key,
   Settings, BarChart3, Activity, MessageSquare, Search, Database, Terminal,
 };
 
@@ -67,12 +68,18 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="relative border-t border-slate-200 p-3 dark:border-slate-800">
+            <SignOutButton
+              redirectTo="/account/login"
+              className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              Sign out
+            </SignOutButton>
             <Link
               href="/"
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             >
-              <LogOut className="h-4 w-4" />
-              Exit Admin
+              Exit to site
             </Link>
           </div>
         </div>
@@ -84,6 +91,8 @@ function AdminShellInner({ children }: { children: React.ReactNode }) {
             type="button"
             className="rounded-lg border border-slate-200 p-2 lg:hidden dark:border-slate-700"
             onClick={() => setMobileOpen((v) => !v)}
+            aria-label={mobileOpen ? 'Close admin menu' : 'Open admin menu'}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>

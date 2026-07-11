@@ -8,6 +8,7 @@ import { Product } from '@/types/product';
 import { LiftCard } from '@/components/motion/lift-card';
 import { useCart } from '@/context/cart-context';
 import { useWishlist } from '@/context/wishlist-context';
+import { ProductQuoteActions } from './ProductQuoteActions';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
@@ -32,7 +33,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 image_url: product.image_url,
               });
             }}
-            className={`rounded-full p-2 shadow-sm ${wished ? 'bg-orange-500 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+            className={`rounded-full p-2 shadow-sm ${wished ? 'bg-orange-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
           >
             <Heart className="h-4 w-4" fill={wished ? 'currentColor' : 'none'} />
           </button>
@@ -51,7 +52,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 image_url: product.image_url,
               });
             }}
-            className="rounded-full bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50"
+            className="rounded-full bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <ShoppingCart className="h-4 w-4" />
           </button>
@@ -74,7 +75,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 />
               </motion.div>
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-slate-300">
+              <div className="flex h-full items-center justify-center text-sm text-slate-500">
                 No image
               </div>
             )}
@@ -92,15 +93,14 @@ export default function ProductCard({ product }: { product: Product }) {
           </div>
 
           <div className="flex flex-1 flex-col p-4">
-            <p className="mb-1 text-xs uppercase tracking-wide text-slate-400">
+            <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">
               {product.sku}
             </p>
             <h3 className="mb-2 line-clamp-2 font-semibold leading-snug text-slate-900">
               {product.name}
             </h3>
 
-            <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-slate-500">
-              {product.brand?.name && <span>{product.brand.name}</span>}
+            <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-slate-600">
               {product.thread_type && <span>{product.thread_type}</span>}
               {product.material && <span>{product.material}</span>}
             </div>
@@ -108,11 +108,15 @@ export default function ProductCard({ product }: { product: Product }) {
             {product.price != null && (
               <p className="mt-3 font-semibold text-slate-900">
                 €{product.price.toFixed(2)}{' '}
-                <span className="text-xs font-normal text-slate-400">/ {product.unit}</span>
+                <span className="text-xs font-normal text-slate-600">/ {product.unit}</span>
               </p>
             )}
           </div>
         </Link>
+
+        <div className="border-t border-slate-100 px-4 pb-4">
+          <ProductQuoteActions product={product} layout="card" />
+        </div>
       </div>
     </LiftCard>
   );
