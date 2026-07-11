@@ -3,12 +3,16 @@ import {
   Product,
   Category,
   Brand,
-  ProductFilters,
-  PaginatedProducts,
-  SortOption,
   CategoryDivision,
   ProductImage,
 } from '@/types/product';
+import {
+  filterProducts,
+  getUniqueMaterials,
+  getUniqueStandards,
+} from '@/lib/catalogue-filters';
+
+export { filterProducts, getUniqueMaterials, getUniqueStandards };
 
 const PRODUCT_SELECT = '*, category:categories(*), images:product_images(*)';
 const PRODUCT_SELECT_FALLBACK = '*, category:categories(*)';
@@ -97,6 +101,64 @@ async function fetchProducts(select: string): Promise<Product[]> {
   return ((data ?? []) as unknown as Product[]).map(normalizeProduct);
 }
 
+async function fetchProductsWithError(
+  select: string,
+): Promise<{ products: Product[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from('products')
+    .select(select)
+    .eq('is_active', true)
+    .order('name', { ascending: true });
+
+  if (error) {
+    return { products: [], error: error.message };
+  }
+
+  return {
+    products: ((data ?? []) as unknown as Product[]).map(normalizeProduct),
+    error: null,
+  };
+}
+
+export type CataloguePageData = {
+  products: Product[];
+  categories: Category[];
+  error: string | null;
+};
+
+export async function getCataloguePageData(): Promise<CataloguePageData> {
+  const primary = await fetchProductsWithError(PRODUCT_SELECT);
+  let products = primary.products;
+  let productError = primary.error;
+
+  if (productError) {
+    const fallback = await fetchProductsWithError(PRODUCT_SELECT_FALLBACK);
+    products = fallback.products;
+    productError = fallback.error ?? productError;
+  }
+
+  const { data: categories, error: categoriesError } = await supabase
+    .from('categories')
+    .select('*')
+    .order('sort_order', { ascending: true });
+
+  if (categoriesError) {
+    console.error('getCategories error:', categoriesError.message);
+  }
+
+  const error = productError
+    ? `Could not load products. ${productError}`
+    : categoriesError
+      ? `Could not load categories. ${categoriesError.message}`
+      : null;
+
+  return {
+    products,
+    categories: categories ?? [],
+    error,
+  };
+}
+
 export async function getAllProducts(): Promise<Product[]> {
   try {
     return await fetchProducts(PRODUCT_SELECT);
@@ -148,92 +210,4 @@ export async function getFeaturedProducts(limit = 6): Promise<Product[]> {
     console.error('getFeaturedProducts error:', error);
     return [];
   }
-}
-
-function sortProducts(products: Product[], sort: SortOption): Product[] {
-  const sorted = [...products];
-  switch (sort) {
-    case 'name-desc':
-      return sorted.sort((a, b) => b.name.localeCompare(a.name));
-    case 'price-asc':
-      return sorted.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
-    case 'price-desc':
-      return sorted.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
-    case 'newest':
-      return sorted.reverse();
-    case 'name-asc':
-    default:
-      return sorted.sort((a, b) => a.name.localeCompare(b.name));
-  }
-}
-
-export function filterProducts(
-  products: Product[],
-  filters: ProductFilters,
-): PaginatedProducts {
-  const {
-    query = '',
-    categoryId,
-    brandId,
-    inStockOnly,
-    material,
-    standard,
-    sort = 'name-asc',
-    page = 1,
-    pageSize = 24,
-  } = filters;
-
-  const q = query.trim().toLowerCase();
-
-  let filtered = products.filter((p) => {
-    if (categoryId && categoryId !== 'all' && p.category_id !== categoryId) return false;
-    if (brandId && brandId !== 'all' && p.brand_id !== brandId) return false;
-    if (inStockOnly && !p.in_stock) return false;
-    if (material && material !== 'all' && p.material !== material) return false;
-    if (standard && standard !== 'all' && p.standard !== standard) return false;
-
-    if (q) {
-      const haystack = [
-        p.name,
-        p.sku,
-        p.description,
-        p.thread_type,
-        p.material,
-        p.standard,
-        p.category?.name,
-        ...(p.tags ?? []),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      if (!haystack.includes(q)) return false;
-    }
-
-    return true;
-  });
-
-  filtered = sortProducts(filtered, sort);
-
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * pageSize;
-  const paginated = filtered.slice(start, start + pageSize);
-
-  return {
-    products: paginated,
-    total,
-    page: safePage,
-    pageSize,
-    totalPages,
-  };
-}
-
-export function getUniqueMaterials(products: Product[]): string[] {
-  return [...new Set(products.map((p) => p.material).filter(Boolean) as string[])].sort();
-}
-
-export function getUniqueStandards(products: Product[]): string[] {
-  return [...new Set(products.map((p) => p.standard).filter(Boolean) as string[])].sort();
 }

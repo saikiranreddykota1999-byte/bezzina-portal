@@ -13,14 +13,17 @@ async function checkLockout(email: string): Promise<boolean> {
   const supabase = await createClient();
   const since = new Date(Date.now() - LOCKOUT_MINUTES * 60 * 1000).toISOString();
 
-  const { count } = await supabase
-    .from('login_attempts')
-    .select('*', { count: 'exact', head: true })
-    .eq('email', email.toLowerCase())
-    .eq('success', false)
-    .gte('attempted_at', since);
+  const { data, error } = await supabase.rpc('count_failed_login_attempts', {
+    p_email: email.toLowerCase(),
+    p_since: since,
+  });
 
-  return (count ?? 0) >= MAX_FAILED_ATTEMPTS;
+  if (error) {
+    console.error('checkLockout error:', error.message);
+    return false;
+  }
+
+  return (data ?? 0) >= MAX_FAILED_ATTEMPTS;
 }
 
 async function recordAttempt(email: string, success: boolean) {

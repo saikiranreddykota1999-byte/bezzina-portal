@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   createProduct,
@@ -8,10 +8,10 @@ import {
   uploadProductImage,
 } from '@/actions/admin-products';
 import type { Product } from '@/types/product';
-import type { Category } from '@/types/product';
+import type { CategoryTree } from '@/actions/admin-categories';
 
 type Props = {
-  categories: Category[];
+  categoryTree: CategoryTree;
   product?: Product;
 };
 
@@ -22,7 +22,7 @@ function slugify(text: string): string {
 const inputClass =
   'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500';
 
-export function ProductForm({ categories, product }: Props) {
+export function ProductForm({ categoryTree, product }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState('');
@@ -30,6 +30,11 @@ export function ProductForm({ categories, product }: Props) {
   const [sku, setSku] = useState(product?.sku ?? '');
   const [slug, setSlug] = useState(product?.slug ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
+  const [parentCategoryId, setParentCategoryId] = useState(() => {
+    if (!product?.category_id) return '';
+    const sub = categoryTree.subcategories.find((c) => c.id === product.category_id);
+    return sub?.parent_id ?? '';
+  });
   const [categoryId, setCategoryId] = useState(product?.category_id ?? '');
   const [price, setPrice] = useState(product?.price?.toString() ?? '1.00');
   const [unit, setUnit] = useState(product?.unit ?? 'each');
@@ -37,10 +42,29 @@ export function ProductForm({ categories, product }: Props) {
   const [stockQty, setStockQty] = useState(product?.stock_quantity?.toString() ?? '0');
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [uploading, setUploading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const subcategoriesForParent = useMemo(() => {
+    if (!parentCategoryId) return categoryTree.subcategories;
+    return categoryTree.subcategories.filter((c) => c.parent_id === parentCategoryId);
+  }, [categoryTree.subcategories, parentCategoryId]);
 
   function handleNameChange(value: string) {
     setName(value);
     if (!product) setSlug(slugify(value));
+  }
+
+  function handleParentChange(value: string) {
+    setParentCategoryId(value);
+    setCategoryId('');
+  }
+
+  async function uploadSelectedImage(productId: string) {
+    if (!imageFile) return;
+    const formData = new FormData();
+    formData.append('file', imageFile);
+    const result = await uploadProductImage(productId, formData);
+    if (!result.success) throw new Error(result.error);
   }
 
   function handleSave(e: React.FormEvent) {
@@ -61,33 +85,52 @@ export function ProductForm({ categories, product }: Props) {
     };
 
     startTransition(async () => {
-      const result = product
-        ? await updateProduct(product.id, payload)
-        : await createProduct(payload);
+      try {
+        const result = product
+          ? await updateProduct(product.id, payload)
+          : await createProduct(payload);
 
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
 
-      if (!product && result.data?.id) {
-        router.push(`/admin/products/${result.data.id}`);
-      } else {
-        router.refresh();
+        const productId = product?.id ?? result.data?.id;
+        if (productId && imageFile) {
+          setUploading(true);
+          await uploadSelectedImage(productId);
+          setUploading(false);
+        }
+
+        if (!product && result.data?.id) {
+          router.push(`/admin/products/${result.data.id}`);
+        } else {
+          router.refresh();
+        }
+      } catch (uploadError) {
+        setUploading(false);
+        setError(uploadError instanceof Error ? uploadError.message : 'Image upload failed');
       }
     });
   }
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!product || !e.target.files?.[0]) return;
-    setUploading(true);
-    setError('');
-    const formData = new FormData();
-    formData.append('file', e.target.files[0]);
-    const result = await uploadProductImage(product.id, formData);
-    if (!result.success) setError(result.error);
-    else router.refresh();
-    setUploading(false);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (product) {
+      setUploading(true);
+      setError('');
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await uploadProductImage(product.id, formData);
+      if (!result.success) setError(result.error);
+      else router.refresh();
+      setUploading(false);
+      return;
+    }
+
+    setImageFile(file);
   }
 
   return (
@@ -108,14 +151,40 @@ export function ProductForm({ categories, product }: Props) {
         <input value={slug} onChange={(e) => setSlug(e.target.value)} className={inputClass} required />
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
-        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass} required>
-          <option value="">Select category</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
+          <select
+            value={parentCategoryId}
+            onChange={(e) => handleParentChange(e.target.value)}
+            className={inputClass}
+            required
+          >
+            <option value="">Select category</option>
+            {categoryTree.parents.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Subcategory</label>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className={inputClass}
+            required
+            disabled={!parentCategoryId}
+          >
+            <option value="">Select subcategory</option>
+            {subcategoriesForParent.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div>
@@ -149,22 +218,26 @@ export function ProductForm({ categories, product }: Props) {
         </label>
       </div>
 
-      {product && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Product image</label>
-          <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="text-sm text-slate-700" />
-          {uploading && <p className="mt-1 text-xs text-slate-600">Uploading…</p>}
-        </div>
-      )}
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700">Product image</label>
+        <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading || pending} className="text-sm text-slate-700" />
+        {uploading && <p className="mt-1 text-xs text-slate-600">Uploading…</p>}
+        {!product && imageFile && (
+          <p className="mt-1 text-xs text-slate-600">Selected: {imageFile.name} (uploads after save)</p>
+        )}
+        {product?.image_url && (
+          <p className="mt-2 text-xs text-slate-500">Current image on file. Upload to replace.</p>
+        )}
+      </div>
 
       {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || uploading}
         className="rounded-lg bg-orange-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
       >
-        {pending ? 'Saving…' : product ? 'Update Product' : 'Create Product'}
+        {pending || uploading ? 'Saving…' : product ? 'Update Product' : 'Create Product'}
       </button>
     </form>
   );

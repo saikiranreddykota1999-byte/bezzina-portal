@@ -2,21 +2,21 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { Search, Package } from 'lucide-react';
 import { TrackingTimeline } from '@/components/account/tracking-timeline';
 import { findShipment, SAMPLE_SHIPMENTS } from '@/lib/tracking';
 import { RippleButton } from '@/components/ui/ripple-button';
 
-export default function TrackingPageContent() {
-  const searchParams = useSearchParams();
-  const orderParam = searchParams.get('order') ?? '';
+type Props = {
+  initialOrder?: string;
+};
 
-  const [query, setQuery] = useState(orderParam);
+export default function TrackingPageContent({ initialOrder = '' }: Props) {
+  const [query, setQuery] = useState(initialOrder);
   const [manualResult, setManualResult] = useState<ReturnType<typeof findShipment>>(null);
   const [searched, setSearched] = useState(false);
 
-  const autoResult = orderParam ? findShipment(orderParam) : null;
+  const autoResult = initialOrder ? findShipment(initialOrder) : null;
   const result = manualResult ?? autoResult;
   const showEmpty = searched && !result;
 

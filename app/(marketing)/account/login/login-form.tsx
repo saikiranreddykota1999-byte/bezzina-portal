@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { sendEmailOtpAction, verifyEmailOtpAction } from '@/actions/email-otp';
 import { sendPhoneOtpAction, verifyPhoneOtpAction } from '@/actions/phone-otp';
-import { sanitizeRedirectPath } from '@/lib/auth/redirect';
 import { loginSchema } from '@/lib/validators/auth';
 import { RippleButton } from '@/components/ui/ripple-button';
 
@@ -15,11 +13,18 @@ const inputClassName =
 
 type AuthMode = 'email-otp' | 'phone-otp' | 'password';
 
-export default function LoginForm() {
+type LoginFormProps = {
+  redirectPath: string;
+  initialMode?: AuthMode;
+  authCallbackError?: string;
+};
+
+export default function LoginForm({
+  redirectPath,
+  initialMode = 'email-otp',
+  authCallbackError,
+}: LoginFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirect = sanitizeRedirectPath(searchParams.get('redirect'));
-  const initialMode = searchParams.get('mode') === 'phone' ? 'phone-otp' : 'email-otp';
 
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
@@ -29,7 +34,7 @@ export default function LoginForm() {
   const [otpSent, setOtpSent] = useState(false);
   const [demoCode, setDemoCode] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [error, setError] = useState('');
+  const [error, setError] = useState(authCallbackError ?? '');
   const [loading, setLoading] = useState(false);
 
   const supabase = createClient();
@@ -73,7 +78,7 @@ export default function LoginForm() {
       return;
     }
 
-    router.push(redirect);
+    router.push(redirectPath);
     router.refresh();
   }
 
@@ -83,7 +88,9 @@ export default function LoginForm() {
     const origin = window.location.origin;
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirect)}` },
+      options: {
+        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
+      },
     });
     if (authError) {
       setError(authError.message);
@@ -131,7 +138,7 @@ export default function LoginForm() {
       return;
     }
 
-    router.push(redirect);
+    router.push(redirectPath);
     router.refresh();
   }
 

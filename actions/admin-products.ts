@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireStaffUser } from '@/lib/auth/server-session';
 import { productFormSchema } from '@/lib/validators/catalogue';
 import type { Product } from '@/types/product';
+import { getAdminCategoryTree, type CategoryTree } from '@/actions/admin-categories';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
@@ -200,20 +201,11 @@ export async function uploadProductImage(
 }
 
 export async function getAdminCategories() {
-  try {
-    const { supabase } = await requireStaffUser();
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .not('parent_id', 'is', null)
-      .order('name');
+  const result = await getAdminCategoryTree();
+  if (!result.success) return result;
+  return { success: true as const, data: result.data?.subcategories ?? [] };
+}
 
-    if (error) return { success: false as const, error: error.message };
-    return { success: true as const, data: data ?? [] };
-  } catch (error) {
-    return {
-      success: false as const,
-      error: error instanceof Error ? error.message : 'Failed to load categories',
-    };
-  }
+export async function getAdminCategoryOptions(): Promise<ActionResult<CategoryTree>> {
+  return getAdminCategoryTree();
 }

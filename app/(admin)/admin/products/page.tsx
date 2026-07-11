@@ -20,12 +20,20 @@ export default async function AdminProductsPage() {
           <h1 className="text-2xl font-bold text-slate-900">Products</h1>
           <p className="mt-1 text-sm text-slate-600">{products.length} products in catalogue</p>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
-        >
-          Add Product
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/admin/categories"
+            className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Manage Categories
+          </Link>
+          <Link
+            href="/admin/products/new"
+            className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
+          >
+            Add Product
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">

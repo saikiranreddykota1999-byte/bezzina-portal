@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
-import ProductCatalogue from '@/components/products/ProductCatalogue';
-import { getAllProducts, getCategories } from '@/services/product.service';
+import { ProductsCatalogueSection } from '@/components/products/products-catalogue-section';
+import { CatalogueSkeleton } from '@/components/products/catalogue-skeleton';
+import type { CatalogueSearchParams } from '@/lib/catalogue-params';
 
 export const metadata = {
   title: 'Marine Supplies | Joseph Bezzina & Co Ltd',
@@ -10,12 +11,11 @@ export const metadata = {
 
 export const revalidate = 60;
 
-export default async function MarinePage() {
-  const [products, categories] = await Promise.all([
-    getAllProducts(),
-    getCategories(),
-  ]);
+type PageProps = {
+  searchParams: Promise<CatalogueSearchParams>;
+};
 
+export default function MarinePage({ searchParams }: PageProps) {
   return (
     <main className="mx-auto max-w-7xl px-4 py-12 md:px-8">
       <div className="mb-10">
@@ -25,12 +25,9 @@ export default async function MarinePage() {
           Browse our full A–Z marine catalogue or contact us for specialist enquiries.
         </p>
       </div>
-      <Suspense fallback={<p className="text-slate-600">Loading catalogue…</p>}>
-        <ProductCatalogue
-          products={products}
-          categories={categories}
-          division="marine"
-        />
+
+      <Suspense fallback={<CatalogueSkeleton />}>
+        <ProductsCatalogueSection searchParams={searchParams} division="marine" />
       </Suspense>
     </main>
   );

@@ -1,18 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import type { JobPosting } from '@/types/quote';
+import type { Vacancy } from '@/types/quote';
 import { submitJobApplication } from '@/actions/careers';
 import { RippleButton } from '@/components/ui/ripple-button';
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500';
 
-export function CareersContent({ jobs }: { jobs: JobPosting[] }) {
-  const [selectedJob, setSelectedJob] = useState<string | null>(null);
+export function CareersContent({ vacancies }: { vacancies: Vacancy[] }) {
+  const [selectedVacancy, setSelectedVacancy] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  function handleApplyClick(vacancyId: string) {
+    setSelectedVacancy(vacancyId);
+    document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   async function handleApply(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -26,7 +31,7 @@ export function CareersContent({ jobs }: { jobs: JobPosting[] }) {
     if (cv instanceof File) cvForm.append('cv', cv);
 
     const input = {
-      jobPostingId: selectedJob ?? undefined,
+      vacancyId: selectedVacancy ?? undefined,
       fullName: formData.get('fullName'),
       email: formData.get('email'),
       phone: formData.get('phone') || undefined,
@@ -44,6 +49,8 @@ export function CareersContent({ jobs }: { jobs: JobPosting[] }) {
     setLoading(false);
   }
 
+  const selectedVacancyTitle = vacancies.find((v) => v.id === selectedVacancy)?.title;
+
   if (submitted) {
     return (
       <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
@@ -53,7 +60,10 @@ export function CareersContent({ jobs }: { jobs: JobPosting[] }) {
         </p>
         <button
           type="button"
-          onClick={() => { setSubmitted(false); setSelectedJob(null); }}
+          onClick={() => {
+            setSubmitted(false);
+            setSelectedVacancy(null);
+          }}
           className="mt-4 text-sm font-semibold text-orange-600 hover:underline"
         >
           Submit another application
@@ -66,33 +76,30 @@ export function CareersContent({ jobs }: { jobs: JobPosting[] }) {
     <div className="space-y-12">
       <section>
         <h2 className="text-xl font-bold text-slate-900">Current Vacancies</h2>
-        {jobs.length === 0 ? (
+        {vacancies.length === 0 ? (
           <p className="mt-4 text-slate-600">
             No open positions at the moment. Submit a general application below.
           </p>
         ) : (
           <ul className="mt-6 space-y-4">
-            {jobs.map((job) => (
+            {vacancies.map((vacancy) => (
               <li
-                key={job.id}
+                key={vacancy.id}
                 className="rounded-xl border border-slate-200 bg-white p-6"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900">{job.title}</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">{vacancy.title}</h3>
                     <p className="mt-1 text-sm text-slate-600">
-                      {job.department} · {job.location}
+                      {vacancy.department} · {vacancy.location}
                     </p>
-                    <p className="mt-3 text-sm leading-6 text-slate-700">{job.description}</p>
-                    {job.requirements && (
-                      <p className="mt-2 text-sm text-slate-600">
-                        <strong>Requirements:</strong> {job.requirements}
-                      </p>
-                    )}
+                    <p className="mt-3 text-sm leading-6 text-slate-700">
+                      {vacancy.short_description}
+                    </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setSelectedJob(job.id)}
+                    onClick={() => handleApplyClick(vacancy.id)}
                     className="shrink-0 rounded-full bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
                   >
                     Apply
@@ -106,7 +113,7 @@ export function CareersContent({ jobs }: { jobs: JobPosting[] }) {
 
       <section id="apply" className="rounded-2xl border border-slate-200 bg-slate-50 p-6 md:p-8">
         <h2 className="text-xl font-bold text-slate-900">
-          {selectedJob ? 'Apply for Position' : 'General Application'}
+          {selectedVacancy ? `Apply for ${selectedVacancyTitle}` : 'General Application'}
         </h2>
         <p className="mt-2 text-sm text-slate-600">
           Upload a single CV/Resume (PDF or DOC, max 5 MB). Cover letter is optional in the text area below.
@@ -139,7 +146,13 @@ export function CareersContent({ jobs }: { jobs: JobPosting[] }) {
               <label htmlFor="linkedinUrl" className="mb-1.5 block text-sm font-medium text-slate-700">
                 LinkedIn profile
               </label>
-              <input id="linkedinUrl" name="linkedinUrl" type="url" placeholder="https://linkedin.com/in/..." className={inputClass} />
+              <input
+                id="linkedinUrl"
+                name="linkedinUrl"
+                type="url"
+                placeholder="https://linkedin.com/in/..."
+                className={inputClass}
+              />
             </div>
           </div>
 
@@ -157,7 +170,11 @@ export function CareersContent({ jobs }: { jobs: JobPosting[] }) {
             <input id="cv" name="cv" type="file" accept=".pdf,.doc,.docx" required className="text-sm text-slate-700" />
           </div>
 
-          {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
 
           <RippleButton type="submit" variant="primary">
             {loading ? 'Submitting…' : 'Submit Application'}

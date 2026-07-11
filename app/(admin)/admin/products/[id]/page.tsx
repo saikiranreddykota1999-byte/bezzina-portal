@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getAdminProduct, getAdminCategories } from '@/actions/admin-products';
+import { getAdminProduct, getAdminCategoryOptions } from '@/actions/admin-products';
 import { ProductForm } from '@/components/admin/product-form';
 
 type Props = { params: Promise<{ id: string }> };
@@ -18,17 +18,19 @@ export default async function EditProductPage({ params }: Props) {
   const { id } = await params;
   const [productResult, categoriesResult] = await Promise.all([
     getAdminProduct(id),
-    getAdminCategories(),
+    getAdminCategoryOptions(),
   ]);
 
   if (!productResult.success) notFound();
 
-  const categories = categoriesResult.success ? categoriesResult.data : [];
+  const categoryTree = categoriesResult.success
+    ? categoriesResult.data ?? { parents: [], subcategories: [] }
+    : { parents: [], subcategories: [] };
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold text-slate-900">Edit Product</h1>
-      <ProductForm categories={categories} product={productResult.data} />
+      <ProductForm categoryTree={categoryTree} product={productResult.data} />
     </div>
   );
 }

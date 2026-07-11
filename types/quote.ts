@@ -29,11 +29,12 @@ export type QuoteRequestItem = {
   unit_price: number | null;
 };
 
-export type JobPosting = {
+export type Vacancy = {
   id: string;
   title: string;
   department: string;
   location: string;
+  short_description: string;
   description: string;
   requirements: string | null;
   is_active: boolean;
@@ -41,7 +42,12 @@ export type JobPosting = {
   created_at: string;
 };
 
+/** @deprecated Use Vacancy */
+export type JobPosting = Vacancy;
+
 export type JobApplicationInput = {
+  vacancyId?: string;
+  /** @deprecated Use vacancyId */
   jobPostingId?: string;
   fullName: string;
   email: string;

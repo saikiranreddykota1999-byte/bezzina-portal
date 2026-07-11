@@ -1,8 +1,8 @@
 import { company } from '@/config/company';
 
-/** WhatsApp number for wa.me links (no + or spaces). Confirm with client — see docs/CLIENT-CONFIRMATIONS.md */
+/** WhatsApp number for wa.me links (no + or spaces). */
 export const WHATSAPP_NUMBER =
-  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, '') || '35621226647';
+  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, '') || '35677576721';
 
 export function buildWhatsAppUrl(message: string): string {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;

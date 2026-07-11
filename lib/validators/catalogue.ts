@@ -15,16 +15,22 @@ export const productFormSchema = z.object({
   standard: z.string().trim().max(128).optional(),
 });
 
-export const jobPostingSchema = z.object({
+export const vacancySchema = z.object({
   title: z.string().trim().min(1).max(256),
   department: z.string().trim().min(1).max(128),
   location: z.string().trim().min(1).max(128).default('Malta'),
+  short_description: z.string().trim().min(10).max(500),
   description: z.string().trim().min(10),
   requirements: z.string().trim().optional(),
   is_active: z.boolean().default(true),
+  sort_order: z.coerce.number().int().min(0).default(0),
 });
 
+/** @deprecated Use vacancySchema */
+export const jobPostingSchema = vacancySchema;
+
 export const jobApplicationSchema = z.object({
+  vacancyId: z.string().uuid().optional(),
   jobPostingId: z.string().uuid().optional(),
   fullName: z.string().trim().min(2).max(128),
   email: z.string().trim().email(),
@@ -34,5 +40,23 @@ export const jobApplicationSchema = z.object({
 });
 
 export type ProductFormInput = z.infer<typeof productFormSchema>;
-export type JobPostingInput = z.infer<typeof jobPostingSchema>;
+export type VacancyInput = z.infer<typeof vacancySchema>;
+/** @deprecated Use VacancyInput */
+export type JobPostingInput = VacancyInput;
 export type JobApplicationInput = z.infer<typeof jobApplicationSchema>;
+
+export const categoryFormSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(128),
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(128)
+    .regex(/^[a-z0-9-]+$/, 'Slug must be lowercase with hyphens'),
+  description: z.string().trim().max(2000).optional(),
+  division: z.enum(['marine', 'industrial']).nullable(),
+  parent_id: z.string().uuid().nullable(),
+  sort_order: z.coerce.number().int().min(0).default(0),
+});
+
+export type CategoryFormInput = z.infer<typeof categoryFormSchema>;

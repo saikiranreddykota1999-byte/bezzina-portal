@@ -1,4 +1,4 @@
-import { ProductGridSkeleton } from '@/components/ui/skeleton';
+import { CatalogueSkeleton } from '@/components/products/catalogue-skeleton';
 
 export default function ProductsLoading() {
   return (
@@ -7,7 +7,7 @@ export default function ProductsLoading() {
         <div className="h-8 w-64 animate-pulse rounded-lg bg-slate-200" />
         <div className="h-4 w-96 animate-pulse rounded-lg bg-slate-200" />
       </div>
-      <ProductGridSkeleton count={12} />
+      <CatalogueSkeleton />
     </main>
   );
 }

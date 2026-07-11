@@ -3,36 +3,47 @@
 import { revalidatePath } from 'next/cache';
 import { requireStaffUser } from '@/lib/auth/server-session';
 import { createClient } from '@/lib/supabase/server';
-import { jobPostingSchema, jobApplicationSchema } from '@/lib/validators/catalogue';
-import type { JobPosting } from '@/types/quote';
+import { jobApplicationSchema, vacancySchema } from '@/lib/validators/catalogue';
+import type { Vacancy } from '@/types/quote';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
-export async function getActiveJobPostings(): Promise<JobPosting[]> {
+export async function getActiveVacancies(): Promise<Vacancy[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('job_postings')
+    .from('vacancies')
     .select('*')
     .eq('is_active', true)
-    .order('sort_order', { ascending: true });
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('getActiveJobPostings:', error.message);
+    console.error('getActiveVacancies:', error.message);
     return [];
   }
-  return (data ?? []) as JobPosting[];
+  return (data ?? []) as Vacancy[];
 }
 
-export async function getJobPosting(id: string): Promise<JobPosting | null> {
+/** @deprecated Use getActiveVacancies */
+export async function getActiveJobPostings(): Promise<Vacancy[]> {
+  return getActiveVacancies();
+}
+
+export async function getVacancy(id: string): Promise<Vacancy | null> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from('job_postings')
+    .from('vacancies')
     .select('*')
     .eq('id', id)
     .eq('is_active', true)
     .maybeSingle();
 
-  return (data as JobPosting) ?? null;
+  return (data as Vacancy) ?? null;
+}
+
+/** @deprecated Use getVacancy */
+export async function getJobPosting(id: string): Promise<Vacancy | null> {
+  return getVacancy(id);
 }
 
 export async function submitJobApplication(
@@ -49,7 +60,11 @@ export async function submitJobApplication(
     return { success: false, error: 'CV/Resume file is required (PDF or DOC)' };
   }
 
-  const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  const allowed = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ];
   if (!allowed.includes(file.type)) {
     return { success: false, error: 'CV must be PDF or DOC format' };
   }
@@ -69,9 +84,10 @@ export async function submitJobApplication(
   if (uploadError) return { success: false, error: uploadError.message };
 
   const { data: urlData } = supabase.storage.from('career-documents').getPublicUrl(path);
+  const vacancyId = parsed.data.vacancyId ?? parsed.data.jobPostingId ?? null;
 
   const { error } = await supabase.from('job_applications').insert({
-    job_posting_id: parsed.data.jobPostingId ?? null,
+    vacancy_id: vacancyId,
     full_name: parsed.data.fullName,
     email: parsed.data.email,
     phone: parsed.data.phone ?? null,
@@ -84,37 +100,49 @@ export async function submitJobApplication(
   return { success: true };
 }
 
-export async function getAdminJobPostings(): Promise<ActionResult<JobPosting[]>> {
+export async function getAdminVacancies(): Promise<ActionResult<Vacancy[]>> {
   try {
     const { supabase } = await requireStaffUser();
     const { data, error } = await supabase
-      .from('job_postings')
+      .from('vacancies')
       .select('*')
-      .order('sort_order');
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false });
 
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data ?? []) as JobPosting[] };
+    return { success: true, data: (data ?? []) as Vacancy[] };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to load postings',
+      error: error instanceof Error ? error.message : 'Failed to load vacancies',
     };
   }
 }
 
-export async function upsertJobPosting(input: unknown, id?: string): Promise<ActionResult> {
+/** @deprecated Use getAdminVacancies */
+export async function getAdminJobPostings(): Promise<ActionResult<Vacancy[]>> {
+  return getAdminVacancies();
+}
+
+export async function upsertVacancy(input: unknown, id?: string): Promise<ActionResult> {
   try {
     const { supabase } = await requireStaffUser();
-    const parsed = jobPostingSchema.safeParse(input);
+    const parsed = vacancySchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
     }
 
+    const payload = {
+      ...parsed.data,
+      requirements: parsed.data.requirements ?? null,
+      updated_at: new Date().toISOString(),
+    };
+
     if (id) {
-      const { error } = await supabase.from('job_postings').update(parsed.data).eq('id', id);
+      const { error } = await supabase.from('vacancies').update(payload).eq('id', id);
       if (error) return { success: false, error: error.message };
     } else {
-      const { error } = await supabase.from('job_postings').insert(parsed.data);
+      const { error } = await supabase.from('vacancies').insert(payload);
       if (error) return { success: false, error: error.message };
     }
 
@@ -124,15 +152,20 @@ export async function upsertJobPosting(input: unknown, id?: string): Promise<Act
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to save posting',
+      error: error instanceof Error ? error.message : 'Failed to save vacancy',
     };
   }
 }
 
-export async function deleteJobPosting(id: string): Promise<ActionResult> {
+/** @deprecated Use upsertVacancy */
+export async function upsertJobPosting(input: unknown, id?: string): Promise<ActionResult> {
+  return upsertVacancy(input, id);
+}
+
+export async function deleteVacancy(id: string): Promise<ActionResult> {
   try {
     const { supabase } = await requireStaffUser();
-    const { error } = await supabase.from('job_postings').delete().eq('id', id);
+    const { error } = await supabase.from('vacancies').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
     revalidatePath('/careers');
     revalidatePath('/admin/careers');
@@ -140,7 +173,12 @@ export async function deleteJobPosting(id: string): Promise<ActionResult> {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete posting',
+      error: error instanceof Error ? error.message : 'Failed to delete vacancy',
     };
   }
+}
+
+/** @deprecated Use deleteVacancy */
+export async function deleteJobPosting(id: string): Promise<ActionResult> {
+  return deleteVacancy(id);
 }

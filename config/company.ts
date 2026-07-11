@@ -16,7 +16,7 @@ export const company = {
     fax: "+356 2124 3085",
     email: "jason@jbezzina.com",
     website: "https://jbezzina.com",
-    whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "+356 2122 6647",
+    whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "+356 7757 6721",
   },
   social: {
     facebook: "https://facebook.com/JosephBezzina.Co.Ltd",

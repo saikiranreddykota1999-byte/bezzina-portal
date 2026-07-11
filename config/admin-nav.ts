@@ -5,7 +5,7 @@ export const ADMIN_NAV = [
   { title: 'Pickup Locations', href: '/admin/pickup-locations', icon: 'MapPin' },
   { title: 'Customers', href: '/admin/customers', icon: 'Users' },
   { title: 'Products', href: '/admin/products', icon: 'Package' },
-  { title: 'Careers', href: '/admin/careers', icon: 'Briefcase' },
+  { title: 'Vacancies', href: '/admin/careers', icon: 'Briefcase' },
   { title: 'Categories', href: '/admin/categories', icon: 'FolderTree' },
   { title: 'Inventory', href: '/admin/inventory', icon: 'Warehouse' },
   { title: 'Discounts', href: '/admin/discounts', icon: 'Percent' },

@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
-import { getAllProducts, getCategories } from '@/services/product.service';
-import ProductCatalogue from '@/components/products/ProductCatalogue';
-import { ProductGridSkeleton } from '@/components/ui/skeleton';
+import { ProductsCatalogueSection } from '@/components/products/products-catalogue-section';
+import { CatalogueSkeleton } from '@/components/products/catalogue-skeleton';
+import type { CatalogueSearchParams } from '@/lib/catalogue-params';
 
 export const metadata = {
   title: 'Product Catalogue | Joseph Bezzina & Co Ltd',
@@ -10,12 +10,11 @@ export const metadata = {
 
 export const revalidate = 60;
 
-export default async function ProductsPage() {
-  const [products, categories] = await Promise.all([
-    getAllProducts(),
-    getCategories(),
-  ]);
+type PageProps = {
+  searchParams: Promise<CatalogueSearchParams>;
+};
 
+export default function ProductsPage({ searchParams }: PageProps) {
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 md:px-8">
       <div className="mb-8">
@@ -25,8 +24,8 @@ export default async function ProductsPage() {
         </p>
       </div>
 
-      <Suspense fallback={<ProductGridSkeleton count={12} />}>
-        <ProductCatalogue products={products} categories={categories} />
+      <Suspense fallback={<CatalogueSkeleton />}>
+        <ProductsCatalogueSection searchParams={searchParams} />
       </Suspense>
     </main>
   );

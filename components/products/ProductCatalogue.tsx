@@ -1,21 +1,28 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
+import { usePathname, useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
-import { Product, Category, SortOption, CategoryDivision } from '@/types/product';
 import {
-  filterProducts,
-  getUniqueMaterials,
-  getUniqueStandards,
-} from '@/services/product.service';
+  Category,
+  CategoryDivision,
+  PaginatedProducts,
+  SortOption,
+} from '@/types/product';
+import {
+  buildCatalogueQuery,
+  type ParsedCatalogueParams,
+} from '@/lib/catalogue-params';
 import ProductCard from './ProductCard';
-import { staggerContainer, fadeIn, defaultTransition } from '@/lib/motion';
+import { CatalogueEmptyState } from './catalogue-empty-state';
 
 interface Props {
-  products: Product[];
-  categories: Category[];
+  result: PaginatedProducts;
+  subcategories: Category[];
+  parentCategories: Category[];
+  materials: string[];
+  standards: string[];
+  filters: ParsedCatalogueParams;
   division?: CategoryDivision;
   title?: string;
 }
@@ -28,115 +35,138 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'newest', label: 'Newest' },
 ];
 
+const selectClass =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500';
+
 export default function ProductCatalogue({
-  products,
-  categories,
+  result,
+  subcategories,
+  parentCategories,
+  materials,
+  standards,
+  filters,
   division,
   title,
 }: Props) {
-  const searchParams = useSearchParams();
-  const categorySlug = searchParams.get('category');
-
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [categoryId, setCategoryId] = useState('all');
-  const [material, setMaterial] = useState('all');
-  const [standard, setStandard] = useState('all');
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [sort, setSort] = useState<SortOption>('name-asc');
+  const router = useRouter();
+  const pathname = usePathname();
+  const [query, setQuery] = useState(filters.query);
   const [showFilters, setShowFilters] = useState(false);
 
-  const scopedCategories = useMemo(() => {
-    if (!division) return categories.filter((c) => c.parent_id || c.slug.includes('-'));
-    return categories.filter(
-      (c) =>
-        c.slug.startsWith(`${division}-`) &&
-        !c.slug.endsWith('-supplies') &&
-        !c.slug.endsWith('-equipment'),
-    );
-  }, [categories, division]);
+  const showParentFilter = !division && parentCategories.length > 0;
 
-  const scopedProducts = useMemo(() => {
-    if (!division) return products;
-    const divisionCategoryIds = new Set(
-      categories
-        .filter((c) => c.slug.startsWith(`${division}-`))
-        .map((c) => c.id),
-    );
-    return products.filter(
-      (p) => p.category_id && divisionCategoryIds.has(p.category_id),
-    );
-  }, [products, categories, division]);
-
-  const resolvedCategoryId = useMemo(() => {
-    if (categorySlug) {
-      return scopedCategories.find((c) => c.slug === categorySlug)?.id ?? categoryId;
-    }
-    return categoryId;
-  }, [categorySlug, scopedCategories, categoryId]);
-
-  const materials = useMemo(() => getUniqueMaterials(scopedProducts), [scopedProducts]);
-  const standards = useMemo(() => getUniqueStandards(scopedProducts), [scopedProducts]);
-
-  const filterSignature = `${debouncedQuery}|${resolvedCategoryId}|${material}|${standard}|${inStockOnly}|${sort}|${division}`;
+  const selectedSubcategoryId = useMemo(() => {
+    if (!filters.categorySlug) return 'all';
+    return subcategories.find((c) => c.slug === filters.categorySlug)?.id ?? 'all';
+  }, [filters.categorySlug, subcategories]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query), 200);
+    setQuery(filters.query);
+  }, [filters.query]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (query === filters.query) return;
+      navigate({ query, page: 1 });
+    }, 300);
+
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
-  const [pageByFilter, setPageByFilter] = useState({ signature: filterSignature, page: 1 });
-  const page = pageByFilter.signature === filterSignature ? pageByFilter.page : 1;
-
-  const setPage = (next: number | ((p: number) => number)) => {
-    setPageByFilter((prev) => {
-      const currentPage = prev.signature === filterSignature ? prev.page : 1;
-      const newPage = typeof next === 'function' ? next(currentPage) : next;
-      return { signature: filterSignature, page: newPage };
-    });
+  const navigate = (updates: Partial<ParsedCatalogueParams>) => {
+    const qs = buildCatalogueQuery(filters, updates);
+    router.push(qs ? `${pathname}?${qs}` : pathname);
   };
-
-  const result = useMemo(
-    () =>
-      filterProducts(scopedProducts, {
-        query: debouncedQuery,
-        categoryId: resolvedCategoryId,
-        material,
-        standard,
-        inStockOnly,
-        sort,
-        page,
-        pageSize: 24,
-      }),
-    [scopedProducts, debouncedQuery, resolvedCategoryId, material, standard, inStockOnly, sort, page],
-  );
 
   return (
     <div>
-      {title && (
-        <h2 className="mb-6 text-2xl font-bold text-slate-900">{title}</h2>
-      )}
+      {title && <h2 className="mb-6 text-2xl font-bold text-slate-900">{title}</h2>}
 
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative max-w-xl flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, SKU, specs, tags..."
-            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
+      <div className="mb-6 space-y-4">
+        <div
+          className={`grid gap-3 ${showParentFilter ? 'lg:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,0.8fr))]' : 'lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]'}`}
+        >
+          <div className="relative lg:col-span-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, SKU, specs, tags..."
+              aria-label="Search products"
+              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+
+          {showParentFilter && (
+            <div>
+              <label htmlFor="catalogue-parent" className="sr-only">
+                Category
+              </label>
+              <select
+                id="catalogue-parent"
+                value={filters.parentSlug ?? 'all'}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  navigate({
+                    parentSlug: value === 'all' ? null : value,
+                    categorySlug: null,
+                    page: 1,
+                  });
+                }}
+                className={selectClass}
+              >
+                <option value="all">All categories</option>
+                {parentCategories.map((cat) => (
+                  <option key={cat.id} value={cat.slug}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="catalogue-subcategory" className="sr-only">
+              Subcategory
+            </label>
+            <select
+              id="catalogue-subcategory"
+              value={selectedSubcategoryId}
+              onChange={(e) => {
+                if (e.target.value === 'all') {
+                  navigate({ categorySlug: null, page: 1 });
+                  return;
+                }
+                const category = subcategories.find((c) => c.id === e.target.value);
+                navigate({ categorySlug: category?.slug ?? null, page: 1 });
+              }}
+              className={selectClass}
+            >
+              <option value="all">
+                {showParentFilter ? 'All subcategories' : 'All categories'}
+              </option>
+              {subcategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortOption)}
+            value={filters.sort}
+            onChange={(e) => navigate({ sort: e.target.value as SortOption, page: 1 })}
             className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900"
+            aria-label="Sort products"
           >
             {SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
 
@@ -146,48 +176,39 @@ export default function ProductCatalogue({
             className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 lg:hidden"
           >
             <SlidersHorizontal className="h-4 w-4" />
-            Filters
+            More filters
           </button>
         </div>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
         <aside className={`space-y-5 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-          <FilterGroup label="Subcategory">
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
-            >
-              <option value="all">All subcategories</option>
-              {scopedCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </FilterGroup>
-
           <FilterGroup label="Material">
             <select
-              value={material}
-              onChange={(e) => setMaterial(e.target.value)}
+              value={filters.material}
+              onChange={(e) => navigate({ material: e.target.value, page: 1 })}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
             >
               <option value="all">All materials</option>
               {materials.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
             </select>
           </FilterGroup>
 
           <FilterGroup label="Standard">
             <select
-              value={standard}
-              onChange={(e) => setStandard(e.target.value)}
+              value={filters.standard}
+              onChange={(e) => navigate({ standard: e.target.value, page: 1 })}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
             >
               <option value="all">All standards</option>
               {standards.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
           </FilterGroup>
@@ -195,8 +216,8 @@ export default function ProductCatalogue({
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"
-              checked={inStockOnly}
-              onChange={(e) => setInStockOnly(e.target.checked)}
+              checked={filters.inStockOnly}
+              onChange={(e) => navigate({ inStockOnly: e.target.checked, page: 1 })}
               className="rounded border-slate-300"
             />
             In stock only
@@ -206,41 +227,26 @@ export default function ProductCatalogue({
         <div>
           <p className="mb-4 text-sm text-slate-600">
             {result.total} product{result.total !== 1 ? 's' : ''}
-            {debouncedQuery ? ` matching "${debouncedQuery}"` : ''}
+            {filters.query ? ` matching "${filters.query}"` : ''}
+            {division ? ` in ${division}` : ''}
           </p>
 
           {result.products.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="py-16 text-center text-slate-600"
-            >
-              No products match your filters.
-            </motion.div>
+            <CatalogueEmptyState filtered />
           ) : (
-            <motion.div
-              key={`${resolvedCategoryId}-${page}-${debouncedQuery}`}
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 md:gap-6"
-            >
-              <AnimatePresence mode="popLayout">
-                {result.products.map((product, i) => (
-                  <motion.div key={product.id} variants={fadeIn} transition={{ ...defaultTransition, delay: i * 0.02 }}>
-                    <ProductCard product={product} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 md:gap-6">
+              {result.products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
           )}
 
           {result.totalPages > 1 && (
             <div className="mt-10 flex items-center justify-center gap-4">
               <button
                 type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
+                disabled={result.page <= 1}
+                onClick={() => navigate({ page: result.page - 1 })}
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-800 disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" /> Previous
@@ -250,8 +256,8 @@ export default function ProductCatalogue({
               </span>
               <button
                 type="button"
-                disabled={page >= result.totalPages}
-                onClick={() => setPage((p) => p + 1)}
+                disabled={result.page >= result.totalPages}
+                onClick={() => navigate({ page: result.page + 1 })}
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-800 disabled:opacity-40"
               >
                 Next <ChevronRight className="h-4 w-4" />
@@ -267,7 +273,9 @@ export default function ProductCatalogue({
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">{label}</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+        {label}
+      </p>
       {children}
     </div>
   );

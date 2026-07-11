@@ -1,21 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield } from 'lucide-react';
 import { adminLogin } from '@/actions/auth';
-import { sanitizeRedirectPath } from '@/lib/auth/redirect';
 import { loginSchema } from '@/lib/validators/auth';
 import { RippleButton } from '@/components/ui/ripple-button';
 
 const inputClassName =
   'w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500';
 
-export default function AdminLoginForm() {
+type Props = {
+  redirectPath: string;
+};
+
+export default function AdminLoginForm({ redirectPath }: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirect = sanitizeRedirectPath(searchParams.get('redirect'), '/admin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -48,7 +49,7 @@ export default function AdminLoginForm() {
       return;
     }
 
-    router.push(redirect);
+    router.push(redirectPath);
     router.refresh();
   }
 

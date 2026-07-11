@@ -1,13 +1,31 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isStaffRole } from '@/lib/auth/roles';
+import { withTimeout } from '@/lib/auth/timeout';
 
 const ADMIN_LOGIN = '/admin/login';
+const AUTH_TIMEOUT_MS = 8_000;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 
+const PUBLIC_ACCOUNT_PATHS = [
+  '/account/login',
+  '/account/register',
+  '/account/cart',
+  '/account/wishlist',
+  '/account/tracking',
+  '/account/quotes',
+];
+
+function isPublicAccountPath(pathname: string) {
+  return PUBLIC_ACCOUNT_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+  const path = request.nextUrl.pathname;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,11 +48,26 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
 
-  const path = request.nextUrl.pathname;
+  try {
+    const {
+      data: { user: authUser },
+    } = await withTimeout(supabase.auth.getUser(), AUTH_TIMEOUT_MS, 'Session check');
+    user = authUser;
+  } catch (error) {
+    console.error('middleware session check failed:', error);
+
+    if (path.startsWith('/account') && !isPublicAccountPath(path)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/account/login';
+      url.searchParams.set('redirect', path);
+      url.searchParams.set('error', 'session_timeout');
+      return NextResponse.redirect(url);
+    }
+
+    return supabaseResponse;
+  }
 
   if (path.startsWith('/admin') && path !== ADMIN_LOGIN) {
     if (!user) {
@@ -58,20 +91,7 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  const publicAccountPaths = [
-    '/account/login',
-    '/account/register',
-    '/account/cart',
-    '/account/wishlist',
-    '/account/tracking',
-    '/account/quotes',
-  ];
-
-  const isPublicAccount = publicAccountPaths.some(
-    (p) => path === p || path.startsWith(`${p}/`),
-  );
-
-  if (path.startsWith('/account') && !isPublicAccount && !user) {
+  if (path.startsWith('/account') && !isPublicAccountPath(path) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/account/login';
     url.searchParams.set('redirect', path);
