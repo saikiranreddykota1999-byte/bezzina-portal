@@ -14,6 +14,7 @@ export async function exportInvoicePdf({
     throw new Error('Invoice document not found');
   }
 
+  const { syncClonedInvoiceColors } = await import('@/lib/invoice-pdf-colors');
   const { default: html2pdf } = await import('html2pdf.js');
 
   const worker = html2pdf()
@@ -25,6 +26,11 @@ export async function exportInvoicePdf({
         scale: 2,
         useCORS: true,
         logging: false,
+        onclone: (clonedDoc: Document, clonedElement: Element) => {
+          if (clonedElement instanceof HTMLElement) {
+            syncClonedInvoiceColors(element, clonedDoc, clonedElement);
+          }
+        },
       },
       jsPDF: {
         unit: 'mm',
