@@ -50,7 +50,7 @@ export function Header() {
   return (
     <header
       className={[
-        "sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur transition-shadow",
+        "site-chrome sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur transition-shadow",
         isScrolled ? "shadow-sm" : "shadow-none",
       ].join(" ")}
     >

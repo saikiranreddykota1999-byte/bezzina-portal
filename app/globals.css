@@ -101,7 +101,7 @@ html.dark [data-admin-portal] select {
 /* Receipt print / save-as-PDF — only #order-receipt is visible */
 @media print {
   @page {
-    margin: 1.5cm;
+    margin: 12mm;
     size: A4;
   }
 
@@ -111,9 +111,7 @@ html.dark [data-admin-portal] select {
     print-color-adjust: exact;
   }
 
-  header,
-  footer,
-  nav,
+  .site-chrome,
   .no-print {
     display: none !important;
   }
@@ -141,6 +139,12 @@ html.dark [data-admin-portal] select {
     max-width: none;
     margin: 0;
     padding: 0;
+  }
+
+  .invoice-header,
+  .invoice-footer {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .receipt-watermark-layer {

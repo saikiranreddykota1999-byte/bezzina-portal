@@ -28,7 +28,7 @@ export async function Footer() {
   const quickLinks = navigation.filter((item) => item.href !== '/quote');
 
   return (
-    <footer className="border-t border-slate-200 bg-slate-950 text-slate-200">
+    <footer className="site-chrome border-t border-slate-200 bg-slate-950 text-slate-200">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:px-8 xl:grid-cols-4">
         <section aria-labelledby="footer-company">
           <h2 id="footer-company" className="text-lg font-semibold text-white">

@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { company } from '@/config/company';
 import { formatPickupAddress, formatPickupDateTime } from '@/lib/checkout';
 import { formatPrice } from '@/lib/pricing';
@@ -59,21 +58,24 @@ export function TaxInvoiceDocument({ order }: Props) {
   const companyAddress = `${company.address.line1}, ${company.address.city} ${company.address.postalCode}, ${company.address.country}`;
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-slate-300 bg-white shadow-lg print:rounded-none print:border-slate-400 print:shadow-none">
+    <div
+      id="invoice-document"
+      className="relative overflow-hidden rounded-lg border border-slate-300 bg-white shadow-lg print:rounded-none print:border-slate-400 print:shadow-none"
+    >
       <div className="receipt-watermark-layer" aria-hidden />
 
       <div className="relative z-10">
-        <header className="bg-[#0b1f3a] px-6 py-5 text-white print:bg-[#0b1f3a]">
+        <div className="invoice-header bg-[#0b1f3a] px-6 py-5 text-white print:bg-[#0b1f3a]">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 items-center justify-center rounded-md bg-white p-2">
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={company.logoUrl}
                   alt={`${company.name} logo`}
                   width={120}
                   height={48}
                   className="h-10 w-auto object-contain"
-                  priority
                 />
               </div>
               <div>
@@ -92,7 +94,7 @@ export function TaxInvoiceDocument({ order }: Props) {
               </p>
             </div>
           </div>
-        </header>
+        </div>
 
         <div className="grid gap-3 border-b border-slate-200 bg-slate-100 px-6 py-3 sm:grid-cols-2">
           <div className="space-y-0.5">
@@ -287,7 +289,7 @@ export function TaxInvoiceDocument({ order }: Props) {
           </div>
         </div>
 
-        <footer className="bg-[#0b1f3a] px-6 py-4 text-center text-[10px] leading-5 text-slate-300 print:bg-[#0b1f3a]">
+        <div className="invoice-footer bg-[#0b1f3a] px-6 py-4 text-center text-[10px] leading-5 text-slate-300 print:bg-[#0b1f3a]">
           <p>
             {company.name} · {companyAddress} · VAT: {company.invoice.vatNumber}
           </p>
@@ -298,7 +300,7 @@ export function TaxInvoiceDocument({ order }: Props) {
           <p className="mt-2 font-semibold text-white">
             Thank you for choosing {company.name} — Your trusted partner in marine supplies.
           </p>
-        </footer>
+        </div>
       </div>
     </div>
   );

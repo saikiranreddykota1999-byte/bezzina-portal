@@ -12,7 +12,7 @@ export function MobileCtaBar() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-2 backdrop-blur md:hidden"
+      className="site-chrome fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-2 backdrop-blur md:hidden"
       role="region"
       aria-label="Quick actions"
     >
