@@ -11,7 +11,7 @@ export const company = {
     country: "Malta",
   },
   maps: {
-    shortUrl: "https://maps.app.goo.gl/W5i1LCaR3ygShaiS8",
+    shortUrl: "https://maps.app.goo.gl/Pzm81wcCUTisDbbU6",
     embedUrl:
       "https://maps.google.com/maps?q=35.8757591,14.4958324&hl=en&z=17&output=embed",
     latitude: 35.8757591,

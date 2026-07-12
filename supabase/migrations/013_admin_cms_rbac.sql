@@ -283,6 +283,6 @@ ON CONFLICT (section_key) DO NOTHING;
 
 INSERT INTO site_settings (key, value) VALUES
   ('company', '{"name":"Joseph Bezzina & Co. Ltd","email":"jason@jbezzina.com","phone":"+356 2122 6647","whatsapp":"+356 7757 6721","address":"5/6 Triq Aldo Moro, Il-Marsa MRS 9065, Malta"}'),
-  ('social', '{"facebook":"https://facebook.com/JosephBezzina.Co.Ltd","instagram":"","linkedin":""}'),
+  ('social', '{"facebook":"https://www.facebook.com/JosephBezzina.Co.Ltd/","instagram":"","linkedin":""}'),
   ('business_hours', '{"monday":"08:00-17:00","tuesday":"08:00-17:00","wednesday":"08:00-17:00","thursday":"08:00-17:00","friday":"08:00-17:00","saturday":"Closed","sunday":"Closed"}')
 ON CONFLICT (key) DO NOTHING;
