@@ -29,17 +29,18 @@ export function mapInvoicePdfError(error: unknown): string {
 
 async function renderInvoiceCanvas(node: HTMLElement) {
   const html2canvas = (await import('html2canvas')).default;
-  const ownerWindow = node.ownerDocument.defaultView ?? window;
+  const width = node.offsetWidth || 794;
+  const height = node.scrollHeight;
 
   return html2canvas(node, {
     scale: 2,
     useCORS: true,
     logging: false,
     backgroundColor: '#ffffff',
-    width: node.scrollWidth,
-    height: node.scrollHeight,
-    windowWidth: ownerWindow.innerWidth,
-    windowHeight: ownerWindow.innerHeight,
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
     scrollX: 0,
     scrollY: 0,
   });
@@ -58,22 +59,22 @@ async function buildInvoicePdf(node: HTMLElement, filename: string) {
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 10;
+  const margin = 8;
   const printableWidth = pageWidth - margin * 2;
   const printableHeight = pageHeight - margin * 2;
   const imageHeight = (canvas.height * printableWidth) / canvas.width;
 
-  let heightLeft = imageHeight;
-  let position = margin;
+  let offsetY = 0;
+  let page = 0;
 
-  pdf.addImage(imageData, 'JPEG', margin, position, printableWidth, imageHeight);
-  heightLeft -= printableHeight;
+  while (offsetY < imageHeight) {
+    if (page > 0) {
+      pdf.addPage();
+    }
 
-  while (heightLeft > 0) {
-    position = margin - (imageHeight - heightLeft);
-    pdf.addPage();
-    pdf.addImage(imageData, 'JPEG', margin, position, printableWidth, imageHeight);
-    heightLeft -= printableHeight;
+    pdf.addImage(imageData, 'JPEG', margin, margin - offsetY, printableWidth, imageHeight);
+    offsetY += printableHeight;
+    page += 1;
   }
 
   return { pdf, filename };
@@ -100,6 +101,10 @@ export async function exportInvoicePdf({
 
   try {
     await waitForImages(node);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
     const { pdf } = await buildInvoicePdf(node, filename);
 
     if (action === 'open') {
