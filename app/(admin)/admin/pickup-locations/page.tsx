@@ -29,17 +29,11 @@ import {
   adminSubtextClass,
   adminTextareaClass,
 } from '@/components/admin/admin-styles';
+import { buildDefaultOpeningHours, DEFAULT_PICKUP_TIME_SLOTS } from '@/lib/pickup/defaults';
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const DEFAULT_HOURS: PickupOpeningHour[] = DAY_LABELS.map((_, index) => ({
-  id: '',
-  location_id: '',
-  day_of_week: index,
-  opens_at: '08:00:00',
-  closes_at: '17:00:00',
-  is_closed: index === 0 || index === 6,
-}));
+const DEFAULT_HOURS = buildDefaultOpeningHours();
 
 export default function AdminPickupLocationsPage() {
   const [locations, setLocations] = useState<PickupLocation[]>([]);
@@ -372,9 +366,9 @@ export default function AdminPickupLocationsPage() {
                         {
                           id: crypto.randomUUID(),
                           location_id: selectedId,
-                          slot_time: '09:00:00',
-                          label: '09:00 – 10:00',
-                          max_capacity: 5,
+                          slot_time: DEFAULT_PICKUP_TIME_SLOTS[0].slot_time,
+                          label: DEFAULT_PICKUP_TIME_SLOTS[0].label,
+                          max_capacity: DEFAULT_PICKUP_TIME_SLOTS[0].max_capacity,
                           is_active: true,
                         },
                       ])

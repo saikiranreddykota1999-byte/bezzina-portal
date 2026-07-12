@@ -12,8 +12,8 @@ describe('pickup slot availability', () => {
       id: '1',
       location_id: 'loc',
       day_of_week: 1,
-      opens_at: '08:00:00',
-      closes_at: '17:00:00',
+      opens_at: '07:00:00',
+      closes_at: '16:00:00',
       is_closed: false,
     },
   ];

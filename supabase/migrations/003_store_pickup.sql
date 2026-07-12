@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS pickup_opening_hours (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   location_id UUID NOT NULL REFERENCES pickup_locations(id) ON DELETE CASCADE,
   day_of_week SMALLINT NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
-  opens_at TIME NOT NULL DEFAULT '08:00',
-  closes_at TIME NOT NULL DEFAULT '17:00',
+  opens_at TIME NOT NULL DEFAULT '07:00',
+  closes_at TIME NOT NULL DEFAULT '16:00',
   is_closed BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (location_id, day_of_week)
 );
@@ -123,7 +123,7 @@ INSERT INTO pickup_locations (
 ) ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO pickup_opening_hours (location_id, day_of_week, opens_at, closes_at, is_closed)
-SELECT pl.id, dow.day_of_week, '08:00'::TIME, '17:00'::TIME, dow.is_closed
+SELECT pl.id, dow.day_of_week, '07:00'::TIME, '16:00'::TIME, dow.is_closed
 FROM pickup_locations pl
 CROSS JOIN (
   VALUES
@@ -138,13 +138,15 @@ SELECT pl.id, slot.slot_time, slot.label, slot.max_capacity
 FROM pickup_locations pl
 CROSS JOIN (
   VALUES
+    ('07:00'::TIME, '07:00 – 08:00', 5),
+    ('08:00'::TIME, '08:00 – 09:00', 5),
     ('09:00'::TIME, '09:00 – 10:00', 5),
     ('10:00'::TIME, '10:00 – 11:00', 5),
     ('11:00'::TIME, '11:00 – 12:00', 5),
     ('12:00'::TIME, '12:00 – 13:00', 3),
+    ('13:00'::TIME, '13:00 – 14:00', 5),
     ('14:00'::TIME, '14:00 – 15:00', 5),
-    ('15:00'::TIME, '15:00 – 16:00', 5),
-    ('16:00'::TIME, '16:00 – 17:00', 5)
+    ('15:00'::TIME, '15:00 – 16:00', 5)
 ) AS slot(slot_time, label, max_capacity)
 WHERE pl.slug = 'marsa-main'
 ON CONFLICT (location_id, slot_time) DO NOTHING;

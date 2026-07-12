@@ -40,12 +40,15 @@ export function PaymentCheckout() {
   const [error, setError] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [initializingStripe, setInitializingStripe] = useState(false);
-  const [paymentMode, setPaymentMode] = useState<CheckoutPaymentMode>('online');
+  const [paymentMode, setPaymentMode] = useState<CheckoutPaymentMode>(
+    fulfillmentMethod === 'store_pickup' ? 'cash_on_pickup' : 'online',
+  );
 
   const isPickup = fulfillmentMethod === 'store_pickup';
   const stripeEnabled = isStripeClientEnabled();
   const effectivePaymentMode = isPickup ? paymentMode : 'online';
   const useOnlinePayment = !isPickup || effectivePaymentMode === 'online';
+  const isCashOnPickup = isPickup && effectivePaymentMode === 'cash_on_pickup';
   const subtotal = items.reduce(
     (sum, i) => sum + resolveProductPrice(i.price) * i.quantity,
     0,
@@ -94,6 +97,11 @@ export function PaymentCheckout() {
     },
     [deliveryAddress, fulfillmentMethod, orderItems, pickup],
   );
+
+  useEffect(() => {
+    setPaymentMode(fulfillmentMethod === 'store_pickup' ? 'cash_on_pickup' : 'online');
+    setError('');
+  }, [fulfillmentMethod]);
 
   useEffect(() => {
     if (!stripeEnabled || !useOnlinePayment || items.length === 0 || !fulfillmentReady) {
@@ -166,6 +174,10 @@ export function PaymentCheckout() {
       return;
     }
 
+    if (processing || !fulfillmentReady) {
+      return;
+    }
+
     setProcessing(true);
     setError('');
 
@@ -179,6 +191,11 @@ export function PaymentCheckout() {
   async function handleDemoPay(e: React.FormEvent) {
     e.preventDefault();
     if (items.length === 0) return;
+
+    if (isCashOnPickup) {
+      await handleCashOnPickup();
+      return;
+    }
 
     if (isPickup && !pickup) {
       setError('Complete store pickup details on checkout before paying.');
@@ -322,7 +339,7 @@ export function PaymentCheckout() {
                 <CreditCard className="h-5 w-5 text-orange-500" />
                 <h2 className="font-semibold">Payment method</h2>
               </div>
-              {!stripeEnabled && cards.length > 0 && (
+              {!stripeEnabled && cards.length > 0 && useOnlinePayment && (
                 <button
                   type="button"
                   onClick={() => setUseInlinePayment((v) => !v)}
@@ -337,14 +354,37 @@ export function PaymentCheckout() {
               <div className="mt-4">
                 <PaymentMethodSelector
                   value={paymentMode}
-                  onChange={setPaymentMode}
+                  onChange={(mode) => {
+                    setPaymentMode(mode);
+                    setError('');
+                  }}
                   showCashOption
                 />
               </div>
             )}
 
-            {stripeEnabled && useOnlinePayment ? (
-              <div className={isPickup ? 'mt-4' : 'mt-4'}>
+            {isCashOnPickup ? (
+              <div className="mt-4 space-y-4">
+                <p className="text-sm text-slate-600">
+                  You will pay <strong>{formatPrice(total)}</strong> in cash when you collect your
+                  order at the store. No card details are required.
+                </p>
+                {error && (
+                  <p className="text-sm text-red-600" role="alert">
+                    {error}
+                  </p>
+                )}
+                <RippleButton
+                  type="button"
+                  className={`w-full ${processing || !fulfillmentReady ? 'pointer-events-none opacity-60' : ''}`}
+                  variant="primary"
+                  onClick={handleCashOnPickup}
+                >
+                  {processing ? 'Placing order...' : `Place order — pay ${formatPrice(total)} on pickup`}
+                </RippleButton>
+              </div>
+            ) : useOnlinePayment && stripeEnabled ? (
+              <div className="mt-4">
                 {!fulfillmentReady ? (
                   <p className="text-sm text-red-600">
                     Complete checkout details before paying.
@@ -362,27 +402,7 @@ export function PaymentCheckout() {
                   <p className="text-sm text-red-600">{error || 'Unable to load payment form.'}</p>
                 )}
               </div>
-            ) : stripeEnabled && isPickup && paymentMode === 'cash_on_pickup' ? (
-              <div className="mt-4 space-y-4">
-                <p className="text-sm text-slate-600">
-                  You will pay <strong>{formatPrice(total)}</strong> in cash when you collect your
-                  order at the store.
-                </p>
-                {error && (
-                  <p className="text-sm text-red-600" role="alert">
-                    {error}
-                  </p>
-                )}
-                <RippleButton
-                  type="button"
-                  className="w-full"
-                  variant="primary"
-                  onClick={handleCashOnPickup}
-                >
-                  {processing ? 'Placing order...' : `Place order — pay ${formatPrice(total)} on pickup`}
-                </RippleButton>
-              </div>
-            ) : (
+            ) : useOnlinePayment ? (
               <form onSubmit={handleDemoPay} className="mt-4 space-y-4">
                 {useInlinePayment || cards.length === 0 ? (
                   <InlinePaymentForm values={inlinePayment} onChange={setInlinePayment} />
@@ -432,6 +452,10 @@ export function PaymentCheckout() {
                   Demo mode — add Stripe keys in .env.local for real payments.
                 </p>
               </form>
+            ) : (
+              <p className="mt-4 text-sm text-slate-600">
+                Select a payment option above to continue.
+              </p>
             )}
           </section>
         </div>

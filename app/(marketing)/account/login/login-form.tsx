@@ -219,6 +219,15 @@ export default function LoginForm({
         >
           Phone OTP
         </button>
+        <button
+          type="button"
+          onClick={() => switchMode('password')}
+          className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
+            mode === 'password' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+          }`}
+        >
+          Password
+        </button>
       </div>
 
       {mode === 'password' ? (
