@@ -5,6 +5,55 @@ type ExportInvoicePdfOptions = {
   action?: PdfAction;
 };
 
+async function renderInvoiceCanvas(node: HTMLElement) {
+  const html2canvas = (await import('html2canvas')).default;
+
+  return html2canvas(node, {
+    scale: 2,
+    useCORS: true,
+    logging: false,
+    backgroundColor: '#ffffff',
+    width: node.scrollWidth,
+    height: node.scrollHeight,
+    windowWidth: node.scrollWidth,
+    windowHeight: node.scrollHeight,
+  });
+}
+
+async function buildInvoicePdf(node: HTMLElement, filename: string) {
+  const { jsPDF } = await import('jspdf');
+  const canvas = await renderInvoiceCanvas(node);
+  const imageData = canvas.toDataURL('image/jpeg', 0.98);
+
+  const pdf = new jsPDF({
+    unit: 'mm',
+    format: 'a4',
+    orientation: 'portrait',
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 10;
+  const printableWidth = pageWidth - margin * 2;
+  const printableHeight = pageHeight - margin * 2;
+  const imageHeight = (canvas.height * printableWidth) / canvas.width;
+
+  let heightLeft = imageHeight;
+  let position = margin;
+
+  pdf.addImage(imageData, 'JPEG', margin, position, printableWidth, imageHeight);
+  heightLeft -= printableHeight;
+
+  while (heightLeft > 0) {
+    position = margin - (imageHeight - heightLeft);
+    pdf.addPage();
+    pdf.addImage(imageData, 'JPEG', margin, position, printableWidth, imageHeight);
+    heightLeft -= printableHeight;
+  }
+
+  return { pdf, filename };
+}
+
 export async function exportInvoicePdf({
   filename,
   action = 'save',
@@ -14,39 +63,28 @@ export async function exportInvoicePdf({
     throw new Error('Invoice document not found');
   }
 
-  const { syncClonedInvoiceColors } = await import('@/lib/invoice-pdf-colors');
-  const { default: html2pdf } = await import('html2pdf.js');
+  const {
+    mountInvoiceInIframe,
+    unmountInvoiceIframe,
+    waitForImages,
+  } = await import('@/lib/invoice-pdf-colors');
 
-  const worker = html2pdf()
-    .set({
-      margin: [10, 10, 10, 10],
-      filename,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        onclone: (clonedDoc: Document, clonedElement: Element) => {
-          if (clonedElement instanceof HTMLElement) {
-            syncClonedInvoiceColors(element, clonedDoc, clonedElement);
-          }
-        },
-      },
-      jsPDF: {
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait',
-      },
-    })
-    .from(element);
+  const { iframe, node } = mountInvoiceInIframe(element);
 
-  if (action === 'open') {
-    const blob = await worker.outputPdf('blob');
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank', 'noopener,noreferrer');
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    return;
+  try {
+    await waitForImages(node);
+    const { pdf } = await buildInvoicePdf(node, filename);
+
+    if (action === 'open') {
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      return;
+    }
+
+    pdf.save(filename);
+  } finally {
+    unmountInvoiceIframe(iframe);
   }
-
-  await worker.save();
 }
