@@ -4,9 +4,14 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateAdminCustomer } from '@/actions/admin-customers';
 import type { AdminCustomer } from '@/types/admin';
-
-const inputClass =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm';
+import {
+  adminButtonPrimaryClass,
+  adminButtonSecondaryClass,
+  adminCardClass,
+  adminHeadingClass,
+  adminInputClass,
+  adminSubtextClass,
+} from '@/components/admin/admin-styles';
 
 type Props = {
   customer: AdminCustomer;
@@ -42,23 +47,23 @@ export function CustomerDetailForm({ customer, resetPasswordAction }: Props) {
   }
 
   return (
-    <form onSubmit={handleSave} className="rounded-2xl border border-slate-200 bg-white p-6">
-      <h2 className="font-semibold">Edit Customer</h2>
+    <form onSubmit={handleSave} className={`${adminCardClass} p-6`}>
+      <h2 className={adminHeadingClass}>Edit Customer</h2>
       <div className="mt-4 space-y-4">
-        <input name="full_name" defaultValue={customer.full_name ?? ''} className={inputClass} placeholder="Full name" />
-        <input name="phone" defaultValue={customer.phone ?? ''} className={inputClass} placeholder="Phone" />
-        <input name="company_name" defaultValue={customer.company_name ?? ''} className={inputClass} placeholder="Company" />
-        <label className="flex items-center gap-2 text-sm">
+        <input name="full_name" defaultValue={customer.full_name ?? ''} className={adminInputClass} placeholder="Full name" />
+        <input name="phone" defaultValue={customer.phone ?? ''} className={adminInputClass} placeholder="Phone" />
+        <input name="company_name" defaultValue={customer.company_name ?? ''} className={adminInputClass} placeholder="Company" />
+        <label className={`flex items-center gap-2 text-sm ${adminSubtextClass}`}>
           <input type="checkbox" name="is_disabled" defaultChecked={customer.is_disabled} />
           Disabled
         </label>
       </div>
-      {message && <p className="mt-4 text-sm text-slate-600">{message}</p>}
+      {message && <p className={`mt-4 text-sm ${adminSubtextClass}`}>{message}</p>}
       <div className="mt-4 flex flex-wrap gap-3">
-        <button type="submit" disabled={pending} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white">
+        <button type="submit" disabled={pending} className={adminButtonPrimaryClass}>
           Save
         </button>
-        <button type="button" disabled={pending} onClick={handleResetPassword} className="rounded-lg border border-slate-300 px-4 py-2 text-sm">
+        <button type="button" disabled={pending} onClick={handleResetPassword} className={adminButtonSecondaryClass}>
           Send Password Reset
         </button>
       </div>

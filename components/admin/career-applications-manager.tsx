@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { updateApplicationStatusAction } from '@/actions/admin-careers-applications';
 import { AdminDataTable, type Column } from '@/components/admin/admin-data-table';
+import { adminLinkClass, adminSelectClass } from '@/components/admin/admin-styles';
 
 type ApplicationRow = {
   id: string;
@@ -48,7 +49,7 @@ export function CareerApplicationsManager({ applications }: Props) {
               router.refresh();
             });
           }}
-          className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+          className={adminSelectClass}
         >
           {['received', 'reviewing', 'shortlisted', 'interview', 'rejected', 'hired'].map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -60,7 +61,7 @@ export function CareerApplicationsManager({ applications }: Props) {
       key: 'cv_url',
       header: 'CV',
       render: (r) => (
-        <a href={r.cv_url} target="_blank" rel="noreferrer" className="text-orange-600 hover:underline">
+        <a href={r.cv_url} target="_blank" rel="noreferrer" className={adminLinkClass}>
           Download
         </a>
       ),
@@ -75,7 +76,7 @@ export function CareerApplicationsManager({ applications }: Props) {
       header: 'LinkedIn',
       render: (r) =>
         r.linkedin_url ? (
-          <a href={r.linkedin_url} target="_blank" rel="noreferrer" className="text-orange-600 hover:underline">
+          <a href={r.linkedin_url} target="_blank" rel="noreferrer" className={adminLinkClass}>
             View
           </a>
         ) : (

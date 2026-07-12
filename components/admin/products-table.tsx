@@ -4,13 +4,20 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   bulkArchiveProducts,
+  bulkDeleteProducts,
   bulkPublishProducts,
   duplicateProduct,
   restoreProduct,
 } from '@/actions/admin-products';
 import { AdminDataTable, exportToCsv, type Column } from '@/components/admin/admin-data-table';
-import type { Product } from '@/types/product';
+import {
+  adminBadgeNeutralClass,
+  adminBadgeSuccessClass,
+  adminLinkClass,
+} from '@/components/admin/admin-styles';
 import { ArchiveProductButton } from '@/app/(admin)/admin/products/archive-product-button';
+import { DeleteProductButton } from '@/app/(admin)/admin/products/delete-product-button';
+import type { Product } from '@/types/product';
 
 type Props = { products: Product[] };
 
@@ -31,7 +38,7 @@ export function ProductsTable({ products }: Props) {
       key: 'publish_status',
       header: 'Publish',
       render: (p) => (
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs capitalize">
+        <span className={adminBadgeNeutralClass}>
           {(p as Product & { publish_status?: string }).publish_status ?? 'published'}
         </span>
       ),
@@ -40,7 +47,7 @@ export function ProductsTable({ products }: Props) {
       key: 'is_active',
       header: 'Status',
       render: (p) => (
-        <span className={`rounded-full px-2 py-0.5 text-xs ${p.is_active ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'}`}>
+        <span className={p.is_active ? adminBadgeSuccessClass : adminBadgeNeutralClass}>
           {p.is_active ? 'Active' : 'Archived'}
         </span>
       ),
@@ -50,12 +57,15 @@ export function ProductsTable({ products }: Props) {
       header: 'Actions',
       render: (p) => (
         <div className="flex flex-wrap gap-2">
-          <Link href={`/admin/products/${p.id}`} className="text-orange-600 hover:underline">Edit</Link>
-          <Link href={`/products/${p.slug}`} target="_blank" className="text-slate-600 hover:underline">Preview</Link>
-          <button type="button" className="text-slate-600 hover:underline" onClick={async () => { await duplicateProduct(p.id); router.refresh(); }}>Duplicate</button>
-          {p.is_active ? <ArchiveProductButton id={p.id} /> : (
-            <button type="button" className="text-green-600 hover:underline" onClick={async () => { await restoreProduct(p.id); router.refresh(); }}>Restore</button>
+          <Link href={`/admin/products/${p.id}`} className={adminLinkClass}>Edit</Link>
+          <Link href={`/products/${p.slug}`} target="_blank" className="text-[var(--admin-text-muted)] hover:text-[var(--admin-primary)]">Preview</Link>
+          <button type="button" className="text-[var(--admin-text-muted)] hover:text-[var(--admin-primary)]" onClick={async () => { await duplicateProduct(p.id); router.refresh(); }}>Duplicate</button>
+          {p.is_active ? (
+            <ArchiveProductButton id={p.id} name={p.name} />
+          ) : (
+            <button type="button" className="text-[var(--admin-success)] hover:underline" onClick={async () => { await restoreProduct(p.id); router.refresh(); }}>Restore</button>
           )}
+          <DeleteProductButton id={p.id} name={p.name} />
         </div>
       ),
     },
@@ -80,6 +90,19 @@ export function ProductsTable({ products }: Props) {
           variant: 'danger',
           onAction: async (ids) => {
             await bulkArchiveProducts(ids);
+            router.refresh();
+          },
+        },
+        {
+          label: 'Delete Permanently',
+          variant: 'danger',
+          onAction: async (ids) => {
+            if (!confirm(`Permanently delete ${ids.length} product(s)? This cannot be undone.`)) return;
+            const result = await bulkDeleteProducts(ids);
+            if (!result.success) {
+              alert(result.error);
+              return;
+            }
             router.refresh();
           },
         },

@@ -8,6 +8,13 @@ import {
   updateUserRole,
 } from '@/actions/admin-users';
 import { AdminDataTable, type Column } from '@/components/admin/admin-data-table';
+import {
+  adminButtonPrimaryClass,
+  adminCardClass,
+  adminHeadingClass,
+  adminInputClass,
+  adminSelectClass,
+} from '@/components/admin/admin-styles';
 
 type UserRow = {
   id: string;
@@ -19,9 +26,6 @@ type UserRow = {
 };
 
 type Props = { users: UserRow[] };
-
-const inputClass =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900';
 
 export function UsersManager({ users }: Props) {
   const router = useRouter();
@@ -50,7 +54,7 @@ export function UsersManager({ users }: Props) {
               router.refresh();
             });
           }}
-          className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+          className={adminSelectClass}
         >
           <option value="admin">Admin</option>
           <option value="super_admin">Super Admin</option>
@@ -72,7 +76,7 @@ export function UsersManager({ users }: Props) {
               router.refresh();
             });
           }}
-          className="text-sm text-red-600 hover:underline"
+          className="text-sm text-[var(--admin-danger)] hover:underline"
         >
           Delete
         </button>
@@ -96,17 +100,17 @@ export function UsersManager({ users }: Props) {
 
   return (
     <div className="space-y-8">
-      <form onSubmit={handleCreate} className="max-w-xl space-y-4 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-semibold text-slate-900 dark:text-white">Create Admin User</h2>
-        <input className={inputClass} placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
-        <input className={inputClass} type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-        <input className={inputClass} type="password" placeholder="Password (min 8 chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} />
-        <select className={inputClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as 'admin' | 'super_admin' })}>
+      <form onSubmit={handleCreate} className={`max-w-xl space-y-4 ${adminCardClass} p-6`}>
+        <h2 className={adminHeadingClass}>Create Admin User</h2>
+        <input className={adminInputClass} placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
+        <input className={adminInputClass} type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+        <input className={adminInputClass} type="password" placeholder="Password (min 8 chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} />
+        <select className={adminSelectClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as 'admin' | 'super_admin' })}>
           <option value="admin">Admin</option>
           <option value="super_admin">Super Admin</option>
         </select>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button type="submit" disabled={pending} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+        {error && <p className="text-sm text-[var(--admin-danger)]">{error}</p>}
+        <button type="submit" disabled={pending} className={adminButtonPrimaryClass}>
           Create Admin
         </button>
       </form>

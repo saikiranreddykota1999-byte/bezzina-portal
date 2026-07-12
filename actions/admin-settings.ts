@@ -6,9 +6,9 @@ import { requireSuperAdminUser } from '@/lib/auth/server-session';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
-const settingsKeySchema = z.enum(['company', 'social', 'business_hours']);
+type SettingsKey = 'company' | 'social' | 'business_hours';
 
-export async function getSiteSettingsAction(key: z.infer<typeof settingsKeySchema>) {
+export async function getSiteSettingsAction(key: SettingsKey) {
   try {
     const { supabase } = await requireSuperAdminUser();
     const { data, error } = await supabase
@@ -28,7 +28,7 @@ export async function getSiteSettingsAction(key: z.infer<typeof settingsKeySchem
 }
 
 export async function updateSiteSettingsAction(
-  key: z.infer<typeof settingsKeySchema>,
+  key: SettingsKey,
   value: unknown,
 ): Promise<ActionResult> {
   try {

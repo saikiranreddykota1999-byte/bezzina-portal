@@ -2,8 +2,17 @@
 
 import { Plus, Trash2 } from 'lucide-react';
 import { INVENTORY_STATUS_OPTIONS, type ProductVariant } from '@/types/product';
+import {
+  adminButtonSecondaryClass,
+  adminCardClass,
+  adminHeadingClass,
+  adminInputClass,
+  adminSelectClass,
+  adminSubtextClass,
+  adminTextareaClass,
+} from '@/components/admin/admin-styles';
 
-type VariantDraft = Omit<ProductVariant, 'id' | 'product_id'> & { id?: string };
+export type VariantDraft = Omit<ProductVariant, 'id' | 'product_id'> & { id?: string };
 
 type Props = {
   variants: VariantDraft[];
@@ -40,23 +49,23 @@ export function ProductVariantsSection({ variants, onChange }: Props) {
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
+    <section className={`${adminCardClass} p-5`}>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">Product Variants</h3>
+        <h3 className={`text-sm ${adminHeadingClass}`}>Product Variants</h3>
         <button
           type="button"
           onClick={addVariant}
-          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          className={`inline-flex items-center gap-1 text-xs ${adminButtonSecondaryClass}`}
         >
           <Plus className="h-3.5 w-3.5" /> Add Variant
         </button>
       </div>
       <div className="space-y-4">
         {variants.map((variant, index) => (
-          <div key={index} className="rounded-lg border border-slate-100 p-4">
+          <div key={index} className="rounded-lg border border-[var(--admin-border-light)] p-4">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-800">Variant {index + 1}</p>
-              <button type="button" onClick={() => removeVariant(index)} className="text-red-500">
+              <p className="text-sm font-medium text-[var(--admin-navy)]">Variant {index + 1}</p>
+              <button type="button" onClick={() => removeVariant(index)} className="text-[var(--admin-danger)]">
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
@@ -65,18 +74,18 @@ export function ProductVariantsSection({ variants, onChange }: Props) {
                 value={variant.name}
                 onChange={(e) => updateVariant(index, { name: e.target.value })}
                 placeholder="Name (e.g. 6mm)"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={adminInputClass}
               />
               <input
                 value={variant.sku}
                 onChange={(e) => updateVariant(index, { sku: e.target.value })}
                 placeholder="SKU"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={adminInputClass}
               />
               <select
                 value={variant.availability}
                 onChange={(e) => updateVariant(index, { availability: e.target.value as ProductVariant['availability'] })}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={adminSelectClass}
               >
                 {INVENTORY_STATUS_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -86,7 +95,7 @@ export function ProductVariantsSection({ variants, onChange }: Props) {
                 value={variant.unit}
                 onChange={(e) => updateVariant(index, { unit: e.target.value })}
                 placeholder="Unit"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={adminInputClass}
               />
               <input
                 type="number"
@@ -94,38 +103,40 @@ export function ProductVariantsSection({ variants, onChange }: Props) {
                 value={variant.weight_kg ?? ''}
                 onChange={(e) => updateVariant(index, { weight_kg: e.target.value ? Number(e.target.value) : null })}
                 placeholder="Weight (kg)"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={adminInputClass}
               />
               <input
                 type="number"
                 value={variant.stock_quantity}
                 onChange={(e) => updateVariant(index, { stock_quantity: Number(e.target.value) })}
                 placeholder="Stock qty"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={adminInputClass}
               />
               <textarea
                 value={variant.specification ?? ''}
                 onChange={(e) => updateVariant(index, { specification: e.target.value })}
                 placeholder="Specification"
                 rows={2}
-                className="sm:col-span-2 lg:col-span-3 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={`sm:col-span-2 lg:col-span-3 ${adminTextareaClass}`}
               />
               <input
                 value={variant.image_url ?? ''}
                 onChange={(e) => updateVariant(index, { image_url: e.target.value })}
                 placeholder="Image URL"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={adminInputClass}
               />
               <input
                 value={variant.document_url ?? ''}
                 onChange={(e) => updateVariant(index, { document_url: e.target.value })}
                 placeholder="Document URL"
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={adminInputClass}
               />
             </div>
           </div>
         ))}
-        {variants.length === 0 && <p className="text-sm text-slate-500">No variants. Add sizes, grades, or configurations.</p>}
+        {variants.length === 0 && (
+          <p className={`text-sm ${adminSubtextClass}`}>No variants. Add sizes, grades, or configurations.</p>
+        )}
       </div>
     </section>
   );

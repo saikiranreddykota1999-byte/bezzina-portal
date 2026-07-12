@@ -213,7 +213,7 @@ export function SearchBar({
               {results.map((product) => {
                 const price = resolveProductPrice(product.price);
                 return (
-                  <li key={product.id} role="option">
+                  <li key={product.id} role="option" aria-selected={false}>
                     <Link
                       href={`/products/${product.slug}`}
                       onClick={() => setOpen(false)}

@@ -5,6 +5,12 @@ import { useTransition } from 'react';
 import { bulkDeleteMediaAction, deleteMediaAssetAction, uploadMediaAssetAction } from '@/actions/admin-media';
 import { AdminDataTable, type Column } from '@/components/admin/admin-data-table';
 import type { MediaAsset } from '@/types/admin';
+import {
+  adminCardClass,
+  adminFileInputClass,
+  adminLinkClass,
+  adminSubtextClass,
+} from '@/components/admin/admin-styles';
 
 type Props = { assets: MediaAsset[] };
 
@@ -24,7 +30,7 @@ export function MediaLibraryManager({ assets }: Props) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={r.url} alt={r.alt_text ?? r.file_name} className="h-10 w-10 rounded object-cover" />
         ) : (
-          <a href={r.url} target="_blank" rel="noreferrer" className="text-orange-600 hover:underline">
+          <a href={r.url} target="_blank" rel="noreferrer" className={adminLinkClass}>
             Open
           </a>
         ),
@@ -35,7 +41,7 @@ export function MediaLibraryManager({ assets }: Props) {
       render: (r) => (
         <button
           type="button"
-          className="text-sm text-red-600"
+          className="text-sm text-[var(--admin-danger)]"
           onClick={() => {
             startTransition(async () => {
               await deleteMediaAssetAction(r.id);
@@ -63,9 +69,9 @@ export function MediaLibraryManager({ assets }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900/50">
-        <p className="text-sm text-slate-600">Drag & drop or choose files to upload</p>
-        <input type="file" onChange={handleUpload} disabled={pending} className="mt-4 text-sm" />
+      <div className={`${adminCardClass} border-dashed p-8 text-center`}>
+        <p className={adminSubtextClass}>Drag & drop or choose files to upload</p>
+        <input type="file" onChange={handleUpload} disabled={pending} className={`mt-4 ${adminFileInputClass}`} />
       </div>
 
       <AdminDataTable

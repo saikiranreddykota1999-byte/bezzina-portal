@@ -9,6 +9,132 @@ import { logActivity } from '@/services/activity-log.service';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
+function storagePathFromPublicUrl(url: string, bucket: string): string | null {
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const index = url.indexOf(marker);
+  if (index === -1) return null;
+  return decodeURIComponent(url.slice(index + marker.length));
+}
+
+async function removeProductStorageAssets(
+  supabase: ReturnType<typeof import('@/lib/supabase/admin').createAdminClient>,
+  productId: string,
+) {
+  const { data: images } = await supabase
+    .from('product_images')
+    .select('url')
+    .eq('product_id', productId);
+
+  const imagePaths = (images ?? [])
+    .map((image) => storagePathFromPublicUrl(image.url, 'product-images'))
+    .filter((path): path is string => Boolean(path));
+
+  if (imagePaths.length > 0) {
+    await supabase.storage.from('product-images').remove(imagePaths);
+  }
+
+  const { data: documents } = await supabase
+    .from('product_documents')
+    .select('url')
+    .eq('product_id', productId);
+
+  const documentPaths = (documents ?? [])
+    .map((document) => storagePathFromPublicUrl(document.url, 'product-documents'))
+    .filter((path): path is string => Boolean(path));
+
+  if (documentPaths.length > 0) {
+    await supabase.storage.from('product-documents').remove(documentPaths);
+  }
+}
+
+async function detachProductReferences(
+  supabase: ReturnType<typeof import('@/lib/supabase/admin').createAdminClient>,
+  productId: string,
+) {
+  await supabase.from('order_items').update({ product_id: null }).eq('product_id', productId);
+}
+
+export async function deleteProduct(id: string): Promise<ActionResult> {
+  try {
+    const { supabase, user } = await requirePermission('products:manage');
+
+    const { data: product, error: fetchError } = await supabase
+      .from('products')
+      .select('id, name, sku, slug')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !product) {
+      return { success: false, error: 'Product not found' };
+    }
+
+    await detachProductReferences(supabase, id);
+    await removeProductStorageAssets(supabase, id);
+
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) return { success: false, error: error.message };
+
+    await logActivity({
+      userId: user?.id ?? null,
+      action: 'product.delete',
+      entity: 'product',
+      entityId: id,
+      oldValue: { name: product.name, sku: product.sku, slug: product.slug },
+    });
+
+    revalidatePath('/admin/products');
+    revalidatePath('/products');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete product',
+    };
+  }
+}
+
+export async function bulkDeleteProducts(ids: string[]): Promise<ActionResult> {
+  if (ids.length === 0) {
+    return { success: false, error: 'No products selected' };
+  }
+
+  try {
+    const { supabase, user } = await requirePermission('products:manage');
+
+    const { data: products, error: fetchError } = await supabase
+      .from('products')
+      .select('id, name, sku, slug')
+      .in('id', ids);
+
+    if (fetchError) return { success: false, error: fetchError.message };
+    if (!products?.length) return { success: false, error: 'No products found' };
+
+    for (const product of products) {
+      await detachProductReferences(supabase, product.id);
+      await removeProductStorageAssets(supabase, product.id);
+    }
+
+    const { error } = await supabase.from('products').delete().in('id', ids);
+    if (error) return { success: false, error: error.message };
+
+    await logActivity({
+      userId: user?.id ?? null,
+      action: 'product.bulk_delete',
+      entity: 'product',
+      newValue: { count: products.length, ids },
+    });
+
+    revalidatePath('/admin/products');
+    revalidatePath('/products');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Bulk delete failed',
+    };
+  }
+}
+
 export async function getAdminProducts(): Promise<ActionResult<Product[]>> {
   try {
     const { supabase } = await requirePermission('products:manage');
@@ -233,7 +359,6 @@ export async function uploadProductImage(
 
     if (!product) return { success: false, error: 'Product not found' };
 
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const path = `${product.slug}/${Date.now()}-${safeName}`;
 
@@ -316,7 +441,9 @@ export async function duplicateProduct(id: string): Promise<ActionResult<{ id: s
     if (fetchError || !source) return { success: false, error: 'Product not found' };
 
     const copySlug = `${source.slug}-copy-${Date.now().toString(36).slice(-4)}`;
-    const { id: _id, created_at: _ca, ...rest } = source as Record<string, unknown>;
+    const rest = { ...(source as Record<string, unknown>) };
+    delete rest.id;
+    delete rest.created_at;
 
     const { data, error } = await supabase
       .from('products')

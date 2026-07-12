@@ -1,45 +1,43 @@
 import type { ActivityLog } from '@/types/admin';
+import { adminEmptyStateClass, adminTableClass, adminTableWrapClass } from '@/components/admin/admin-styles';
 
 type Props = { logs: ActivityLog[] };
 
 export function ActivityLogTable({ logs }: Props) {
   if (logs.length === 0) {
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">
-        No activity recorded yet.
-      </div>
-    );
+    return <div className={adminEmptyStateClass}>No activity recorded yet.</div>;
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-      <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+    <div className={adminTableWrapClass}>
+      <table className={adminTableClass}>
+        <thead>
           <tr>
-            <th className="px-4 py-3">When</th>
-            <th className="px-4 py-3">Who</th>
-            <th className="px-4 py-3">Action</th>
-            <th className="px-4 py-3">Entity</th>
-            <th className="px-4 py-3">IP</th>
-            <th className="px-4 py-3">Device</th>
+            <th>When</th>
+            <th>Who</th>
+            <th>Action</th>
+            <th>Entity</th>
+            <th>IP</th>
+            <th>Device</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody>
           {logs.map((log) => (
-            <tr key={log.id} className="hover:bg-slate-50">
-              <td className="px-4 py-3 text-slate-600">
+            <tr key={log.id}>
+              <td className="text-[var(--admin-text-muted)]">
                 {new Date(log.created_at).toLocaleString('en-GB')}
               </td>
-              <td className="px-4 py-3">
-                {log.profile?.full_name ?? log.profile?.email ?? '—'}
-              </td>
-              <td className="px-4 py-3 font-medium text-slate-900">{log.action}</td>
-              <td className="px-4 py-3 text-slate-600">
+              <td>{log.profile?.full_name ?? log.profile?.email ?? '—'}</td>
+              <td className="font-medium text-[var(--admin-navy)]">{log.action}</td>
+              <td className="text-[var(--admin-text-muted)]">
                 {log.entity ?? '—'}
                 {log.entity_id ? ` (${log.entity_id.slice(0, 8)}…)` : ''}
               </td>
-              <td className="px-4 py-3 text-slate-500">{log.ip_address ?? '—'}</td>
-              <td className="px-4 py-3 text-xs text-slate-500 max-w-[200px] truncate" title={log.user_agent ?? ''}>
+              <td className="text-[var(--admin-text-muted)]">{log.ip_address ?? '—'}</td>
+              <td
+                className="max-w-[200px] truncate text-xs text-[var(--admin-text-muted)]"
+                title={log.user_agent ?? ''}
+              >
                 {log.user_agent ? log.user_agent.slice(0, 40) : '—'}
               </td>
             </tr>

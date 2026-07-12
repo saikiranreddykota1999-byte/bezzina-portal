@@ -1,6 +1,13 @@
 import Link from 'next/link';
 import { getAdminCustomer, resetCustomerPasswordAction } from '@/actions/admin-customers';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { CustomerDetailForm } from '@/components/admin/customer-detail-form';
+import {
+  adminCardClass,
+  adminHeadingClass,
+  adminLinkClass,
+  adminSubtextClass,
+} from '@/components/admin/admin-styles';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -16,8 +23,8 @@ export default async function AdminCustomerDetailPage({ params }: Props) {
   if (!result.success) {
     return (
       <div>
-        <p className="text-red-600">{result.error}</p>
-        <Link href="/admin/customers" className="mt-4 inline-block text-orange-600 hover:underline">
+        <p className="text-[var(--admin-danger)]">{result.error}</p>
+        <Link href="/admin/customers" className={`mt-4 inline-block ${adminLinkClass}`}>
           ← Back to customers
         </Link>
       </div>
@@ -28,25 +35,28 @@ export default async function AdminCustomerDetailPage({ params }: Props) {
 
   return (
     <div>
-      <Link href="/admin/customers" className="text-sm text-orange-600 hover:underline">
+      <Link href="/admin/customers" className={adminLinkClass}>
         ← Back to customers
       </Link>
-      <h1 className="mt-4 text-2xl font-bold text-slate-900">{customer.full_name ?? customer.email}</h1>
-      <p className="mt-1 text-sm text-slate-600">{customer.email}</p>
+      <AdminPageHeader
+        className="mt-4"
+        title={customer.full_name ?? customer.email}
+        description={customer.email}
+      />
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-2">
         <CustomerDetailForm customer={customer} resetPasswordAction={resetCustomerPasswordAction} />
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-          <h2 className="font-semibold">Quote History</h2>
+        <div className={`${adminCardClass} p-6`}>
+          <h2 className={adminHeadingClass}>Quote History</h2>
           {quotes.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">No quotes submitted.</p>
+            <p className={`mt-4 ${adminSubtextClass}`}>No quotes submitted.</p>
           ) : (
             <ul className="mt-4 space-y-3">
               {quotes.map((q) => (
-                <li key={q.id} className="rounded-lg border border-slate-200 px-4 py-3 text-sm">
-                  <p className="font-medium">{q.reference}</p>
-                  <p className="text-slate-500">{q.status} · {new Date(q.created_at).toLocaleDateString('en-GB')}</p>
+                <li key={q.id} className={`rounded-lg border border-[var(--admin-border)] px-4 py-3 text-sm`}>
+                  <p className="font-medium text-[var(--admin-navy)]">{q.reference}</p>
+                  <p className={adminSubtextClass}>{q.status} · {new Date(q.created_at).toLocaleDateString('en-GB')}</p>
                 </li>
               ))}
             </ul>

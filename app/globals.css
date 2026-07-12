@@ -56,6 +56,35 @@ textarea::placeholder {
   opacity: 1;
 }
 
+/* Admin portal — readable forms in light & dark mode */
+[data-admin-portal] input:not([type='checkbox']):not([type='radio']):not([type='file']),
+[data-admin-portal] textarea {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+html.dark [data-admin-portal] input:not([type='checkbox']):not([type='radio']):not([type='file']),
+html.dark [data-admin-portal] textarea {
+  color: #f8fafc;
+  background-color: #1e293b;
+}
+
+[data-admin-portal] select {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+html.dark [data-admin-portal] select {
+  color: #f8fafc;
+  background-color: #1e293b;
+}
+
+/* Native dropdown list — always dark text on white for clarity */
+[data-admin-portal] select option {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

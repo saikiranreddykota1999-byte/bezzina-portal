@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { sendEmailOtpAction, verifyEmailOtpAction } from '@/actions/email-otp';
 import { sendPhoneOtpAction, verifyPhoneOtpAction } from '@/actions/phone-otp';
+import type { CustomerAuthConfigStatus } from '@/actions/customer-auth-status';
+import { SocialAuthButtons } from '@/components/auth/social-auth-buttons';
 import { loginSchema } from '@/lib/validators/auth';
 import { RippleButton } from '@/components/ui/ripple-button';
 
@@ -17,12 +19,14 @@ type LoginFormProps = {
   redirectPath: string;
   initialMode?: AuthMode;
   authCallbackError?: string;
+  authConfig: CustomerAuthConfigStatus;
 };
 
 export default function LoginForm({
   redirectPath,
   initialMode = 'email-otp',
   authCallbackError,
+  authConfig,
 }: LoginFormProps) {
   const router = useRouter();
 
@@ -82,24 +86,25 @@ export default function LoginForm({
     router.refresh();
   }
 
-  async function handleOAuth(provider: 'google' | 'facebook') {
-    setLoading(true);
-    setError('');
-    const origin = window.location.origin;
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
-      },
-    });
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-    }
-  }
-
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
+    if (!authConfig.adminConfigured || !authConfig.otpTablesReady) {
+      setError(authConfig.adminError ?? 'Login is not configured yet.');
+      return;
+    }
+
+    const deliveryReady =
+      mode === 'email-otp' ? authConfig.emailDeliveryConfigured : authConfig.smsDeliveryConfigured;
+
+    if (!authConfig.isDevelopment && !deliveryReady) {
+      setError(
+        mode === 'email-otp'
+          ? 'Email OTP is not configured on this server. Add RESEND_API_KEY in Vercel, redeploy, or use Sign in with password.'
+          : 'Phone OTP is not configured on this server. Add Twilio variables in Vercel, redeploy, or use Sign in with password.',
+      );
+      return;
+    }
+
     setLoading(true);
     setError('');
     setDemoCode('');
@@ -148,6 +153,52 @@ export default function LoginForm({
       <p className="mt-1 text-sm text-slate-600">
         Sign in or create your account with a 6-digit code sent to your email or phone.
       </p>
+
+      {!authConfig.adminConfigured && (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+          <p className="font-semibold">Login backend is not configured</p>
+          <p className="mt-1">{authConfig.adminError}</p>
+          <p className="mt-2 text-xs text-red-700">
+            After updating <code className="font-mono">.env.local</code>, stop and restart{' '}
+            <code className="font-mono">npm run dev</code>.
+          </p>
+        </div>
+      )}
+
+      {authConfig.adminConfigured && authConfig.demoMode && authConfig.isDevelopment && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+          Dev mode: email/SMS delivery is not configured. After you click &quot;Send 6-digit code&quot;, the
+          code will appear on this page.
+        </div>
+      )}
+
+      {authConfig.adminConfigured &&
+        authConfig.demoMode &&
+        !authConfig.isDevelopment &&
+        authConfig.otpTablesReady && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="alert">
+          <p className="font-semibold">OTP delivery is not configured on this server</p>
+          <p className="mt-1">
+            Add <code className="font-mono">RESEND_API_KEY</code> for Mail OTP or Twilio variables for Phone OTP
+            in your hosting environment, then redeploy. Until then, use{' '}
+            <button type="button" onClick={() => switchMode('password')} className="font-medium text-orange-700 underline">
+              Sign in with password
+            </button>
+            .
+          </p>
+        </div>
+      )}
+
+      {authConfig.adminConfigured && !authConfig.otpTablesReady && (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+          <p className="font-semibold">OTP database tables are missing</p>
+          <p className="mt-1">{authConfig.otpTablesError}</p>
+          <p className="mt-2 text-xs text-red-700">
+            Run migrations <code className="font-mono">006_phone_otp.sql</code> and{' '}
+            <code className="font-mono">011_email_otp.sql</code> in the Supabase SQL Editor.
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 flex gap-2 rounded-xl bg-slate-100 p-1">
         <button
@@ -295,7 +346,11 @@ export default function LoginForm({
           )}
 
           {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-          <RippleButton type="submit" className="w-full" variant="primary">
+          <RippleButton
+            type="submit"
+            className={`w-full ${!authConfig.adminConfigured || !authConfig.otpTablesReady ? 'pointer-events-none opacity-50' : ''}`}
+            variant="primary"
+          >
             {loading ? 'Please wait…' : otpSent ? 'Verify & Sign In' : 'Send 6-digit code'}
           </RippleButton>
         </form>
@@ -323,28 +378,11 @@ export default function LoginForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => handleOAuth('google')}
-          className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:opacity-50"
-        >
-          Google
-        </button>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => handleOAuth('facebook')}
-          className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-50 disabled:opacity-50"
-        >
-          Facebook
-        </button>
-      </div>
+      <SocialAuthButtons redirectPath={redirectPath} disabled={loading} />
 
       <p className="mt-6 text-center text-sm text-slate-600">
-        New customer? Use <strong>Mail OTP</strong> or <strong>Phone OTP</strong> above — your account
-        is created automatically when you verify the code.
+        New customer? Use <strong>Mail OTP</strong>, <strong>Phone OTP</strong>, or{' '}
+        <strong>Google / Facebook</strong> above — your account is created automatically.
       </p>
     </div>
   );

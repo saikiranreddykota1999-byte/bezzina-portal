@@ -34,9 +34,9 @@ export function PaymentCheckout() {
   const [useInlinePayment, setUseInlinePayment] = useState(cards.length === 0);
   const [inlinePayment, setInlinePayment] = useState({ cardholderName: '', cardNumber: '' });
   const [processing, setProcessing] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [orderNumber, setOrderNumber] = useState('');
-  const [pickupCode, setPickupCode] = useState('');
+  const success = false;
+  const orderNumber = '';
+  const pickupCode = '';
   const [error, setError] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [initializingStripe, setInitializingStripe] = useState(false);
@@ -137,6 +137,7 @@ export function PaymentCheckout() {
     fulfillmentMethod,
     orderSignature,
     orderItems,
+    items.length,
     total,
   ]);
 

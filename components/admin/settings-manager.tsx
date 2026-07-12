@@ -3,9 +3,13 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateSiteSettingsAction } from '@/actions/admin-settings';
-
-const inputClass =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900';
+import {
+  adminButtonPrimaryClass,
+  adminCardClass,
+  adminHeadingClass,
+  adminInputClass,
+  adminLabelClass,
+} from '@/components/admin/admin-styles';
 
 type Props = {
   company: Record<string, unknown>;
@@ -29,10 +33,10 @@ export function SettingsManager({ company, social, businessHours }: Props) {
 
   return (
     <div className="space-y-8">
-      {message && <p className="text-sm text-green-700">{message}</p>}
+      {message && <p className="text-sm text-[var(--admin-success)]">{message}</p>}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-semibold">Company Settings</h2>
+      <section className={`${adminCardClass} p-6`}>
+        <h2 className={adminHeadingClass}>Company Settings</h2>
         <form
           className="mt-4 grid gap-4 sm:grid-cols-2"
           onSubmit={(e) => {
@@ -43,18 +47,18 @@ export function SettingsManager({ company, social, businessHours }: Props) {
         >
           {['name', 'email', 'phone', 'whatsapp', 'address', 'logoUrl', 'faviconUrl'].map((field) => (
             <div key={field}>
-              <label className="mb-1 block text-xs font-medium uppercase text-slate-500">{field}</label>
-              <input name={field} defaultValue={String(company[field] ?? '')} className={inputClass} />
+              <label className={`mb-1 block ${adminLabelClass}`}>{field}</label>
+              <input name={field} defaultValue={String(company[field] ?? '')} className={adminInputClass} />
             </div>
           ))}
-          <button type="submit" disabled={pending} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white sm:col-span-2">
+          <button type="submit" disabled={pending} className={`${adminButtonPrimaryClass} sm:col-span-2`}>
             Save Company
           </button>
         </form>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-semibold">Social Links</h2>
+      <section className={`${adminCardClass} p-6`}>
+        <h2 className={adminHeadingClass}>Social Links</h2>
         <form
           className="mt-4 grid gap-4 sm:grid-cols-3"
           onSubmit={(e) => {
@@ -65,18 +69,18 @@ export function SettingsManager({ company, social, businessHours }: Props) {
         >
           {['facebook', 'instagram', 'linkedin'].map((field) => (
             <div key={field}>
-              <label className="mb-1 block text-xs font-medium uppercase text-slate-500">{field}</label>
-              <input name={field} defaultValue={String(social[field] ?? '')} className={inputClass} />
+              <label className={`mb-1 block ${adminLabelClass}`}>{field}</label>
+              <input name={field} defaultValue={String(social[field] ?? '')} className={adminInputClass} />
             </div>
           ))}
-          <button type="submit" disabled={pending} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white sm:col-span-3">
+          <button type="submit" disabled={pending} className={`${adminButtonPrimaryClass} sm:col-span-3`}>
             Save Social
           </button>
         </form>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-semibold">Business Hours</h2>
+      <section className={`${adminCardClass} p-6`}>
+        <h2 className={adminHeadingClass}>Business Hours</h2>
         <form
           className="mt-4 grid gap-4 sm:grid-cols-2"
           onSubmit={(e) => {
@@ -87,11 +91,11 @@ export function SettingsManager({ company, social, businessHours }: Props) {
         >
           {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
             <div key={day}>
-              <label className="mb-1 block text-xs font-medium uppercase text-slate-500">{day}</label>
-              <input name={day} defaultValue={String(businessHours[day] ?? '')} className={inputClass} />
+              <label className={`mb-1 block ${adminLabelClass}`}>{day}</label>
+              <input name={day} defaultValue={String(businessHours[day] ?? '')} className={adminInputClass} />
             </div>
           ))}
-          <button type="submit" disabled={pending} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white sm:col-span-2">
+          <button type="submit" disabled={pending} className={`${adminButtonPrimaryClass} sm:col-span-2`}>
             Save Hours
           </button>
         </form>

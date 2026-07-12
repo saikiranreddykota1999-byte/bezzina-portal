@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
-import Link from 'next/link';
 import { bulkUpdateQuoteStatus, updateQuoteRequest } from '@/actions/admin-quotes';
 import { AdminDataTable, exportToCsv, type Column } from '@/components/admin/admin-data-table';
+import { adminSelectClass } from '@/components/admin/admin-styles';
 import type { QuoteStatus } from '@/types/admin';
 
 type QuoteRow = {
@@ -53,7 +53,7 @@ export function QuotesManager({ quotes }: Props) {
               router.refresh();
             });
           }}
-          className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+          className={adminSelectClass}
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>{s.replace('_', ' ')}</option>

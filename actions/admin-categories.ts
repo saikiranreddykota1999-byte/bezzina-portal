@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import { categoryFormSchema } from '@/lib/validators/catalogue';
+import { normalizeCategoryTree } from '@/lib/catalogue/category-tree';
 import type { Category, CategoryDivision } from '@/types/product';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
@@ -10,6 +11,7 @@ type ActionResult<T = void> = { success: true; data?: T } | { success: false; er
 export type CategoryTree = {
   parents: Category[];
   subcategories: Category[];
+  all?: Category[];
 };
 
 export async function getAdminCategoryTree(): Promise<ActionResult<CategoryTree>> {
@@ -23,12 +25,15 @@ export async function getAdminCategoryTree(): Promise<ActionResult<CategoryTree>
 
     if (error) return { success: false, error: error.message };
 
-    const categories = data ?? [];
+    const categories = (data ?? []) as Category[];
+    const normalized = normalizeCategoryTree(categories);
     return {
       success: true,
       data: {
-        parents: categories.filter((c) => !c.parent_id),
-        subcategories: categories.filter((c) => c.parent_id),
+        ...normalized,
+        all: categories.sort(
+          (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name),
+        ),
       },
     };
   } catch (error) {

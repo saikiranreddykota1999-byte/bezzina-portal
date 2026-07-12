@@ -17,7 +17,18 @@ import type {
   PickupTimeSlot,
   PickupUnavailableDate,
 } from '@/types/pickup';
-import { RippleButton } from '@/components/ui/ripple-button';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import {
+  adminButtonDangerClass,
+  adminButtonPrimaryClass,
+  adminButtonSecondaryClass,
+  adminCardClass,
+  adminHeadingClass,
+  adminInputClass,
+  adminLabelClass,
+  adminSubtextClass,
+  adminTextareaClass,
+} from '@/components/admin/admin-styles';
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -170,22 +181,22 @@ export default function AdminPickupLocationsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Pickup Locations</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Manage branches, opening hours, unavailable dates, and slot capacity.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Pickup Locations"
+        description="Manage branches, opening hours, unavailable dates, and slot capacity."
+      />
 
       {(message || error) && (
-        <p className={`text-sm ${error ? 'text-red-600' : 'text-green-600'}`}>{error || message}</p>
+        <p className={`text-sm ${error ? 'text-[var(--admin-danger)]' : 'text-[var(--admin-success)]'}`}>
+          {error || message}
+        </p>
       )}
 
       <div className="grid gap-6 xl:grid-cols-[280px_1fr]">
-        <aside className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <RippleButton
+        <aside className={`${adminCardClass} p-4`}>
+          <button
             type="button"
-            className="mb-4 w-full"
+            className={`mb-4 w-full ${adminButtonPrimaryClass}`}
             onClick={() => {
               setSelectedId('');
               setForm({
@@ -205,7 +216,7 @@ export default function AdminPickupLocationsPage() {
             }}
           >
             New location
-          </RippleButton>
+          </button>
           <ul className="space-y-2">
             {locations.map((location) => (
               <li key={location.id}>
@@ -214,8 +225,8 @@ export default function AdminPickupLocationsPage() {
                   onClick={() => setSelectedId(location.id)}
                   className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
                     selectedId === location.id
-                      ? 'bg-orange-500 text-white'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? 'bg-[var(--admin-primary)] text-white'
+                      : 'text-[var(--admin-navy)] hover:bg-[var(--admin-border-light)]'
                   }`}
                 >
                   {location.name}
@@ -226,8 +237,8 @@ export default function AdminPickupLocationsPage() {
         </aside>
 
         <div className="space-y-6">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Location details</h2>
+          <section className={`${adminCardClass} p-6`}>
+            <h2 className={adminHeadingClass}>Location details</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {[
                 ['name', 'Name'],
@@ -241,34 +252,30 @@ export default function AdminPickupLocationsPage() {
                 ['email', 'Email'],
               ].map(([key, label]) => (
                 <label key={key} className="block text-sm">
-                  <span className="mb-1 block font-medium text-slate-700 dark:text-slate-300">
-                    {label}
-                  </span>
+                  <span className={`mb-1 block ${adminLabelClass}`}>{label}</span>
                   <input
                     value={form[key as keyof typeof form] as string}
                     onChange={(event) =>
                       setForm((current) => ({ ...current, [key]: event.target.value }))
                     }
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                    className={adminInputClass}
                   />
                 </label>
               ))}
             </div>
             <label className="mt-4 block text-sm">
-              <span className="mb-1 block font-medium text-slate-700 dark:text-slate-300">
-                Pickup instructions
-              </span>
+              <span className={`mb-1 block ${adminLabelClass}`}>Pickup instructions</span>
               <textarea
                 value={form.instructions}
                 onChange={(event) =>
                   setForm((current) => ({ ...current, instructions: event.target.value }))
                 }
                 rows={4}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                className={adminTextareaClass}
               />
             </label>
             <div className="mt-4 flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm">
+              <label className={`flex items-center gap-2 text-sm ${adminSubtextClass}`}>
                 <input
                   type="checkbox"
                   checked={form.is_active}
@@ -278,13 +285,13 @@ export default function AdminPickupLocationsPage() {
                 />
                 Active
               </label>
-              <RippleButton type="button" onClick={handleSaveLocation}>
+              <button type="button" onClick={handleSaveLocation} className={adminButtonPrimaryClass}>
                 Save location
-              </RippleButton>
+              </button>
               {selectedId && (
                 <button
                   type="button"
-                  className="text-sm text-red-600"
+                  className={adminButtonDangerClass}
                   onClick={async () => {
                     const result = await deletePickupLocationAction(selectedId);
                     if (result.success) {
@@ -301,17 +308,19 @@ export default function AdminPickupLocationsPage() {
 
           {selectedId && (
             <>
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+              <section className={`${adminCardClass} p-6`}>
                 <div className="flex items-center justify-between gap-4">
-                  <h2 className="font-semibold text-slate-900 dark:text-white">Opening hours</h2>
-                  <RippleButton type="button" variant="ghost" onClick={handleSaveHours}>
+                  <h2 className={adminHeadingClass}>Opening hours</h2>
+                  <button type="button" className={adminButtonSecondaryClass} onClick={handleSaveHours}>
                     Save hours
-                  </RippleButton>
+                  </button>
                 </div>
                 <div className="mt-4 space-y-3">
                   {hours.map((hour, index) => (
                     <div key={hour.day_of_week} className="grid gap-3 md:grid-cols-4">
-                      <p className="self-center text-sm font-medium">{DAY_LABELS[hour.day_of_week]}</p>
+                      <p className="self-center text-sm font-medium text-[var(--admin-navy)]">
+                        {DAY_LABELS[hour.day_of_week]}
+                      </p>
                       <input
                         type="time"
                         value={hour.opens_at.slice(0, 5)}
@@ -321,7 +330,7 @@ export default function AdminPickupLocationsPage() {
                           next[index] = { ...hour, opens_at: `${event.target.value}:00` };
                           setHours(next);
                         }}
-                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                        className={adminInputClass}
                       />
                       <input
                         type="time"
@@ -332,9 +341,9 @@ export default function AdminPickupLocationsPage() {
                           next[index] = { ...hour, closes_at: `${event.target.value}:00` };
                           setHours(next);
                         }}
-                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                        className={adminInputClass}
                       />
-                      <label className="flex items-center gap-2 text-sm">
+                      <label className={`flex items-center gap-2 text-sm ${adminSubtextClass}`}>
                         <input
                           type="checkbox"
                           checked={hour.is_closed}
@@ -351,12 +360,12 @@ export default function AdminPickupLocationsPage() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+              <section className={`${adminCardClass} p-6`}>
                 <div className="flex items-center justify-between gap-4">
-                  <h2 className="font-semibold text-slate-900 dark:text-white">Time slot capacity</h2>
-                  <RippleButton
+                  <h2 className={adminHeadingClass}>Time slot capacity</h2>
+                  <button
                     type="button"
-                    variant="ghost"
+                    className={adminButtonSecondaryClass}
                     onClick={() =>
                       setSlots((current) => [
                         ...current,
@@ -372,7 +381,7 @@ export default function AdminPickupLocationsPage() {
                     }
                   >
                     Add slot
-                  </RippleButton>
+                  </button>
                 </div>
                 <div className="mt-4 space-y-3">
                   {slots.map((slot, index) => (
@@ -385,7 +394,7 @@ export default function AdminPickupLocationsPage() {
                           next[index] = { ...slot, slot_time: `${event.target.value}:00` };
                           setSlots(next);
                         }}
-                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                        className={adminInputClass}
                       />
                       <input
                         value={slot.label}
@@ -394,7 +403,7 @@ export default function AdminPickupLocationsPage() {
                           next[index] = { ...slot, label: event.target.value };
                           setSlots(next);
                         }}
-                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                        className={adminInputClass}
                       />
                       <input
                         type="number"
@@ -408,9 +417,9 @@ export default function AdminPickupLocationsPage() {
                           };
                           setSlots(next);
                         }}
-                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                        className={adminInputClass}
                       />
-                      <label className="flex items-center gap-2 text-sm">
+                      <label className={`flex items-center gap-2 text-sm ${adminSubtextClass}`}>
                         <input
                           type="checkbox"
                           checked={slot.is_active}
@@ -425,29 +434,29 @@ export default function AdminPickupLocationsPage() {
                     </div>
                   ))}
                 </div>
-                <RippleButton type="button" className="mt-4" onClick={handleSaveSlots}>
+                <button type="button" className={`mt-4 ${adminButtonPrimaryClass}`} onClick={handleSaveSlots}>
                   Save slots
-                </RippleButton>
+                </button>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-                <h2 className="font-semibold text-slate-900 dark:text-white">Unavailable dates</h2>
+              <section className={`${adminCardClass} p-6`}>
+                <h2 className={adminHeadingClass}>Unavailable dates</h2>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <input
                     type="date"
                     value={closedDate}
                     onChange={(event) => setClosedDate(event.target.value)}
-                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                    className={adminInputClass}
                   />
                   <input
                     value={closedReason}
                     onChange={(event) => setClosedReason(event.target.value)}
                     placeholder="Reason"
-                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                    className={adminInputClass}
                   />
-                  <RippleButton
+                  <button
                     type="button"
-                    variant="ghost"
+                    className={adminButtonSecondaryClass}
                     onClick={async () => {
                       if (!closedDate) return;
                       const result = await addPickupUnavailableDateAction({
@@ -465,21 +474,21 @@ export default function AdminPickupLocationsPage() {
                     }}
                   >
                     Add date
-                  </RippleButton>
+                  </button>
                 </div>
                 <ul className="mt-4 space-y-2 text-sm">
                   {unavailable.map((entry) => (
                     <li
                       key={entry.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2"
+                      className="flex items-center justify-between rounded-lg border border-[var(--admin-border)] px-3 py-2"
                     >
-                      <span>
+                      <span className={adminSubtextClass}>
                         {entry.closed_date}
                         {entry.reason ? ` — ${entry.reason}` : ''}
                       </span>
                       <button
                         type="button"
-                        className="text-red-600"
+                        className="text-[var(--admin-danger)] hover:underline"
                         onClick={async () => {
                           await removePickupUnavailableDateAction(entry.id);
                           setUnavailable((current) => current.filter((item) => item.id !== entry.id));

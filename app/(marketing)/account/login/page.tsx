@@ -1,4 +1,5 @@
 import LoginForm from './login-form';
+import { getCustomerAuthConfigStatus } from '@/actions/customer-auth-status';
 import { sanitizeRedirectPath } from '@/lib/auth/redirect';
 
 type PageProps = {
@@ -19,11 +20,14 @@ export default async function LoginPage({ searchParams }: PageProps) {
         ? 'Session check timed out. Please sign in again.'
         : undefined;
 
+  const authConfig = await getCustomerAuthConfigStatus();
+
   return (
     <LoginForm
       redirectPath={sanitizeRedirectPath(params.redirect)}
       initialMode={params.mode === 'phone' ? 'phone-otp' : 'email-otp'}
       authCallbackError={authCallbackError}
+      authConfig={authConfig}
     />
   );
 }

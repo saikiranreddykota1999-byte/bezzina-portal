@@ -2,6 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { AdminCheckbox } from '@/components/admin/ui/admin-checkbox';
+import {
+  adminButtonDangerClass,
+  adminButtonSecondaryClass,
+  adminInputClass,
+  adminTableClass,
+  adminTableWrapClass,
+} from '@/components/admin/admin-styles';
 
 export type Column<T> = {
   key: string;
@@ -86,19 +94,19 @@ export function AdminDataTable<T extends { id: string }>({
     setSortDir('asc');
   }
 
-  function toggleAll() {
-    if (allSelected) {
+  function toggleAll(checked: boolean) {
+    if (!checked) {
       setSelected(new Set());
       return;
     }
     setSelected(new Set(pageRows.map((r) => r.id)));
   }
 
-  function toggleRow(id: string) {
+  function toggleRow(id: string, checked: boolean) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   }
@@ -109,7 +117,7 @@ export function AdminDataTable<T extends { id: string }>({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-md flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-text-muted)]" />
           <input
             type="search"
             value={query}
@@ -118,7 +126,7 @@ export function AdminDataTable<T extends { id: string }>({
               setPage(1);
             }}
             placeholder={searchPlaceholder}
-            className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-slate-700 dark:bg-slate-900"
+            className={`${adminInputClass} !py-2.5 !pl-10`}
           />
         </div>
 
@@ -129,11 +137,7 @@ export function AdminDataTable<T extends { id: string }>({
                 key={action.label}
                 type="button"
                 onClick={() => void action.onAction(selectedIds)}
-                className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                  action.variant === 'danger'
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'border border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900'
-                }`}
+                className={action.variant === 'danger' ? adminButtonDangerClass : adminButtonSecondaryClass}
               >
                 {action.label} ({selectedIds.length})
               </button>
@@ -142,22 +146,27 @@ export function AdminDataTable<T extends { id: string }>({
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600 dark:border-slate-800 dark:bg-slate-950">
+      <div className={adminTableWrapClass}>
+        <table className={adminTableClass}>
+          <thead>
             <tr>
               {bulkActions.length > 0 && (
-                <th className="px-4 py-3">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" />
+                <th className="!w-12">
+                  <AdminCheckbox
+                    id="select-all-rows"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    label=""
+                  />
                 </th>
               )}
               {columns.map((col) => (
-                <th key={col.key} className={`px-4 py-3 ${col.className ?? ''}`}>
+                <th key={col.key} className={col.className ?? ''}>
                   {col.sortable ? (
                     <button
                       type="button"
                       onClick={() => toggleSort(col.key)}
-                      className="inline-flex items-center gap-1 font-semibold"
+                      className="inline-flex items-center gap-1 font-semibold text-white"
                     >
                       {col.header}
                       {sortKey === col.key ? (
@@ -171,31 +180,31 @@ export function AdminDataTable<T extends { id: string }>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             {pageRows.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length + (bulkActions.length > 0 ? 1 : 0)}
-                  className="px-4 py-10 text-center text-slate-500"
+                  className="admin-table-empty"
                 >
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
               pageRows.map((row) => (
-                <tr key={row.id} className="text-slate-800 dark:text-slate-200">
+                <tr key={row.id}>
                   {bulkActions.length > 0 && (
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
+                    <td>
+                      <AdminCheckbox
+                        id={`select-row-${row.id}`}
                         checked={selected.has(row.id)}
-                        onChange={() => toggleRow(row.id)}
-                        aria-label={`Select row ${row.id}`}
+                        onChange={(checked) => toggleRow(row.id, checked)}
+                        label=""
                       />
                     </td>
                   )}
                   {columns.map((col) => (
-                    <td key={col.key} className={`px-4 py-3 ${col.className ?? ''}`}>
+                    <td key={col.key} className={col.className ?? ''}>
                       {col.render(row)}
                     </td>
                   ))}
@@ -207,7 +216,7 @@ export function AdminDataTable<T extends { id: string }>({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-slate-600">
+        <div className="flex items-center justify-between text-sm text-[var(--admin-text-muted)]">
           <p>
             Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of{' '}
             {filtered.length}
@@ -217,18 +226,18 @@ export function AdminDataTable<T extends { id: string }>({
               type="button"
               disabled={currentPage <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:opacity-40 dark:border-slate-700"
+              className={`${adminButtonSecondaryClass} !min-h-0 !py-1.5 !text-sm disabled:opacity-40`}
             >
               Previous
             </button>
-            <span className="px-2 py-1.5">
+            <span className="flex items-center px-2">
               Page {currentPage} of {totalPages}
             </span>
             <button
               type="button"
               disabled={currentPage >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:opacity-40 dark:border-slate-700"
+              className={`${adminButtonSecondaryClass} !min-h-0 !py-1.5 !text-sm disabled:opacity-40`}
             >
               Next
             </button>

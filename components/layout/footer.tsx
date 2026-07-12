@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { company } from '@/config/company';
 import { navigation } from '@/config/navigation';
+import { FacebookIcon } from '@/components/icons/facebook';
 import { getHomepageSection, getSiteSetting } from '@/services/cms.service';
-import type { FooterContent, CompanySettings } from '@/types/cms';
+import type { FooterContent, CompanySettings, SocialSettings } from '@/types/cms';
 
 function formatAddress(address: unknown): string {
   if (typeof address === 'string' && address.trim()) return address;
@@ -14,13 +15,15 @@ function formatAddress(address: unknown): string {
 }
 
 export async function Footer() {
-  const [footerSection, siteCompany] = await Promise.all([
+  const [footerSection, siteCompany, socialSettings] = await Promise.all([
     getHomepageSection('footer'),
     getSiteSetting('company', company as unknown as CompanySettings),
+    getSiteSetting<SocialSettings>('social', company.social),
   ]);
 
   const footer = footerSection as Partial<FooterContent>;
   const settings = siteCompany as CompanySettings;
+  const facebookUrl = socialSettings.facebook?.trim() || company.social.facebook;
   const quickLinks = navigation.filter((item) => item.href !== '/quote');
 
   return (
@@ -70,6 +73,19 @@ export async function Footer() {
                 {settings.email ?? company.contact.email}
               </a>
             </p>
+            {facebookUrl && (
+              <p>
+                <a
+                  href={facebookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 hover:text-white"
+                >
+                  <FacebookIcon className="h-4 w-4" />
+                  Facebook
+                </a>
+              </p>
+            )}
           </address>
         </section>
       </div>

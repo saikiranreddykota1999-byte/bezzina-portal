@@ -11,11 +11,21 @@ import {
 import { ProductImagesSection } from '@/components/admin/product-images-section';
 import { ProductDocumentsSection } from '@/components/admin/product-documents-section';
 import { ProductSpecsBuilder } from '@/components/admin/product-specs-builder';
-import { ProductVariantsSection } from '@/components/admin/product-variants-section';
+import { ProductVariantsSection, type VariantDraft } from '@/components/admin/product-variants-section';
 import { ProductFeatureToggles } from '@/components/admin/product-feature-toggles';
+import { AdminCollapsible } from '@/components/admin/ui/admin-collapsible';
+import { AdminCheckbox } from '@/components/admin/ui/admin-checkbox';
 import type { Product, TechnicalSpecRow, InventoryStatus } from '@/types/product';
 import { INVENTORY_STATUS_OPTIONS, PRODUCT_FEATURE_FLAGS } from '@/types/product';
 import type { CategoryTree } from '@/actions/admin-categories';
+import {
+  adminButtonPrimaryClass,
+  adminFileInputClass,
+  adminInputClass,
+  adminLabelClass,
+  adminSubtextClass,
+} from '@/components/admin/admin-styles';
+import { buildProductCategoryGroups } from '@/lib/catalogue/category-tree';
 
 type Props = {
   categoryTree: CategoryTree;
@@ -32,8 +42,11 @@ function parseSpecs(product?: Product): TechnicalSpecRow[] {
   return Object.entries(product.technical_specs).map(([property, value]) => ({ property, value }));
 }
 
-const inputClass =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500';
+function toVariantDraft(variant: NonNullable<Product['variants']>[number]): VariantDraft {
+  const { id, product_id, ...rest } = variant;
+  void product_id;
+  return id ? { ...rest, id } : rest;
+}
 
 export function ProductForm({ categoryTree, product }: Props) {
   const router = useRouter();
@@ -43,11 +56,6 @@ export function ProductForm({ categoryTree, product }: Props) {
   const [sku, setSku] = useState(product?.sku ?? '');
   const [slug, setSlug] = useState(product?.slug ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
-  const [parentCategoryId, setParentCategoryId] = useState(() => {
-    if (!product?.category_id) return '';
-    const sub = categoryTree.subcategories.find((c) => c.id === product.category_id);
-    return sub?.parent_id ?? '';
-  });
   const [categoryId, setCategoryId] = useState(product?.category_id ?? '');
   const [price, setPrice] = useState(product?.price?.toString() ?? '1.00');
   const [unit, setUnit] = useState(product?.unit ?? 'each');
@@ -69,8 +77,8 @@ export function ProductForm({ categoryTree, product }: Props) {
   const [youtubeUrl, setYoutubeUrl] = useState(product?.youtube_url ?? '');
   const [weightKg, setWeightKg] = useState(product?.weight_kg?.toString() ?? '');
   const [specs, setSpecs] = useState<TechnicalSpecRow[]>(parseSpecs(product));
-  const [variants, setVariants] = useState(
-    (product?.variants ?? []).map(({ id: _id, product_id: _pid, ...rest }) => rest),
+  const [variants, setVariants] = useState<VariantDraft[]>(
+    (product?.variants ?? []).map(toVariantDraft),
   );
   const [featureFlags, setFeatureFlags] = useState(
     Object.fromEntries(
@@ -80,19 +88,16 @@ export function ProductForm({ categoryTree, product }: Props) {
   const [uploading, setUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const subcategoriesForParent = useMemo(() => {
-    if (!parentCategoryId) return categoryTree.subcategories;
-    return categoryTree.subcategories.filter((c) => c.parent_id === parentCategoryId);
-  }, [categoryTree.subcategories, parentCategoryId]);
+  const categoryGroups = useMemo(
+    () => buildProductCategoryGroups(categoryTree),
+    [categoryTree],
+  );
+
+  const hasCategories = categoryGroups.some((group) => group.options.length > 0);
 
   function handleNameChange(value: string) {
     setName(value);
     if (!product) setSlug(slugify(value));
-  }
-
-  function handleParentChange(value: string) {
-    setParentCategoryId(value);
-    setCategoryId('');
   }
 
   async function uploadSelectedImage(productId: string) {
@@ -185,158 +190,193 @@ export function ProductForm({ categoryTree, product }: Props) {
   }
 
   return (
-    <form onSubmit={handleSave} className="max-w-4xl space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
-          <input value={name} onChange={(e) => handleNameChange(e.target.value)} className={inputClass} required />
+    <form onSubmit={handleSave} className="max-w-4xl space-y-4">
+      <AdminCollapsible title="Basic Information" defaultOpen>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={adminLabelClass}>Name</label>
+              <input value={name} onChange={(e) => handleNameChange(e.target.value)} className={adminInputClass} required />
+            </div>
+            <div>
+              <label className={adminLabelClass}>SKU</label>
+              <input value={sku} onChange={(e) => setSku(e.target.value)} className={adminInputClass} required />
+            </div>
+          </div>
+
+          <div>
+            <label className={adminLabelClass}>Slug</label>
+            <input value={slug} onChange={(e) => setSlug(e.target.value)} className={adminInputClass} required />
+          </div>
+
+          <div>
+            <label className={adminLabelClass}>Catalogue Category</label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className={adminInputClass}
+              required
+            >
+              <option value="">Select category</option>
+              {categoryGroups.map((group) => (
+                <optgroup key={group.groupLabel} label={group.groupLabel}>
+                  {group.options.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            {!hasCategories && (
+              <p className={`mt-1 text-xs ${adminSubtextClass} !text-[var(--admin-warning)]`}>
+                No categories found. Add categories under Admin → Categories, or run migration 016.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className={adminLabelClass}>Description</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={adminInputClass} />
+          </div>
+
+          <div>
+            <label className={adminLabelClass}>Long Description</label>
+            <textarea value={longDescription} onChange={(e) => setLongDescription(e.target.value)} rows={6} className={adminInputClass} />
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">SKU</label>
-          <input value={sku} onChange={(e) => setSku(e.target.value)} className={inputClass} required />
+      </AdminCollapsible>
+
+      <AdminCollapsible title="Specifications" defaultOpen={false}>
+        <ProductSpecsBuilder specs={specs} onChange={setSpecs} />
+      </AdminCollapsible>
+
+      <AdminCollapsible title="Variants" defaultOpen={false}>
+        <ProductVariantsSection variants={variants} onChange={setVariants} />
+      </AdminCollapsible>
+
+      <AdminCollapsible title="Feature Flags" defaultOpen={false}>
+        <ProductFeatureToggles flags={featureFlags} onChange={setFeatureFlags} />
+      </AdminCollapsible>
+
+      <AdminCollapsible title="SEO" defaultOpen={false}>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={adminLabelClass}>SEO Title</label>
+              <input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} className={adminInputClass} />
+            </div>
+            <div>
+              <label className={adminLabelClass}>Search Keywords</label>
+              <input value={searchKeywords} onChange={(e) => setSearchKeywords(e.target.value)} className={adminInputClass} />
+            </div>
+          </div>
+          <div>
+            <label className={adminLabelClass}>SEO Description</label>
+            <textarea value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} rows={2} className={adminInputClass} />
+          </div>
         </div>
-      </div>
+      </AdminCollapsible>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Slug</label>
-        <input value={slug} onChange={(e) => setSlug(e.target.value)} className={inputClass} required />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
-          <select value={parentCategoryId} onChange={(e) => handleParentChange(e.target.value)} className={inputClass} required>
-            <option value="">Select category</option>
-            {categoryTree.parents.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+      <AdminCollapsible title="Media & Notes" defaultOpen={false}>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={adminLabelClass}>Video URL</label>
+              <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className={adminInputClass} placeholder="https://..." />
+            </div>
+            <div>
+              <label className={adminLabelClass}>YouTube URL</label>
+              <input value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} className={adminInputClass} placeholder="https://youtube.com/..." />
+            </div>
+          </div>
+          <div>
+            <label className={adminLabelClass}>Internal Notes (admin only)</label>
+            <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} className={adminInputClass} />
+          </div>
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Subcategory</label>
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass} required disabled={!parentCategoryId}>
-            <option value="">Select subcategory</option>
-            {subcategoriesForParent.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+      </AdminCollapsible>
+
+      <AdminCollapsible title="Pricing & Inventory" defaultOpen>
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-4">
+            <div>
+              <label className={adminLabelClass}>Price (€)</label>
+              <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={adminInputClass} />
+            </div>
+            <div>
+              <label className={adminLabelClass}>Unit</label>
+              <input value={unit} onChange={(e) => setUnit(e.target.value)} className={adminInputClass} />
+            </div>
+            <div>
+              <label className={adminLabelClass}>Weight (kg)</label>
+              <input type="number" step="0.001" min="0" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className={adminInputClass} />
+            </div>
+            <div>
+              <label className={adminLabelClass}>Stock qty</label>
+              <input type="number" min="0" value={stockQty} onChange={(e) => setStockQty(e.target.value)} className={adminInputClass} />
+            </div>
+          </div>
+
+          <div>
+            <label className={adminLabelClass}>Inventory Status</label>
+            <select value={availability} onChange={(e) => setAvailability(e.target.value as InventoryStatus)} className={adminInputClass}>
+              {INVENTORY_STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-wrap gap-6">
+            <AdminCheckbox id="in-stock" checked={inStock} onChange={setInStock} label="In stock" />
+            <AdminCheckbox id="is-active" checked={isActive} onChange={setIsActive} label="Active" />
+          </div>
+
+          <div>
+            <label className={adminLabelClass}>Publish Status</label>
+            <select value={publishStatus} onChange={(e) => setPublishStatus(e.target.value as 'draft' | 'published')} className={adminInputClass}>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
         </div>
-      </div>
+      </AdminCollapsible>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputClass} />
-      </div>
+      <AdminCollapsible title={product ? 'Gallery & Documents' : 'Product Image'} defaultOpen={Boolean(product)}>
+        <div className="space-y-4">
+          {!product && (
+            <div>
+              <label className={adminLabelClass}>Product image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploading || pending}
+                className={adminFileInputClass}
+              />
+              {imageFile && (
+                <p className={`mt-1 text-xs ${adminSubtextClass}`}>
+                  Selected: {imageFile.name} (uploads after save)
+                </p>
+              )}
+            </div>
+          )}
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Long Description</label>
-        <textarea value={longDescription} onChange={(e) => setLongDescription(e.target.value)} rows={6} className={inputClass} />
-      </div>
-
-      <ProductSpecsBuilder specs={specs} onChange={setSpecs} />
-      <ProductVariantsSection variants={variants} onChange={setVariants} />
-      <ProductFeatureToggles flags={featureFlags} onChange={setFeatureFlags} />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">SEO Title</label>
-          <input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} className={inputClass} />
+          {product && (
+            <>
+              <ProductImagesSection productId={product.id} images={product.images ?? []} />
+              <ProductDocumentsSection productId={product.id} documents={product.documents ?? []} />
+            </>
+          )}
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Search Keywords</label>
-          <input value={searchKeywords} onChange={(e) => setSearchKeywords(e.target.value)} className={inputClass} />
-        </div>
-      </div>
+      </AdminCollapsible>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">SEO Description</label>
-        <textarea value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} rows={2} className={inputClass} />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Video URL</label>
-          <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className={inputClass} placeholder="https://..." />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">YouTube URL</label>
-          <input value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} className={inputClass} placeholder="https://youtube.com/..." />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Internal Notes (admin only)</label>
-        <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} className={inputClass} />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Price (€)</label>
-          <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Unit</label>
-          <input value={unit} onChange={(e) => setUnit(e.target.value)} className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Weight (kg)</label>
-          <input type="number" step="0.001" min="0" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Stock qty</label>
-          <input type="number" min="0" value={stockQty} onChange={(e) => setStockQty(e.target.value)} className={inputClass} />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Inventory Status</label>
-        <select value={availability} onChange={(e) => setAvailability(e.target.value as InventoryStatus)} className={inputClass}>
-          {INVENTORY_STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex flex-wrap gap-6">
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />
-          In stock
-        </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-          Active
-        </label>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Publish Status</label>
-        <select value={publishStatus} onChange={(e) => setPublishStatus(e.target.value as 'draft' | 'published')} className={inputClass}>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-        </select>
-      </div>
-
-      {!product && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Product image</label>
-          <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading || pending} className="text-sm text-slate-700" />
-          {imageFile && <p className="mt-1 text-xs text-slate-600">Selected: {imageFile.name} (uploads after save)</p>}
-        </div>
-      )}
-
-      {product && (
-        <>
-          <ProductImagesSection productId={product.id} images={product.images ?? []} />
-          <ProductDocumentsSection productId={product.id} documents={product.documents ?? []} />
-        </>
-      )}
-
-      {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
+      {error && <p className="text-sm text-[var(--admin-danger)]" role="alert">{error}</p>}
 
       <button
         type="submit"
         disabled={pending || uploading}
-        className="rounded-lg bg-orange-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
+        className={adminButtonPrimaryClass}
       >
         {pending || uploading ? 'Saving…' : product ? 'Update Product' : 'Create Product'}
       </button>

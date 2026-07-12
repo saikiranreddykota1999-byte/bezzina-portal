@@ -10,6 +10,14 @@ export const company = {
     postalCode: "MRS 9065",
     country: "Malta",
   },
+  maps: {
+    shortUrl: "https://maps.app.goo.gl/W5i1LCaR3ygShaiS8",
+    embedUrl:
+      "https://maps.google.com/maps?q=35.8757591,14.4958324&hl=en&z=17&output=embed",
+    latitude: 35.8757591,
+    longitude: 14.4958324,
+    placeName: "Joseph Bezzina Co. Ltd.",
+  },
   contact: {
     phone1: "+356 2122 6647",
     phone2: "+356 2122 6648",
@@ -19,7 +27,7 @@ export const company = {
     whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "+356 7757 6721",
   },
   social: {
-    facebook: "https://facebook.com/JosephBezzina.Co.Ltd",
+    facebook: "https://www.facebook.com/JosephBezzina.Co.Ltd/",
     linkedin: "",
     instagram: "",
   },

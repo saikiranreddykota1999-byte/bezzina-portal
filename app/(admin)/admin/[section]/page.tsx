@@ -1,5 +1,13 @@
 import Link from 'next/link';
 import { ADMIN_NAV } from '@/config/admin-nav';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import {
+  adminButtonPrimaryClass,
+  adminButtonSecondaryClass,
+  adminCardClass,
+  adminHeadingClass,
+  adminSubtextClass,
+} from '@/components/admin/admin-styles';
 
 type Props = { params: Promise<{ section: string }> };
 
@@ -44,30 +52,33 @@ export default async function AdminSectionPage({ params }: Props) {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold capitalize text-slate-900 dark:text-white">{title}</h1>
-      <p className="mt-1 text-sm text-slate-500">Enterprise admin — {title.toLowerCase()} management.</p>
+      <AdminPageHeader
+        title={title}
+        description={`Enterprise admin — ${title.toLowerCase()} management.`}
+        className="capitalize"
+      />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="font-semibold text-slate-900 dark:text-white">Capabilities</h2>
-          <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className={`${adminCardClass} p-6`}>
+          <h2 className={adminHeadingClass}>Capabilities</h2>
+          <ul className={`mt-4 space-y-2 text-sm ${adminSubtextClass}`}>
             {features.map((f) => (
               <li key={f} className="flex items-start gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--admin-primary)]" />
                 {f}
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 dark:border-slate-700 dark:bg-slate-900/50">
-          <h2 className="font-semibold text-slate-900 dark:text-white">Quick actions</h2>
+        <div className={`${adminCardClass} border-dashed p-6`}>
+          <h2 className={adminHeadingClass}>Quick actions</h2>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/admin" className="rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-600">
+            <Link href="/admin" className={adminButtonSecondaryClass}>
               Dashboard
             </Link>
             {section === 'products' && (
-              <Link href="/products" className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white">
+              <Link href="/products" className={adminButtonPrimaryClass}>
                 View Catalogue
               </Link>
             )}

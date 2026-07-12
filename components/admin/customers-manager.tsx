@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { bulkDisableCustomers } from '@/actions/admin-customers';
 import { AdminDataTable, exportToCsv, type Column } from '@/components/admin/admin-data-table';
+import {
+  adminBadgeSuccessClass,
+  adminBadgeWarningClass,
+  adminLinkClass,
+} from '@/components/admin/admin-styles';
 import type { AdminCustomer } from '@/types/admin';
 
 type Props = { customers: AdminCustomer[] };
@@ -20,7 +25,7 @@ export function CustomersManager({ customers }: Props) {
       key: 'is_disabled',
       header: 'Status',
       render: (r) => (
-        <span className={`rounded-full px-2 py-0.5 text-xs ${r.is_disabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+        <span className={r.is_disabled ? adminBadgeWarningClass : adminBadgeSuccessClass}>
           {r.is_disabled ? 'Disabled' : 'Active'}
         </span>
       ),
@@ -29,7 +34,7 @@ export function CustomersManager({ customers }: Props) {
       key: 'id',
       header: 'Actions',
       render: (r) => (
-        <Link href={`/admin/customers/${r.id}`} className="text-orange-600 hover:underline">
+        <Link href={`/admin/customers/${r.id}`} className={adminLinkClass}>
           View
         </Link>
       ),

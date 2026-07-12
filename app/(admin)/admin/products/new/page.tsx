@@ -1,4 +1,5 @@
 import { getAdminCategoryOptions } from '@/actions/admin-products';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { ProductForm } from '@/components/admin/product-form';
 
 export const metadata = { title: 'New Product | Admin' };
@@ -6,14 +7,14 @@ export const metadata = { title: 'New Product | Admin' };
 export default async function NewProductPage() {
   const categoriesResult = await getAdminCategoryOptions();
   const categoryTree = categoriesResult.success
-    ? categoriesResult.data ?? { parents: [], subcategories: [] }
-    : { parents: [], subcategories: [] };
+    ? categoriesResult.data ?? { parents: [], subcategories: [], all: [] }
+    : { parents: [], subcategories: [], all: [] };
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Add Product</h1>
+      <AdminPageHeader title="Add Product" />
       {!categoriesResult.success && (
-        <p className="mb-4 text-sm text-amber-800">{categoriesResult.error}</p>
+        <p className="mb-4 text-sm text-[var(--admin-warning)]">{categoriesResult.error}</p>
       )}
       <ProductForm categoryTree={categoryTree} />
     </div>

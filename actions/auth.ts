@@ -1,6 +1,5 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { isStaffRole } from '@/lib/auth/roles';
 import { MAX_FAILED_ATTEMPTS, LOCKOUT_MINUTES } from '@/lib/supabase/middleware';
@@ -83,14 +82,11 @@ export async function customerOAuthLogin(provider: 'google' | 'facebook') {
     provider,
     options: {
       redirectTo: `${origin}/auth/callback?next=/account`,
+      queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined,
     },
   });
 
   if (error) return { success: false as const, error: error.message };
-  if (data.url) {
-    const cookieStore = await cookies();
-    cookieStore.set('oauth_redirect', '/account', { httpOnly: true, maxAge: 300 });
-  }
   return { success: true as const, url: data.url };
 }
 

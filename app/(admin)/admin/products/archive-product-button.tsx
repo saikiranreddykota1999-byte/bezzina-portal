@@ -1,27 +1,36 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { archiveProduct } from '@/actions/admin-products';
 
-export function ArchiveProductButton({ id }: { id: string }) {
+export function ArchiveProductButton({ id, name }: { id: string; name: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState('');
 
   return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() => {
-        if (!confirm('Archive this product?')) return;
-        startTransition(async () => {
-          await archiveProduct(id);
-          router.refresh();
-        });
-      }}
-      className="text-red-600 hover:underline disabled:opacity-50"
-    >
-      Archive
-    </button>
+    <span className="inline-flex flex-col items-start">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => {
+          if (!confirm(`Archive "${name}"? It will be hidden from the public catalogue.`)) return;
+          setError('');
+          startTransition(async () => {
+            const result = await archiveProduct(id);
+            if (!result.success) {
+              setError(result.error);
+              return;
+            }
+            router.refresh();
+          });
+        }}
+        className="text-[var(--admin-warning)] hover:underline disabled:opacity-50"
+      >
+        {pending ? 'Archiving…' : 'Archive'}
+      </button>
+      {error ? <span className="mt-1 text-xs text-[var(--admin-danger)]">{error}</span> : null}
+    </span>
   );
 }

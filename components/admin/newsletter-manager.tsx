@@ -29,7 +29,7 @@ export function NewsletterManager({ subscribers }: Props) {
       render: (r) => (
         <button
           type="button"
-          className="text-sm text-red-600"
+          className="text-sm text-[var(--admin-danger)]"
           onClick={async () => {
             await deleteNewsletterSubscriberAction(r.id);
             router.refresh();

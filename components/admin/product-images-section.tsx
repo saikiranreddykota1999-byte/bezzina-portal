@@ -11,6 +11,12 @@ import {
   uploadProductImage,
 } from '@/actions/admin-products';
 import type { ProductImage } from '@/types/product';
+import {
+  adminCardClass,
+  adminFileInputClass,
+  adminHeadingClass,
+  adminSubtextClass,
+} from '@/components/admin/admin-styles';
 
 type Props = {
   productId: string;
@@ -50,8 +56,8 @@ export function ProductImagesSection({ productId, images }: Props) {
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="mb-4 text-sm font-semibold text-slate-900">Product Images</h3>
+    <section className={`${adminCardClass} p-5`}>
+      <h3 className={`mb-4 text-sm ${adminHeadingClass}`}>Product Images</h3>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.map((img) => (
           <div
@@ -60,13 +66,13 @@ export function ProductImagesSection({ productId, images }: Props) {
             onDragStart={() => setDragId(img.id)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(img.id)}
-            className="group relative rounded-lg border border-slate-200 p-2"
+            className="group relative rounded-lg border border-[var(--admin-border)] p-2"
           >
-            <div className="relative aspect-square overflow-hidden rounded-md bg-slate-50">
+            <div className="relative aspect-square overflow-hidden rounded-md bg-[var(--admin-border-light)]">
               <Image src={img.url} alt="" fill className="object-cover" sizes="200px" />
             </div>
             <div className="mt-2 flex items-center justify-between gap-2">
-              <GripVertical className="h-4 w-4 text-slate-400" />
+              <GripVertical className="h-4 w-4 text-[var(--admin-text-muted)]" />
               <div className="flex gap-1">
                 <button
                   type="button"
@@ -75,7 +81,7 @@ export function ProductImagesSection({ productId, images }: Props) {
                     await setPrimaryProductImage(productId, img.id);
                     router.refresh();
                   }}
-                  className={`rounded p-1 ${img.is_primary ? 'text-orange-500' : 'text-slate-400 hover:text-orange-500'}`}
+                  className={`rounded p-1 ${img.is_primary ? 'text-[var(--admin-accent)]' : 'text-[var(--admin-text-muted)] hover:text-[var(--admin-accent)]'}`}
                 >
                   <Star className="h-4 w-4" fill={img.is_primary ? 'currentColor' : 'none'} />
                 </button>
@@ -86,14 +92,14 @@ export function ProductImagesSection({ productId, images }: Props) {
                     await deleteProductImage(img.id, productId);
                     router.refresh();
                   }}
-                  className="rounded p-1 text-red-500 hover:bg-red-50"
+                  className="rounded p-1 text-[var(--admin-danger)] hover:bg-[var(--admin-danger-light)]"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
             {img.is_primary && (
-              <span className="absolute left-3 top-3 rounded bg-orange-500 px-2 py-0.5 text-xs font-medium text-white">
+              <span className="absolute left-3 top-3 rounded bg-[var(--admin-primary)] px-2 py-0.5 text-xs font-medium text-white">
                 Primary
               </span>
             )}
@@ -105,11 +111,11 @@ export function ProductImagesSection({ productId, images }: Props) {
         accept="image/*"
         onChange={handleUpload}
         disabled={uploading}
-        className="mt-4 text-sm text-slate-700"
+        className={`mt-4 ${adminFileInputClass}`}
       />
-      {uploading && <p className="mt-1 text-xs text-slate-600">Uploading…</p>}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-      <p className="mt-2 text-xs text-slate-500">Drag images to reorder. Star icon sets primary image.</p>
+      {uploading && <p className={`mt-1 text-xs ${adminSubtextClass}`}>Uploading…</p>}
+      {error && <p className="mt-1 text-xs text-[var(--admin-danger)]">{error}</p>}
+      <p className={`mt-2 text-xs ${adminSubtextClass}`}>Drag images to reorder. Star icon sets primary image.</p>
     </section>
   );
 }

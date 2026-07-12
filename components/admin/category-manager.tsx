@@ -7,6 +7,17 @@ import {
   updateCategory,
 } from '@/actions/admin-categories';
 import type { Category, CategoryDivision } from '@/types/product';
+import {
+  adminButtonPrimaryClass,
+  adminButtonSecondaryClass,
+  adminCardClass,
+  adminHeadingClass,
+  adminInputClass,
+  adminLabelClass,
+  adminLinkClass,
+  adminSubtextClass,
+  adminTextareaClass,
+} from '@/components/admin/admin-styles';
 
 type Props = {
   parents: Category[];
@@ -21,9 +32,6 @@ type FormState = {
   parent_id: string;
   sort_order: string;
 };
-
-const inputClass =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500';
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -121,30 +129,21 @@ export function CategoryManager({ parents, subcategories }: Props) {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-slate-600">
+        <p className={adminSubtextClass}>
           Manage marine and industrial categories and subcategories used in the product catalogue.
         </p>
-        <button
-          type="button"
-          onClick={() => openCreate()}
-          className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
-        >
+        <button type="button" onClick={() => openCreate()} className={adminButtonPrimaryClass}>
           Add Category
         </button>
       </div>
 
       {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-xl border border-slate-200 bg-white p-6 space-y-4"
-        >
-          <h2 className="text-lg font-semibold text-slate-900">
-            {editingId ? 'Edit Category' : 'New Category'}
-          </h2>
+        <form onSubmit={handleSubmit} className={`${adminCardClass} space-y-4 p-6`}>
+          <h2 className={adminHeadingClass}>{editingId ? 'Edit Category' : 'New Category'}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
+              <label className={`mb-1 block ${adminLabelClass}`}>Name</label>
               <input
                 value={form.name}
                 onChange={(e) => {
@@ -155,16 +154,16 @@ export function CategoryManager({ parents, subcategories }: Props) {
                     slug: editingId ? prev.slug : slugify(name),
                   }));
                 }}
-                className={inputClass}
+                className={adminInputClass}
                 required
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Slug</label>
+              <label className={`mb-1 block ${adminLabelClass}`}>Slug</label>
               <input
                 value={form.slug}
                 onChange={(e) => setForm((prev) => ({ ...prev, slug: e.target.value }))}
-                className={inputClass}
+                className={adminInputClass}
                 required
               />
             </div>
@@ -172,7 +171,7 @@ export function CategoryManager({ parents, subcategories }: Props) {
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Type</label>
+              <label className={`mb-1 block ${adminLabelClass}`}>Type</label>
               <select
                 value={form.parent_id ? 'sub' : 'parent'}
                 onChange={(e) =>
@@ -182,7 +181,7 @@ export function CategoryManager({ parents, subcategories }: Props) {
                     division: e.target.value === 'sub' ? '' : prev.division || 'marine',
                   }))
                 }
-                className={inputClass}
+                className={adminInputClass}
               >
                 <option value="parent">Top-level category</option>
                 <option value="sub">Subcategory</option>
@@ -191,11 +190,11 @@ export function CategoryManager({ parents, subcategories }: Props) {
 
             {form.parent_id ? (
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Parent</label>
+                <label className={`mb-1 block ${adminLabelClass}`}>Parent</label>
                 <select
                   value={form.parent_id}
                   onChange={(e) => setForm((prev) => ({ ...prev, parent_id: e.target.value }))}
-                  className={inputClass}
+                  className={adminInputClass}
                   required
                 >
                   <option value="">Select parent</option>
@@ -208,7 +207,7 @@ export function CategoryManager({ parents, subcategories }: Props) {
               </div>
             ) : (
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Division</label>
+                <label className={`mb-1 block ${adminLabelClass}`}>Division</label>
                 <select
                   value={form.division}
                   onChange={(e) =>
@@ -217,7 +216,7 @@ export function CategoryManager({ parents, subcategories }: Props) {
                       division: e.target.value as CategoryDivision,
                     }))
                   }
-                  className={inputClass}
+                  className={adminInputClass}
                   required
                 >
                   <option value="marine">Marine Supplies</option>
@@ -227,35 +226,31 @@ export function CategoryManager({ parents, subcategories }: Props) {
             )}
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Sort order</label>
+              <label className={`mb-1 block ${adminLabelClass}`}>Sort order</label>
               <input
                 type="number"
                 min="0"
                 value={form.sort_order}
                 onChange={(e) => setForm((prev) => ({ ...prev, sort_order: e.target.value }))}
-                className={inputClass}
+                className={adminInputClass}
               />
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
+            <label className={`mb-1 block ${adminLabelClass}`}>Description</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
               rows={3}
-              className={inputClass}
+              className={adminTextareaClass}
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-[var(--admin-danger)]">{error}</p>}
 
           <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-orange-500 px-5 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50"
-            >
+            <button type="submit" disabled={pending} className={adminButtonPrimaryClass}>
               {pending ? 'Saving…' : editingId ? 'Update' : 'Create'}
             </button>
             <button
@@ -265,7 +260,7 @@ export function CategoryManager({ parents, subcategories }: Props) {
                 setEditingId(null);
                 setError('');
               }}
-              className="rounded-lg border border-slate-300 px-5 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className={adminButtonSecondaryClass}
             >
               Cancel
             </button>
@@ -274,64 +269,60 @@ export function CategoryManager({ parents, subcategories }: Props) {
       )}
 
       {error && !showForm && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <p className="rounded-lg border border-[var(--admin-danger-light)] bg-[var(--admin-danger-light)] px-4 py-3 text-sm text-[var(--admin-danger)]">
           {error}
         </p>
       )}
 
       {grouped.map(({ division, parent, subs }) => (
-        <section key={division} className="rounded-xl border border-slate-200 bg-white">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-            <h2 className="text-lg font-semibold capitalize text-slate-900">{division}</h2>
+        <section key={division} className={adminCardClass}>
+          <div className="flex items-center justify-between border-b border-[var(--admin-border)] px-5 py-4">
+            <h2 className={`${adminHeadingClass} capitalize`}>{division}</h2>
             {parent && (
-              <button
-                type="button"
-                onClick={() => openCreate(parent.id)}
-                className="text-sm font-medium text-orange-600 hover:underline"
-              >
+              <button type="button" onClick={() => openCreate(parent.id)} className={adminLinkClass}>
                 Add subcategory
               </button>
             )}
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[var(--admin-border-light)]">
             {parent ? (
               <div className="flex items-center justify-between px-5 py-4">
                 <div>
-                  <p className="font-medium text-slate-900">{parent.name}</p>
-                  <p className="text-xs text-slate-500">{parent.slug}</p>
+                  <p className="font-medium text-[var(--admin-navy)]">{parent.name}</p>
+                  <p className={`text-xs ${adminSubtextClass}`}>{parent.slug}</p>
                 </div>
                 <div className="flex gap-3 text-sm">
-                  <button type="button" onClick={() => openEdit(parent)} className="text-orange-600 hover:underline">
+                  <button type="button" onClick={() => openEdit(parent)} className={adminLinkClass}>
                     Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(parent.id, parent.name)}
-                    className="text-red-600 hover:underline"
+                    className="text-[var(--admin-danger)] hover:underline"
                   >
                     Delete
                   </button>
                 </div>
               </div>
             ) : (
-              <p className="px-5 py-4 text-sm text-slate-500">No top-level category for {division} yet.</p>
+              <p className={`px-5 py-4 text-sm ${adminSubtextClass}`}>No top-level category for {division} yet.</p>
             )}
 
             {subs.map((sub) => (
-              <div key={sub.id} className="flex items-center justify-between bg-slate-50 px-5 py-3 pl-10">
+              <div key={sub.id} className="flex items-center justify-between bg-[var(--admin-border-light)] px-5 py-3 pl-10">
                 <div>
-                  <p className="font-medium text-slate-800">{sub.name}</p>
-                  <p className="text-xs text-slate-500">{sub.slug}</p>
+                  <p className="font-medium text-[var(--admin-navy)]">{sub.name}</p>
+                  <p className={`text-xs ${adminSubtextClass}`}>{sub.slug}</p>
                 </div>
                 <div className="flex gap-3 text-sm">
-                  <button type="button" onClick={() => openEdit(sub)} className="text-orange-600 hover:underline">
+                  <button type="button" onClick={() => openEdit(sub)} className={adminLinkClass}>
                     Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(sub.id, sub.name)}
-                    className="text-red-600 hover:underline"
+                    className="text-[var(--admin-danger)] hover:underline"
                   >
                     Delete
                   </button>

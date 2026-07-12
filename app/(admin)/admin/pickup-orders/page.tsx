@@ -5,7 +5,14 @@ import { getStaffPickupOrders, updatePickupOrderStatusAction } from '@/actions/p
 import type { OrderWithPickup } from '@/types/pickup';
 import { formatPickupDateTime } from '@/lib/checkout';
 import { getPickupStatusLabel } from '@/lib/pickup/slots';
-import { RippleButton } from '@/components/ui/ripple-button';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import {
+  adminButtonPrimaryClass,
+  adminButtonSecondaryClass,
+  adminCardClass,
+  adminEmptyStateClass,
+  adminSubtextClass,
+} from '@/components/admin/admin-styles';
 
 export default function AdminPickupOrdersPage() {
   const [orders, setOrders] = useState<OrderWithPickup[]>([]);
@@ -52,68 +59,62 @@ export default function AdminPickupOrdersPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Pickup Orders</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Mark orders as ready for pickup or collected when customers arrive.
-      </p>
+      <AdminPageHeader
+        title="Pickup Orders"
+        description="Mark orders as ready for pickup or collected when customers arrive."
+      />
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-[var(--admin-danger)]">{error}</p>}
 
-      <div className="mt-8 space-y-4">
+      <div className="space-y-4">
         {orders.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-            No store pickup orders yet.
-          </p>
+          <p className={adminEmptyStateClass}>No store pickup orders yet.</p>
         ) : (
           orders.map((order) => (
-            <div
-              key={order.id}
-              className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
-            >
+            <div key={order.id} className={`${adminCardClass} p-5`}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="font-mono font-semibold text-slate-900 dark:text-white">
-                    {order.order_number}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="font-mono font-semibold text-[var(--admin-navy)]">{order.order_number}</p>
+                  <p className={`mt-1 ${adminSubtextClass}`}>
                     {order.pickup_location?.name ?? 'Pickup branch'}
                   </p>
                   {order.pickup_date && order.pickup_time && (
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className={`mt-1 text-sm text-[var(--admin-text)]`}>
                       {formatPickupDateTime(order.pickup_date, order.pickup_time)}
                     </p>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-slate-900 dark:text-white">
-                    €{Number(order.total).toFixed(2)}
-                  </p>
-                  <p className="text-sm text-orange-600">
+                  <p className="font-medium text-[var(--admin-navy)]">€{Number(order.total).toFixed(2)}</p>
+                  <p className="text-sm text-[var(--admin-accent)]">
                     {getPickupStatusLabel(order.pickup_status)}
                   </p>
                   {order.pickup_code && (
-                    <p className="mt-2 font-mono text-sm font-semibold">{order.pickup_code}</p>
+                    <p className="mt-2 font-mono text-sm font-semibold text-[var(--admin-navy)]">
+                      {order.pickup_code}
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
                 {order.pickup_status !== 'ready_for_pickup' && order.pickup_status !== 'collected' && (
-                  <RippleButton
+                  <button
                     type="button"
+                    className={adminButtonPrimaryClass}
                     onClick={() => updateStatus(order.id, 'ready_for_pickup')}
                   >
                     Mark ready for pickup
-                  </RippleButton>
+                  </button>
                 )}
                 {order.pickup_status !== 'collected' && (
-                  <RippleButton
+                  <button
                     type="button"
-                    variant="ghost"
+                    className={adminButtonSecondaryClass}
                     onClick={() => updateStatus(order.id, 'collected')}
                   >
                     Mark collected
-                  </RippleButton>
+                  </button>
                 )}
               </div>
             </div>

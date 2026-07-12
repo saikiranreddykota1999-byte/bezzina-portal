@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
 import { getAdminProduct, getAdminCategoryOptions } from '@/actions/admin-products';
+import { AdminPageHeader } from '@/components/admin/admin-page-header';
+import { DeleteProductButton } from '@/app/(admin)/admin/products/delete-product-button';
 import { ProductForm } from '@/components/admin/product-form';
+import { adminButtonDangerClass } from '@/components/admin/admin-styles';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -21,16 +24,28 @@ export default async function EditProductPage({ params }: Props) {
     getAdminCategoryOptions(),
   ]);
 
-  if (!productResult.success) notFound();
+  if (!productResult.success || !productResult.data) notFound();
 
+  const product = productResult.data;
   const categoryTree = categoriesResult.success
-    ? categoriesResult.data ?? { parents: [], subcategories: [] }
-    : { parents: [], subcategories: [] };
+    ? categoriesResult.data ?? { parents: [], subcategories: [], all: [] }
+    : { parents: [], subcategories: [], all: [] };
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Edit Product</h1>
-      <ProductForm categoryTree={categoryTree} product={productResult.data} />
+      <AdminPageHeader
+        title="Edit Product"
+        description={product.name}
+        actions={
+          <DeleteProductButton
+            id={product.id}
+            name={product.name}
+            redirectTo="/admin/products"
+            className={adminButtonDangerClass}
+          />
+        }
+      />
+      <ProductForm categoryTree={categoryTree} product={product} />
     </div>
   );
 }

@@ -4,9 +4,15 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateHomepageSectionAction } from '@/actions/admin-homepage';
 import type { HomepageSectionKey } from '@/types/cms';
-
-const inputClass =
-  'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900';
+import {
+  adminButtonPrimaryClass,
+  adminCardClass,
+  adminHeadingClass,
+  adminInputClass,
+  adminLabelClass,
+  adminSubtextClass,
+  adminTextareaClass,
+} from '@/components/admin/admin-styles';
 
 type Section = {
   section_key: HomepageSectionKey;
@@ -45,44 +51,44 @@ export function HomepageEditor({ sections }: Props) {
 
   return (
     <div className="space-y-6">
-      {message && <p className="text-sm text-green-700">{message}</p>}
+      {message && <p className="text-sm text-[var(--admin-success)]">{message}</p>}
 
-      <form onSubmit={saveHero} className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-semibold">Hero Section</h2>
+      <form onSubmit={saveHero} className={`${adminCardClass} p-6`}>
+        <h2 className={adminHeadingClass}>Hero Section</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Eyebrow</label>
-            <input name="eyebrow" defaultValue={String(hero.eyebrow ?? '')} className={inputClass} />
+            <label className={`mb-1 block ${adminLabelClass}`}>Eyebrow</label>
+            <input name="eyebrow" defaultValue={String(hero.eyebrow ?? '')} className={adminInputClass} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Subtitle</label>
-            <input name="subtitle" defaultValue={String(hero.subtitle ?? '')} className={inputClass} />
+            <label className={`mb-1 block ${adminLabelClass}`}>Subtitle</label>
+            <input name="subtitle" defaultValue={String(hero.subtitle ?? '')} className={adminInputClass} />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-slate-500">Body</label>
-            <textarea name="body" rows={3} defaultValue={String(hero.body ?? '')} className={inputClass} />
+            <label className={`mb-1 block ${adminLabelClass}`}>Body</label>
+            <textarea name="body" rows={3} defaultValue={String(hero.body ?? '')} className={adminTextareaClass} />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-slate-500">Hero Image URL</label>
-            <input name="heroImageUrl" defaultValue={String(hero.heroImageUrl ?? '')} className={inputClass} />
+            <label className={`mb-1 block ${adminLabelClass}`}>Hero Image URL</label>
+            <input name="heroImageUrl" defaultValue={String(hero.heroImageUrl ?? '')} className={adminInputClass} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Primary Button</label>
-            <input name="primaryButtonLabel" defaultValue={String(hero.primaryButtonLabel ?? '')} className={inputClass} />
-            <input name="primaryButtonHref" defaultValue={String(hero.primaryButtonHref ?? '')} className={`${inputClass} mt-2`} />
+            <label className={`mb-1 block ${adminLabelClass}`}>Primary Button</label>
+            <input name="primaryButtonLabel" defaultValue={String(hero.primaryButtonLabel ?? '')} className={adminInputClass} />
+            <input name="primaryButtonHref" defaultValue={String(hero.primaryButtonHref ?? '')} className={`${adminInputClass} mt-2`} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Secondary Button</label>
-            <input name="secondaryButtonLabel" defaultValue={String(hero.secondaryButtonLabel ?? '')} className={inputClass} />
-            <input name="secondaryButtonHref" defaultValue={String(hero.secondaryButtonHref ?? '')} className={`${inputClass} mt-2`} />
+            <label className={`mb-1 block ${adminLabelClass}`}>Secondary Button</label>
+            <input name="secondaryButtonLabel" defaultValue={String(hero.secondaryButtonLabel ?? '')} className={adminInputClass} />
+            <input name="secondaryButtonHref" defaultValue={String(hero.secondaryButtonHref ?? '')} className={`${adminInputClass} mt-2`} />
           </div>
         </div>
-        <button type="submit" disabled={pending} className="mt-4 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white">
+        <button type="submit" disabled={pending} className={`mt-4 ${adminButtonPrimaryClass}`}>
           Save Hero
         </button>
       </form>
 
-      <p className="text-sm text-slate-500">
+      <p className={adminSubtextClass}>
         Other sections (About, Services, Why Choose Us, Contact, Footer) can be edited from Website Content.
       </p>
     </div>
