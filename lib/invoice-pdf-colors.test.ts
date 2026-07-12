@@ -8,7 +8,8 @@ describe('invoice PDF export', () => {
     const colors = readFileSync(resolve(process.cwd(), 'lib/invoice-pdf-colors.ts'), 'utf8');
     const receiptPdf = readFileSync(resolve(process.cwd(), 'lib/receipt-pdf.ts'), 'utf8');
 
-    expect(colors).toContain('suspendMainDocumentStyles');
+    expect(colors).toContain("node.textContent = '/* pdf-export-suspended */'");
+    expect(colors).not.toContain('node.remove()');
     expect(colors).toContain('mountInvoiceInIframe');
     expect(receiptPdf).toContain('suspendMainDocumentStyles()');
   });

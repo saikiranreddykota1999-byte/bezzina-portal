@@ -76,7 +76,7 @@ function inlineComputedStyles(source: Element, target: Element): void {
     if (!property || SKIP_STYLE_PROPERTIES.has(property)) continue;
 
     const raw = computed.getPropertyValue(property);
-    if (!raw) continue;
+    if (!raw || property.startsWith('--')) continue;
 
     const safeValue = sanitizeStyleValue(property, raw);
     if (safeValue) {
@@ -164,35 +164,25 @@ export function suspendMainDocumentStyles(): () => void {
 
   document.querySelectorAll('link[rel="stylesheet"]').forEach((node) => {
     if (node instanceof HTMLLinkElement) {
-      const previous = node.disabled;
+      const previousDisabled = node.disabled;
       node.disabled = true;
       restores.push(() => {
-        node.disabled = previous;
+        node.disabled = previousDisabled;
       });
     }
   });
-
-  const removedStyles: Array<{
-    node: HTMLStyleElement;
-    parent: Node | null;
-    next: ChildNode | null;
-  }> = [];
 
   document.querySelectorAll('style').forEach((node) => {
     if (node instanceof HTMLStyleElement) {
-      removedStyles.push({
-        node,
-        parent: node.parentNode,
-        next: node.nextSibling,
+      const previousContent = node.textContent ?? '';
+      const previousMedia = node.media;
+      node.textContent = '/* pdf-export-suspended */';
+      node.media = 'not all';
+      restores.push(() => {
+        node.textContent = previousContent;
+        node.media = previousMedia;
       });
-      node.remove();
     }
-  });
-
-  restores.push(() => {
-    removedStyles.forEach(({ node, parent, next }) => {
-      parent?.insertBefore(node, next);
-    });
   });
 
   return () => {

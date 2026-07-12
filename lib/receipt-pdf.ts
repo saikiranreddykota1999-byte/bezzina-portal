@@ -20,11 +20,16 @@ export function mapInvoicePdfError(error: unknown): string {
     return 'Your browser blocked PDF generation. Try Print receipt instead.';
   }
 
+  if (message.includes('insertBefore')) {
+    return 'PDF rendering interrupted page styles. Refresh the page and try Download PDF again.';
+  }
+
   return message || 'Unable to generate invoice PDF. Please try again.';
 }
 
-async function renderInvoiceCanvas(node: HTMLElement, ownerWindow: Window) {
+async function renderInvoiceCanvas(node: HTMLElement) {
   const html2canvas = (await import('html2canvas')).default;
+  const ownerWindow = node.ownerDocument.defaultView ?? window;
 
   return html2canvas(node, {
     scale: 2,
@@ -33,20 +38,16 @@ async function renderInvoiceCanvas(node: HTMLElement, ownerWindow: Window) {
     backgroundColor: '#ffffff',
     width: node.scrollWidth,
     height: node.scrollHeight,
-    windowWidth: node.scrollWidth,
-    windowHeight: node.scrollHeight,
-    foreignObjectRendering: false,
+    windowWidth: ownerWindow.innerWidth,
+    windowHeight: ownerWindow.innerHeight,
     scrollX: 0,
     scrollY: 0,
-    x: 0,
-    y: 0,
-    ...(ownerWindow ? { windowWidth: ownerWindow.innerWidth, windowHeight: ownerWindow.innerHeight } : {}),
   });
 }
 
-async function buildInvoicePdf(node: HTMLElement, ownerWindow: Window, filename: string) {
+async function buildInvoicePdf(node: HTMLElement, filename: string) {
   const { jsPDF } = await import('jspdf');
-  const canvas = await renderInvoiceCanvas(node, ownerWindow);
+  const canvas = await renderInvoiceCanvas(node);
   const imageData = canvas.toDataURL('image/jpeg', 0.98);
 
   const pdf = new jsPDF({
@@ -96,11 +97,10 @@ export async function exportInvoicePdf({
 
   const restoreStyles = suspendMainDocumentStyles();
   const { iframe, node } = mountInvoiceInIframe(element);
-  const ownerWindow = iframe.contentWindow ?? window;
 
   try {
     await waitForImages(node);
-    const { pdf } = await buildInvoicePdf(node, ownerWindow, filename);
+    const { pdf } = await buildInvoicePdf(node, filename);
 
     if (action === 'open') {
       const blob = pdf.output('blob');
