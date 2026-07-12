@@ -19,37 +19,6 @@ export async function waitForImages(root: ParentNode): Promise<void> {
   );
 }
 
-export function suspendMainDocumentStyles(): () => void {
-  const restores: Array<() => void> = [];
-
-  document.querySelectorAll('link[rel="stylesheet"]').forEach((node) => {
-    if (node instanceof HTMLLinkElement) {
-      const previousDisabled = node.disabled;
-      node.disabled = true;
-      restores.push(() => {
-        node.disabled = previousDisabled;
-      });
-    }
-  });
-
-  document.querySelectorAll('style').forEach((node) => {
-    if (node instanceof HTMLStyleElement) {
-      const previousContent = node.textContent ?? '';
-      const previousMedia = node.media;
-      node.textContent = '/* pdf-export-suspended */';
-      node.media = 'not all';
-      restores.push(() => {
-        node.textContent = previousContent;
-        node.media = previousMedia;
-      });
-    }
-  });
-
-  return () => {
-    restores.reverse().forEach((restore) => restore());
-  };
-}
-
 function prepareInvoiceClone(source: HTMLElement): HTMLElement {
   const clone = source.cloneNode(true) as HTMLElement;
   const origin = window.location.origin;
@@ -66,6 +35,14 @@ function prepareInvoiceClone(source: HTMLElement): HTMLElement {
     watermark.style.backgroundImage = `url('${origin}/bezzina-watermark.png')`;
   }
 
+  clone.querySelectorAll('.inv-pickup-code-value, .inv-doc-number').forEach((node) => {
+    if (node instanceof HTMLElement) {
+      node.style.color = '#0f172a';
+      node.style.fontWeight = '700';
+      node.style.visibility = 'visible';
+    }
+  });
+
   return clone;
 }
 
@@ -81,11 +58,13 @@ export function mountInvoiceInIframe(source: HTMLElement): {
   iframe.style.width = `${PDF_PAGE_WIDTH_PX}px`;
   iframe.style.height = '1200px';
   iframe.style.border = '0';
+  iframe.style.visibility = 'hidden';
+  iframe.style.pointerEvents = 'none';
   document.body.appendChild(iframe);
 
   const doc = iframe.contentDocument;
   if (!doc) {
-    document.body.removeChild(iframe);
+    iframe.remove();
     throw new Error('Unable to create PDF frame');
   }
 

@@ -20,20 +20,16 @@ export function mapInvoicePdfError(error: unknown): string {
     return 'Your browser blocked PDF generation. Try Print receipt instead.';
   }
 
-  if (message.includes('insertBefore')) {
-    return 'PDF rendering interrupted page styles. Refresh the page and try Download PDF again.';
-  }
-
   return message || 'Unable to generate invoice PDF. Please try again.';
 }
 
 async function renderInvoiceCanvas(node: HTMLElement) {
   const html2canvas = (await import('html2canvas')).default;
-  const width = node.offsetWidth || 794;
+  const width = node.scrollWidth || node.offsetWidth || 794;
   const height = node.scrollHeight;
 
   return html2canvas(node, {
-    scale: 2,
+    scale: 1.5,
     useCORS: true,
     logging: false,
     backgroundColor: '#ffffff',
@@ -43,13 +39,19 @@ async function renderInvoiceCanvas(node: HTMLElement) {
     windowHeight: height,
     scrollX: 0,
     scrollY: 0,
+    foreignObjectRendering: false,
+    onclone: (_document, clonedNode) => {
+      if (clonedNode instanceof HTMLElement) {
+        clonedNode.style.width = `${width}px`;
+      }
+    },
   });
 }
 
 async function buildInvoicePdf(node: HTMLElement, filename: string) {
   const { jsPDF } = await import('jspdf');
   const canvas = await renderInvoiceCanvas(node);
-  const imageData = canvas.toDataURL('image/jpeg', 0.98);
+  const imageData = canvas.toDataURL('image/jpeg', 0.95);
 
   const pdf = new jsPDF({
     unit: 'mm',
@@ -89,14 +91,10 @@ export async function exportInvoicePdf({
     throw new Error('Invoice document not found');
   }
 
-  const {
-    mountInvoiceInIframe,
-    unmountInvoiceIframe,
-    waitForImages,
-    suspendMainDocumentStyles,
-  } = await import('@/lib/invoice-pdf-colors');
+  const { mountInvoiceInIframe, unmountInvoiceIframe, waitForImages } = await import(
+    '@/lib/invoice-pdf-colors'
+  );
 
-  const restoreStyles = suspendMainDocumentStyles();
   const { iframe, node } = mountInvoiceInIframe(element);
 
   try {
@@ -118,6 +116,5 @@ export async function exportInvoicePdf({
     pdf.save(filename);
   } finally {
     unmountInvoiceIframe(iframe);
-    restoreStyles();
   }
 }

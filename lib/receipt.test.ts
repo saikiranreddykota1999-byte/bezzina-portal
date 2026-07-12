@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   amountInWords,
   buildReceiptTotals,
+  formatInvoiceNumber,
   resolveReceiptCustomer,
   splitVatInclusive,
 } from '@/lib/receipt';
@@ -21,6 +22,17 @@ describe('buildReceiptTotals', () => {
     expect(totals.totalGross).toBe(4);
     expect(totals.totalVat).toBeCloseTo(0.61, 2);
     expect(totals.subtotalNet).toBeCloseTo(3.39, 2);
+  });
+});
+
+describe('formatInvoiceNumber', () => {
+  it('formats valid JB invoice numbers', () => {
+    expect(formatInvoiceNumber('JB-2026-3828')).toBe('JB-2026-3828');
+  });
+
+  it('returns dash for missing values', () => {
+    expect(formatInvoiceNumber(null)).toBe('—');
+    expect(formatInvoiceNumber('   ')).toBe('—');
   });
 });
 

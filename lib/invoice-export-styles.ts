@@ -49,7 +49,9 @@ export const INVOICE_EXPORT_CSS = `
 
   .inv-brand {
     display: flex;
-    align-items: center;
+    width: 100%;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 16px;
   }
 
@@ -107,6 +109,15 @@ export const INVOICE_EXPORT_CSS = `
     margin: 8px 0 0;
     font-size: 11px;
     color: #cbd5e1;
+  }
+
+  .inv-doc-number {
+    margin: 4px 0 0;
+    font-family: Consolas, monospace;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #ffffff;
   }
 
   .inv-meta {
@@ -194,6 +205,8 @@ export const INVOICE_EXPORT_CSS = `
     font-size: 18px;
     font-weight: 700;
     color: #0f172a;
+    line-height: 1.2;
+    -webkit-text-fill-color: #0f172a;
   }
 
   .inv-table-wrap {

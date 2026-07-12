@@ -13,6 +13,7 @@ import {
   displayValue,
   formatPaymentMethodLabel,
   formatPaymentStatusLabel,
+  formatInvoiceNumber,
   formatReceiptDate,
   formatReceiptTime,
   MALTA_VAT_RATE,
@@ -53,6 +54,7 @@ export function TaxInvoiceDocument({ order }: Props) {
   const totals = buildReceiptTotals(Number(order.subtotal), Number(order.shipping_cost));
   const paymentStatus = formatPaymentStatusLabel(order.payment_status, order.payment_method);
   const isPaid = order.payment_status === 'paid';
+  const invoiceNumber = formatInvoiceNumber(order.order_number);
   const companyAddress = `${company.address.line1}, ${company.address.city} ${company.address.postalCode}, ${company.address.country}`;
 
   return (
@@ -87,8 +89,9 @@ export function TaxInvoiceDocument({ order }: Props) {
               <div className="inv-doc-badge inline-block rounded-md bg-slate-700/80 px-4 py-2 text-xs font-bold uppercase tracking-wide">
                 Tax Invoice / Receipt
               </div>
-              <p className="inv-doc-ref mt-2 text-[11px] text-slate-300">
-                Original Copy · {displayValue(order.order_number)}
+              <p className="inv-doc-ref mt-2 text-[11px] text-slate-300">Original Copy</p>
+              <p className="inv-doc-number mt-1 font-mono text-base font-bold tracking-wide text-white">
+                {invoiceNumber}
               </p>
             </div>
           </div>
@@ -103,6 +106,7 @@ export function TaxInvoiceDocument({ order }: Props) {
             <MetaItem label="Email" value={company.invoice.accountsEmail} />
           </div>
           <div className="inv-meta-col-right space-y-0.5 sm:text-right">
+            <MetaItem label="Invoice No." value={invoiceNumber} />
             <MetaItem label="Date" value={formatReceiptDate(order.created_at)} />
             <MetaItem label="Time" value={formatReceiptTime(order.created_at)} />
             <MetaItem label="Currency" value={`${company.invoice.currency} €`} />
@@ -142,7 +146,7 @@ export function TaxInvoiceDocument({ order }: Props) {
                       Pickup Code
                     </p>
                     <p className="inv-pickup-code-value font-mono text-lg font-bold text-slate-900">
-                      {order.pickup_code}
+                      {displayValue(order.pickup_code)}
                     </p>
                   </div>
                 ) : null}

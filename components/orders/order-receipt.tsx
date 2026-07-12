@@ -76,7 +76,23 @@ export function OrderReceipt({ order }: Props) {
   }
 
   return (
-    <div id="order-receipt" className="mx-auto max-w-4xl">
+    <div id="order-receipt" className="relative mx-auto max-w-4xl">
+      {exporting ? (
+        <div
+          className="no-print fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-[1px]"
+          role="status"
+          aria-live="polite"
+          aria-label="Generating invoice PDF"
+        >
+          <div className="rounded-xl bg-white px-6 py-4 shadow-lg">
+            <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
+              <Loader2 className="h-4 w-4 animate-spin text-orange-600" aria-hidden />
+              Generating your invoice PDF...
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="no-print mb-4 flex flex-wrap items-center gap-2">
         <button
           type="button"

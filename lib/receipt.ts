@@ -95,6 +95,14 @@ export function displayValue(value: string | null | undefined): string {
   return trimmed ? trimmed : '—';
 }
 
+const INVOICE_NUMBER_PATTERN = /^JB-\d{4}-\d{4}$/;
+
+export function formatInvoiceNumber(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return '—';
+  return INVOICE_NUMBER_PATTERN.test(trimmed) ? trimmed : trimmed.toUpperCase();
+}
+
 export function formatReceiptDate(isoDate: string): string {
   return new Intl.DateTimeFormat('en-GB', {
     day: 'numeric',
