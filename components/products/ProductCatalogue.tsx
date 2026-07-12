@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
 import {
@@ -60,8 +60,17 @@ export default function ProductCatalogue({
     return subcategories.find((c) => c.slug === filters.categorySlug)?.id ?? 'all';
   }, [filters.categorySlug, subcategories]);
 
+  const navigate = useCallback(
+    (updates: Partial<ParsedCatalogueParams>) => {
+      const qs = buildCatalogueQuery(filters, updates);
+      router.push(qs ? `${pathname}?${qs}` : pathname);
+    },
+    [filters, pathname, router],
+  );
+
   useEffect(() => {
-    setQuery(filters.query);
+    const timer = setTimeout(() => setQuery(filters.query), 0);
+    return () => clearTimeout(timer);
   }, [filters.query]);
 
   useEffect(() => {
@@ -71,13 +80,7 @@ export default function ProductCatalogue({
     }, 300);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
-
-  const navigate = (updates: Partial<ParsedCatalogueParams>) => {
-    const qs = buildCatalogueQuery(filters, updates);
-    router.push(qs ? `${pathname}?${qs}` : pathname);
-  };
+  }, [query, filters.query, navigate]);
 
   return (
     <div>

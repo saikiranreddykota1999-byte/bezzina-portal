@@ -1,33 +1,35 @@
-const reasons = [
+import type { WhyChooseContent } from '@/types/cms';
+
+const DEFAULT_REASONS = [
   {
-    title: "Family Business Since 1969",
+    title: 'Family Business Since 1969',
     description:
-      "A long-established Maltese supplier built on trusted service, continuity, and strong customer relationships.",
+      'A long-established Maltese supplier built on trusted service, continuity, and strong customer relationships.',
   },
   {
-    title: "Marine & Industrial Specialists",
+    title: 'Marine & Industrial Specialists',
     description:
-      "Focused product knowledge across marine supplies, engineering materials, and industrial equipment.",
+      'Focused product knowledge across marine supplies, engineering materials, and industrial equipment.',
   },
   {
-    title: "Large Warehouse Stock",
+    title: 'Large Warehouse Stock',
     description:
-      "Extensive stockholding helps customers source essential items quickly and reliably.",
+      'Extensive stockholding helps customers source essential items quickly and reliably.',
   },
   {
-    title: "Trusted by Trade Professionals",
+    title: 'Trusted by Trade Professionals',
     description:
-      "Preferred by workshops, contractors, marine operators, and technical buyers across Malta.",
+      'Preferred by workshops, contractors, marine operators, and technical buyers across Malta.',
   },
   {
-    title: "Technical Product Knowledge",
+    title: 'Technical Product Knowledge',
     description:
-      "Practical guidance to help customers select the right products for the job.",
+      'Practical guidance to help customers select the right products for the job.',
   },
   {
-    title: "Fast Quote Response",
+    title: 'Fast Quote Response',
     description:
-      "Responsive support for enquiries, quotations, and urgent supply requirements.",
+      'Responsive support for enquiries, quotations, and urgent supply requirements.',
   },
 ];
 
@@ -49,26 +51,27 @@ function FeatureIcon() {
   );
 }
 
-export function WhyChoose() {
+type Props = { content?: Partial<WhyChooseContent> };
+
+export function WhyChoose({ content }: Props) {
+  const reasons = content?.items?.length ? content.items : DEFAULT_REASONS;
+
   return (
-    <section
-      className="bg-white py-16 sm:py-20"
-      aria-labelledby="why-choose-title"
-    >
+    <section className="bg-white py-16 sm:py-20" aria-labelledby="why-choose-title">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-600">
-            Why Choose Us
+            {content?.eyebrow ?? 'Why Choose Us'}
           </p>
           <h2
             id="why-choose-title"
             className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl"
           >
-            Dependable supply backed by experience and technical service
+            {content?.title ?? 'Dependable supply backed by experience and technical service'}
           </h2>
           <p className="mt-4 text-base leading-8 text-slate-600">
-            Joseph Bezzina & Co. Ltd supports marine and industrial customers
-            with practical expertise, trusted stock, and responsive service.
+            {content?.description ??
+              'Joseph Bezzina & Co. Ltd supports marine and industrial customers with practical expertise, trusted stock, and responsive service.'}
           </p>
         </div>
 
@@ -81,12 +84,8 @@ export function WhyChoose() {
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50">
                 <FeatureIcon />
               </div>
-              <h3 className="mt-5 text-xl font-semibold text-slate-900">
-                {reason.title}
-              </h3>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                {reason.description}
-              </p>
+              <h3 className="mt-5 text-xl font-semibold text-slate-900">{reason.title}</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{reason.description}</p>
             </article>
           ))}
         </div>

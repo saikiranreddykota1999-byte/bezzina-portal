@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { detectCardBrand } from '@/lib/payment';
+import { detectCardBrand, isDemoPaymentAllowed } from '@/lib/payment';
+
+describe('isDemoPaymentAllowed', () => {
+  it('blocks demo payment when Stripe is enabled', () => {
+    expect(isDemoPaymentAllowed(true)).toBe(false);
+  });
+
+  it('allows demo payment when Stripe is disabled', () => {
+    expect(isDemoPaymentAllowed(false)).toBe(true);
+  });
+});
 
 describe('detectCardBrand', () => {
   it('detects common card brands from prefixes', () => {

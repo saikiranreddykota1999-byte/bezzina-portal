@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import ProductDetail from '@/components/products/ProductDetail';
 import { getProductBySlug } from '@/services/product.service';
+import { recordProductView } from '@/actions/customer-portal';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -28,6 +29,8 @@ export default async function ProductPage({ params }: PageProps) {
   if (!product) {
     notFound();
   }
+
+  void recordProductView(product.id);
 
   return (
     <main>

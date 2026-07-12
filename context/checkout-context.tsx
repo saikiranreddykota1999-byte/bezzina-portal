@@ -4,10 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
 } from 'react';
+import { useLocalStorage } from '@/lib/hooks/use-local-storage';
 import type { CheckoutPickupSelection, DeliveryAddress, FulfillmentMethod } from '@/types/pickup';
 
 type CheckoutContextValue = {
@@ -32,89 +31,52 @@ type StoredCheckout = {
   deliveryAddress: DeliveryAddress | null;
 };
 
-function readStoredCheckout(): StoredCheckout {
-  if (typeof window === 'undefined') {
-    return { fulfillmentMethod: 'delivery', pickup: null, deliveryAddress: null };
-  }
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored
-      ? JSON.parse(stored)
-      : { fulfillmentMethod: 'delivery', pickup: null, deliveryAddress: null };
-  } catch {
-    return { fulfillmentMethod: 'delivery', pickup: null, deliveryAddress: null };
-  }
-}
+const DEFAULT_CHECKOUT: StoredCheckout = {
+  fulfillmentMethod: 'delivery',
+  pickup: null,
+  deliveryAddress: null,
+};
 
 export function CheckoutProvider({ children }: { children: React.ReactNode }) {
-  const [fulfillmentMethod, setFulfillmentMethodState] =
-    useState<FulfillmentMethod>('delivery');
-  const [pickup, setPickup] = useState<CheckoutPickupSelection | null>(null);
-  const [deliveryAddress, setDeliveryAddressState] = useState<DeliveryAddress | null>(null);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    const stored = readStoredCheckout();
-    setFulfillmentMethodState(stored.fulfillmentMethod);
-    setPickup(stored.pickup);
-    setDeliveryAddressState(stored.deliveryAddress);
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ fulfillmentMethod, pickup, deliveryAddress }),
-    );
-  }, [fulfillmentMethod, pickup, deliveryAddress, hydrated]);
+  const [stored, setStored] = useLocalStorage<StoredCheckout>(STORAGE_KEY, DEFAULT_CHECKOUT);
 
   const setFulfillmentMethod = useCallback((method: FulfillmentMethod) => {
-    setFulfillmentMethodState(method);
-    if (method === 'delivery') {
-      setPickup(null);
-    } else {
-      setDeliveryAddressState(null);
-    }
-  }, []);
+    setStored((prev) => ({
+      ...prev,
+      fulfillmentMethod: method,
+      pickup: method === 'delivery' ? null : prev.pickup,
+      deliveryAddress: method === 'store_pickup' ? null : prev.deliveryAddress,
+    }));
+  }, [setStored]);
 
   const setPickupSelection = useCallback((selection: CheckoutPickupSelection | null) => {
-    setPickup(selection);
-  }, []);
+    setStored((prev) => ({ ...prev, pickup: selection }));
+  }, [setStored]);
 
   const setDeliveryAddress = useCallback((address: DeliveryAddress | null) => {
-    setDeliveryAddressState(address);
-  }, []);
+    setStored((prev) => ({ ...prev, deliveryAddress: address }));
+  }, [setStored]);
 
   const clearCheckout = useCallback(() => {
-    setFulfillmentMethodState('delivery');
-    setPickup(null);
-    setDeliveryAddressState(null);
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
+    setStored(DEFAULT_CHECKOUT);
+  }, [setStored]);
 
-  const isPickupComplete = useMemo(() => {
-    if (fulfillmentMethod !== 'store_pickup') return true;
-    return Boolean(pickup?.locationId && pickup.pickupDate && pickup.pickupTime);
-  }, [fulfillmentMethod, pickup]);
-
-  const isDeliveryComplete = useMemo(() => {
-    if (fulfillmentMethod !== 'delivery') return true;
-    return Boolean(
-      deliveryAddress?.line1 &&
-        deliveryAddress.city &&
-        deliveryAddress.postalCode &&
-        deliveryAddress.country,
-    );
-  }, [fulfillmentMethod, deliveryAddress]);
-
-  const isFulfillmentComplete = isPickupComplete && isDeliveryComplete;
+  const isPickupComplete = Boolean(
+    stored.pickup?.locationId && stored.pickup?.pickupDate && stored.pickup?.pickupTime,
+  );
+  const isDeliveryComplete = Boolean(
+    stored.deliveryAddress?.line1 &&
+    stored.deliveryAddress?.city &&
+    stored.deliveryAddress?.postalCode,
+  );
+  const isFulfillmentComplete =
+    stored.fulfillmentMethod === 'store_pickup' ? isPickupComplete : isDeliveryComplete;
 
   const value = useMemo(
     () => ({
-      fulfillmentMethod,
-      pickup,
-      deliveryAddress,
+      fulfillmentMethod: stored.fulfillmentMethod,
+      pickup: stored.pickup,
+      deliveryAddress: stored.deliveryAddress,
       setFulfillmentMethod,
       setPickupSelection,
       setDeliveryAddress,
@@ -124,9 +86,7 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
       clearCheckout,
     }),
     [
-      fulfillmentMethod,
-      pickup,
-      deliveryAddress,
+      stored,
       setFulfillmentMethod,
       setPickupSelection,
       setDeliveryAddress,

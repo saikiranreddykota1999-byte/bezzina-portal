@@ -1,0 +1,44 @@
+node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm notice
+npm notice New major version of npm available! 11.13.0 -> 12.0.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.1
+npm notice To update run: npm install -g npm@12.0.1
+npm notice
+node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+GÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: 
+https://nextjs.org/docs/messages/middleware-to-proxy
+Error occurred prerendering page "/account/suggestions". Read more: https://nextjs.org/docs/messages/prerender-error
+Error: Objects are not valid as a React child (found: object with keys {line1, city, postalCode, country}). If you 
+meant to render a collection of children, use an array instead.
+    at ignore-listed frames {
+  digest: '846225970'
+}
+Export encountered an error on /(marketing)/account/suggestions/page: /account/suggestions, exiting the build.
+G¿» Next.js build worker exited with code: 1 and signal: null
+
+> bezzina-portal@0.1.0 build
+> next build
+
+Gû¦ Next.js 16.2.10 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+G£ô Compiled successfully in 10.9s
+  Running TypeScript ...
+  Finished TypeScript in 14.0s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/60) ...

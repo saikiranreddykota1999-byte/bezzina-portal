@@ -115,7 +115,10 @@ export function ProductSlider({ products }: ProductSliderProps) {
   );
 
   useEffect(() => {
-    setIndex((current) => (current >= totalSlides ? 0 : current));
+    const timer = setTimeout(() => {
+      setIndex((current) => (current >= totalSlides ? 0 : current));
+    }, 0);
+    return () => clearTimeout(timer);
   }, [totalSlides]);
 
   useEffect(() => {

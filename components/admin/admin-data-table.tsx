@@ -1,0 +1,262 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronUp, Search } from 'lucide-react';
+
+export type Column<T> = {
+  key: string;
+  header: string;
+  sortable?: boolean;
+  render: (row: T) => React.ReactNode;
+  className?: string;
+};
+
+export type BulkAction = {
+  label: string;
+  onAction: (ids: string[]) => void | Promise<void>;
+  variant?: 'default' | 'danger';
+};
+
+type AdminDataTableProps<T extends { id: string }> = {
+  data: T[];
+  columns: Column<T>[];
+  searchPlaceholder?: string;
+  searchKeys?: (keyof T)[];
+  pageSize?: number;
+  bulkActions?: BulkAction[];
+  emptyMessage?: string;
+};
+
+function compareValues(a: unknown, b: unknown): number {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a).localeCompare(String(b));
+}
+
+export function AdminDataTable<T extends { id: string }>({
+  data,
+  columns,
+  searchPlaceholder = 'Search…',
+  searchKeys = [],
+  pageSize = 10,
+  bulkActions = [],
+  emptyMessage = 'No records found.',
+}: AdminDataTableProps<T>) {
+  const [query, setQuery] = useState('');
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let rows = data;
+
+    if (q) {
+      rows = rows.filter((row) =>
+        searchKeys.some((key) => String(row[key] ?? '').toLowerCase().includes(q)),
+      );
+    }
+
+    if (sortKey) {
+      rows = [...rows].sort((a, b) => {
+        const av = (a as Record<string, unknown>)[sortKey];
+        const bv = (b as Record<string, unknown>)[sortKey];
+        const cmp = compareValues(av, bv);
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+
+    return rows;
+  }, [data, query, searchKeys, sortKey, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const allSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
+
+  function toggleSort(key: string) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    setSortDir('asc');
+  }
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected(new Set());
+      return;
+    }
+    setSelected(new Set(pageRows.map((r) => r.id)));
+  }
+
+  function toggleRow(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const selectedIds = Array.from(selected);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder={searchPlaceholder}
+            className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 dark:border-slate-700 dark:bg-slate-900"
+          />
+        </div>
+
+        {bulkActions.length > 0 && selectedIds.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {bulkActions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => void action.onAction(selectedIds)}
+                className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                  action.variant === 'danger'
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'border border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900'
+                }`}
+              >
+                {action.label} ({selectedIds.length})
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600 dark:border-slate-800 dark:bg-slate-950">
+            <tr>
+              {bulkActions.length > 0 && (
+                <th className="px-4 py-3">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" />
+                </th>
+              )}
+              {columns.map((col) => (
+                <th key={col.key} className={`px-4 py-3 ${col.className ?? ''}`}>
+                  {col.sortable ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(col.key)}
+                      className="inline-flex items-center gap-1 font-semibold"
+                    >
+                      {col.header}
+                      {sortKey === col.key ? (
+                        sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                      ) : null}
+                    </button>
+                  ) : (
+                    col.header
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {pageRows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length + (bulkActions.length > 0 ? 1 : 0)}
+                  className="px-4 py-10 text-center text-slate-500"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+              pageRows.map((row) => (
+                <tr key={row.id} className="text-slate-800 dark:text-slate-200">
+                  {bulkActions.length > 0 && (
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(row.id)}
+                        onChange={() => toggleRow(row.id)}
+                        aria-label={`Select row ${row.id}`}
+                      />
+                    </td>
+                  )}
+                  {columns.map((col) => (
+                    <td key={col.key} className={`px-4 py-3 ${col.className ?? ''}`}>
+                      {col.render(row)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-slate-600">
+          <p>
+            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of{' '}
+            {filtered.length}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:opacity-40 dark:border-slate-700"
+            >
+              Previous
+            </button>
+            <span className="px-2 py-1.5">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 disabled:opacity-40 dark:border-slate-700"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function exportToCsv<T extends Record<string, unknown>>(
+  rows: T[],
+  columns: { key: keyof T; header: string }[],
+  filename: string,
+) {
+  const header = columns.map((c) => c.header).join(',');
+  const body = rows
+    .map((row) =>
+      columns
+        .map((c) => `"${String(row[c.key] ?? '').replace(/"/g, '""')}"`)
+        .join(','),
+    )
+    .join('\n');
+  const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}

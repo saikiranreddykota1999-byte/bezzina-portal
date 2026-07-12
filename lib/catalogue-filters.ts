@@ -124,8 +124,14 @@ export function filterProducts(
         p.thread_type,
         p.material,
         p.standard,
-        p.category?.name,
+        p.search_keywords,
+        p.brand?.name,
         ...(p.tags ?? []),
+        ...(Array.isArray(p.technical_specs)
+          ? p.technical_specs.map((s) => `${s.property} ${s.value}`)
+          : p.technical_specs
+            ? Object.entries(p.technical_specs).map(([k, v]) => `${k} ${v}`)
+            : []),
       ]
         .filter(Boolean)
         .join(' ')

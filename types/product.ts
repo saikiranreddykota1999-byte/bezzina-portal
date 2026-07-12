@@ -19,6 +19,54 @@ export interface ProductImage {
   is_primary: boolean;
 }
 
+export type InventoryStatus =
+  | 'available'
+  | 'limited_stock'
+  | 'special_order'
+  | 'made_to_order'
+  | 'coming_soon'
+  | 'discontinued'
+  | 'out_of_stock';
+
+export type ProductDocumentType =
+  | 'pdf'
+  | 'datasheet'
+  | 'sds'
+  | 'manual'
+  | 'catalogue'
+  | 'other';
+
+export interface ProductDocument {
+  id: string;
+  product_id: string;
+  label: string;
+  doc_type: ProductDocumentType;
+  url: string;
+  file_name: string;
+  file_size: number | null;
+  sort_order: number;
+}
+
+export type TechnicalSpecRow = { property: string; value: string };
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  name: string;
+  sku: string;
+  availability: InventoryStatus;
+  unit: string;
+  weight_kg: number | null;
+  specification: string | null;
+  image_url: string | null;
+  document_url: string | null;
+  document_label: string | null;
+  in_stock: boolean;
+  stock_quantity: number;
+  price: number | null;
+  sort_order: number;
+}
+
 export interface Brand {
   id: string;
   name: string;
@@ -52,18 +100,65 @@ export interface Product {
   fast_selling: boolean;
   upcoming: boolean;
   future_product: boolean;
+  new_arrival?: boolean;
+  clearance?: boolean;
+  recommended?: boolean;
+  marine_grade?: boolean;
+  industrial_grade?: boolean;
+  best_seller?: boolean;
+  most_viewed?: boolean;
+  recently_added?: boolean;
   discount_percent: number | null;
   is_active: boolean;
+  video_url?: string | null;
+  youtube_url?: string | null;
+  weight_kg?: number | null;
+  view_count?: number;
+  technical_specs?: TechnicalSpecRow[] | Record<string, string> | null;
 
   tags: string[] | null;
   seo_title: string | null;
   seo_description: string | null;
 
+  long_description?: string | null;
+  applications?: string | null;
+  availability?: InventoryStatus | string | null;
+  internal_notes?: string | null;
+  search_keywords?: string | null;
+  publish_status?: 'draft' | 'published';
+  related_product_ids?: string[] | null;
+
   // populated via join
   category?: Category | null;
   brand?: Brand | null;
   images?: ProductImage[];
+  documents?: ProductDocument[];
+  variants?: ProductVariant[];
 }
+
+export const INVENTORY_STATUS_OPTIONS: { value: InventoryStatus; label: string }[] = [
+  { value: 'available', label: 'Available' },
+  { value: 'limited_stock', label: 'Limited Stock' },
+  { value: 'special_order', label: 'Special Order' },
+  { value: 'made_to_order', label: 'Made To Order' },
+  { value: 'coming_soon', label: 'Coming Soon' },
+  { value: 'discontinued', label: 'Discontinued' },
+  { value: 'out_of_stock', label: 'Out of Stock' },
+];
+
+export const PRODUCT_FEATURE_FLAGS = [
+  { key: 'featured', label: 'Featured Product' },
+  { key: 'fast_selling', label: 'Fast Selling' },
+  { key: 'new_arrival', label: 'New Arrival' },
+  { key: 'upcoming', label: 'Upcoming Product' },
+  { key: 'clearance', label: 'Clearance' },
+  { key: 'recommended', label: 'Recommended' },
+  { key: 'marine_grade', label: 'Marine Grade' },
+  { key: 'industrial_grade', label: 'Industrial Grade' },
+  { key: 'best_seller', label: 'Best Seller' },
+  { key: 'most_viewed', label: 'Most Viewed' },
+  { key: 'recently_added', label: 'Recently Added' },
+] as const;
 
 export type ProductFormData = {
   sku: string;

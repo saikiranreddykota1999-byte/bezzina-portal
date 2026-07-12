@@ -19,7 +19,6 @@ import {
   PaymentMethodSelector,
   type CheckoutPaymentMode,
 } from '@/components/checkout/payment-method-selector';
-import { isDemoMode } from '@/config/demo';
 import { calculateOrderTotals, formatPickupDateTime } from '@/lib/checkout';
 import { formatPrice, resolveProductPrice } from '@/lib/pricing';
 import { isStripeClientEnabled } from '@/lib/stripe/client';
@@ -45,7 +44,8 @@ export function PaymentCheckout() {
 
   const isPickup = fulfillmentMethod === 'store_pickup';
   const stripeEnabled = isStripeClientEnabled();
-  const useOnlinePayment = !isPickup || paymentMode === 'online';
+  const effectivePaymentMode = isPickup ? paymentMode : 'online';
+  const useOnlinePayment = !isPickup || effectivePaymentMode === 'online';
   const subtotal = items.reduce(
     (sum, i) => sum + resolveProductPrice(i.price) * i.quantity,
     0,
@@ -96,20 +96,19 @@ export function PaymentCheckout() {
   );
 
   useEffect(() => {
-    if (!isPickup) {
-      setPaymentMode('online');
-    }
-  }, [isPickup]);
-
-  useEffect(() => {
     if (!stripeEnabled || !useOnlinePayment || items.length === 0 || !fulfillmentReady) {
-      setClientSecret('');
-      return;
+      const resetTimer = setTimeout(() => {
+        setClientSecret('');
+        setInitializingStripe(false);
+      }, 0);
+      return () => clearTimeout(resetTimer);
     }
 
     let cancelled = false;
-    setInitializingStripe(true);
-    setError('');
+    const initTimer = setTimeout(() => {
+      setInitializingStripe(true);
+      setError('');
+    }, 0);
 
     createPaymentIntentAction({
       fulfillmentMethod,
@@ -129,6 +128,7 @@ export function PaymentCheckout() {
 
     return () => {
       cancelled = true;
+      clearTimeout(initTimer);
     };
   }, [
     stripeEnabled,
@@ -136,6 +136,7 @@ export function PaymentCheckout() {
     fulfillmentReady,
     fulfillmentMethod,
     orderSignature,
+    orderItems,
     total,
   ]);
 
@@ -217,17 +218,6 @@ export function PaymentCheckout() {
     const result = await placeOrderAction(buildOrderPayload(payment));
 
     if (!result.success) {
-      if (isDemoMode) {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        setOrderNumber(`JB-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`);
-        setPickupCode(isPickup ? `PKP-DEMO${String(Math.floor(100 + Math.random() * 900))}` : '');
-        clearCart();
-        clearCheckout();
-        setProcessing(false);
-        setSuccess(true);
-        return;
-      }
-
       setError(result.error ?? 'Unable to place order');
       setProcessing(false);
       return;

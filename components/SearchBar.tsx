@@ -91,17 +91,16 @@ export function SearchBar({
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!query.trim()) {
-      setResults([]);
-      setHasSearched(false);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
     debounceRef.current = setTimeout(() => {
+      if (!query.trim()) {
+        setResults([]);
+        setHasSearched(false);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
       void runSearch(query);
-    }, 300);
+    }, query.trim() ? 300 : 0);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);

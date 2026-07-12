@@ -32,6 +32,20 @@ describe('pickup validators', () => {
   it('accepts delivery orders without pickup data', () => {
     const result = placeOrderSchema.safeParse({
       fulfillmentMethod: 'delivery',
+      deliveryAddress: {
+        formattedAddress: '123 Main St, Valletta, Malta',
+        line1: '123 Main St',
+        city: 'Valletta',
+        postalCode: 'VLT 1234',
+        country: 'Malta',
+        lat: 35.8989,
+        lng: 14.5146,
+      },
+      payment: {
+        method: 'demo',
+        cardholderName: 'Test User',
+        cardLast4: '4242',
+      },
       items: [
         {
           productId: 'prod-1',

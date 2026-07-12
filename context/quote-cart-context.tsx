@@ -4,10 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
 } from 'react';
+import { useLocalStorage } from '@/lib/hooks/use-local-storage';
 import type { QuoteCartItem } from '@/types/quote';
 
 const STORAGE_KEY = 'bezzina-quote-cart';
@@ -18,35 +17,15 @@ type QuoteCartContextValue = {
   addItem: (item: Omit<QuoteCartItem, 'quantity'>, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  replaceItems: (items: QuoteCartItem[]) => void;
   clear: () => void;
   has: (productId: string) => boolean;
 };
 
 const QuoteCartContext = createContext<QuoteCartContextValue | null>(null);
 
-function loadItems(): QuoteCartItem[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as QuoteCartItem[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 export function QuoteCartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<QuoteCartItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setItems(loadItems());
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [items, hydrated]);
+  const [items, setItems] = useLocalStorage<QuoteCartItem[]>(STORAGE_KEY, []);
 
   const addItem = useCallback(
     (item: Omit<QuoteCartItem, 'quantity'>, quantity = 1) => {
@@ -62,21 +41,25 @@ export function QuoteCartProvider({ children }: { children: React.ReactNode }) {
         return [...prev, { ...item, quantity }];
       });
     },
-    [],
+    [setItems],
   );
 
   const removeItem = useCallback((productId: string) => {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
-  }, []);
+  }, [setItems]);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity < 1) return;
     setItems((prev) =>
       prev.map((i) => (i.productId === productId ? { ...i, quantity } : i)),
     );
-  }, []);
+  }, [setItems]);
 
-  const clear = useCallback(() => setItems([]), []);
+  const clear = useCallback(() => setItems([]), [setItems]);
+
+  const replaceItems = useCallback((next: QuoteCartItem[]) => {
+    setItems(next);
+  }, [setItems]);
 
   const has = useCallback(
     (productId: string) => items.some((i) => i.productId === productId),
@@ -89,8 +72,8 @@ export function QuoteCartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ items, count, addItem, removeItem, updateQuantity, clear, has }),
-    [items, count, addItem, removeItem, updateQuantity, clear, has],
+    () => ({ items, count, addItem, removeItem, updateQuantity, replaceItems, clear, has }),
+    [items, count, addItem, removeItem, updateQuantity, replaceItems, clear, has],
   );
 
   return (

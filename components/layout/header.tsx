@@ -11,6 +11,7 @@ import { isActivePath } from "@/lib/navigation";
 import { useCart } from "@/context/cart-context";
 import { useWishlist } from "@/context/wishlist-context";
 import { useQuoteCart } from "@/context/quote-cart-context";
+import { QuoteCartDrawer } from "@/components/quote/quote-cart-drawer";
 import { MobileNav } from "./mobile-nav";
 
 export function Header() {
@@ -20,6 +21,7 @@ export function Header() {
   const { items: wishlistItems } = useWishlist();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [quoteDrawerOpen, setQuoteDrawerOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 8);
@@ -84,8 +86,9 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/quote"
+          <button
+            type="button"
+            onClick={() => setQuoteDrawerOpen(true)}
             className="relative rounded-md p-2 text-slate-700 transition hover:bg-slate-50"
             aria-label="Quote cart"
           >
@@ -95,7 +98,7 @@ export function Header() {
                 {quoteCount}
               </span>
             )}
-          </Link>
+          </button>
 
           <Link
             href="/account/wishlist"
@@ -174,6 +177,7 @@ export function Header() {
           </motion.div>
         )}
       </AnimatePresence>
+      <QuoteCartDrawer open={quoteDrawerOpen} onClose={() => setQuoteDrawerOpen(false)} />
     </header>
   );
 }

@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { isStaffRole } from '@/lib/auth/roles';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { isStaffRole, isSuperAdminRole } from '@/lib/auth/roles';
+import { hasPermission } from '@/lib/auth/permissions';
+import type { AdminPermission } from '@/types/admin';
 import { withTimeout } from '@/lib/auth/timeout';
 
 const AUTH_TIMEOUT_MS = 8_000;
@@ -16,6 +19,7 @@ type Profile = {
   billing_address: string | null;
   company_name: string | null;
   vat_number: string | null;
+  is_disabled: boolean | null;
 };
 
 export type AuthenticatedSession = {
@@ -24,6 +28,17 @@ export type AuthenticatedSession = {
   profile: Profile | null;
   authError: string | null;
 };
+
+export type StaffSession = AuthenticatedSession & {
+  supabase: ReturnType<typeof createAdminClient>;
+};
+
+async function withStaffDb(session: AuthenticatedSession): Promise<StaffSession> {
+  return {
+    ...session,
+    supabase: createAdminClient(),
+  };
+}
 
 export async function getAuthenticatedUser(): Promise<AuthenticatedSession> {
   const supabase = await createClient();
@@ -46,7 +61,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedSession> {
       supabase
         .from('profiles')
         .select(
-          'id, email, role, full_name, phone, contact_email, billing_address, company_name, vat_number',
+          'id, email, role, full_name, phone, contact_email, billing_address, company_name, vat_number, is_disabled',
         )
         .eq('id', user.id)
         .maybeSingle(),
@@ -67,7 +82,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedSession> {
   }
 }
 
-export async function requireAuthenticatedUser() {
+export async function requireAuthenticatedUser(redirectPath = '/account') {
   const session = await getAuthenticatedUser();
 
   if (session.authError) {
@@ -75,17 +90,55 @@ export async function requireAuthenticatedUser() {
   }
 
   if (!session.user) {
-    redirect('/account/login?redirect=/account');
+    redirect(`/account/login?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
   return session;
 }
 
-export async function requireStaffUser() {
-  const session = await requireAuthenticatedUser();
+export async function requireAdminAuthenticatedUser(redirectPath = '/admin') {
+  const session = await getAuthenticatedUser();
+
+  if (session.authError) {
+    throw new Error(session.authError);
+  }
+
+  if (!session.user) {
+    redirect(`/admin/login?redirect=${encodeURIComponent(redirectPath)}`);
+  }
+
+  return session;
+}
+
+export async function requireStaffUser(): Promise<StaffSession> {
+  const session = await requireAdminAuthenticatedUser('/admin');
+
+  if (session.profile?.is_disabled) {
+    throw new Error('Your account has been disabled');
+  }
 
   if (!isStaffRole(session.profile?.role)) {
     throw new Error('Admin access required');
+  }
+
+  return withStaffDb(session);
+}
+
+export async function requireSuperAdminUser(): Promise<StaffSession> {
+  const session = await requireStaffUser();
+
+  if (!isSuperAdminRole(session.profile?.role)) {
+    throw new Error('Super Admin access required');
+  }
+
+  return session;
+}
+
+export async function requirePermission(permission: AdminPermission): Promise<StaffSession> {
+  const session = await requireStaffUser();
+
+  if (!hasPermission(session.profile?.role, permission)) {
+    throw new Error('You do not have permission for this action');
   }
 
   return session;

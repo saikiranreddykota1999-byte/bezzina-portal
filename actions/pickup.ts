@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireAuthenticatedUser, requireStaffUser } from '@/lib/auth/server-session';
+import { requireAuthenticatedUser, requirePermission } from '@/lib/auth/server-session';
 import {
   pickupLocationSchema,
   pickupOpeningHourSchema,
@@ -13,6 +13,7 @@ import {
 import { calculateOrderTotals } from '@/lib/checkout';
 import { DEFAULT_PRODUCT_PRICE, resolveProductPrice } from '@/lib/pricing';
 import { isStripeEnabled } from '@/lib/stripe/config';
+import { isDemoPaymentAllowed } from '@/lib/payment';
 import {
   computeAvailableSlots,
   formatIsoDate,
@@ -206,6 +207,12 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
       paymentReference = `COD-${orderNumber}`;
       paymentStatus = 'pending';
     } else if (payload.payment.method === 'demo') {
+      if (!isDemoPaymentAllowed(isStripeEnabled)) {
+        return {
+          success: false,
+          error: 'Demo payments are not available when live payments are enabled.',
+        };
+      }
       paymentReference = `PAY-${orderNumber}-${payload.payment.cardLast4}`;
     } else {
       return { success: false, error: 'Unsupported payment method' };
@@ -394,13 +401,13 @@ export async function updatePickupOrderStatusAction(
   input: unknown,
 ): Promise<ActionResult<OrderWithPickup>> {
   try {
-    await requireStaffUser();
+    await requirePermission('pickup:manage');
     const parsed = updatePickupStatusSchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid status update' };
     }
 
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const orderStatus =
       parsed.data.pickupStatus === 'ready_for_pickup' ? 'ready_for_pickup' : 'collected';
 
@@ -442,7 +449,7 @@ export async function serializeCartItems(items: CartItem[]) {
 
 export async function getStaffPickupLocations(): Promise<ActionResult<PickupLocation[]>> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const { data, error } = await supabase
       .from('pickup_locations')
       .select('*')
@@ -460,7 +467,7 @@ export async function getStaffPickupLocations(): Promise<ActionResult<PickupLoca
 
 export async function upsertPickupLocationAction(input: unknown): Promise<ActionResult<PickupLocation>> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const body = input as { id?: string; location: unknown };
     const parsed = pickupLocationSchema.safeParse(body.location);
     if (!parsed.success) {
@@ -492,7 +499,7 @@ export async function upsertPickupLocationAction(input: unknown): Promise<Action
 
 export async function deletePickupLocationAction(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const { error } = await supabase.from('pickup_locations').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
     revalidatePath('/admin/pickup-locations');
@@ -510,7 +517,7 @@ export async function savePickupOpeningHoursAction(input: {
   hours: unknown[];
 }): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const parsedHours = input.hours.map((hour) => pickupOpeningHourSchema.parse(hour));
 
     await supabase.from('pickup_opening_hours').delete().eq('location_id', input.locationId);
@@ -538,7 +545,7 @@ export async function savePickupTimeSlotsAction(input: {
   slots: unknown[];
 }): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const parsedSlots = input.slots.map((slot) => pickupTimeSlotSchema.parse(slot));
 
     await supabase.from('pickup_time_slots').delete().eq('location_id', input.locationId);
@@ -566,7 +573,7 @@ export async function addPickupUnavailableDateAction(input: {
   entry: unknown;
 }): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const parsed = pickupUnavailableDateSchema.parse(input.entry);
     const { error } = await supabase.from('pickup_unavailable_dates').insert({
       location_id: input.locationId,
@@ -585,7 +592,7 @@ export async function addPickupUnavailableDateAction(input: {
 
 export async function removePickupUnavailableDateAction(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const { error } = await supabase.from('pickup_unavailable_dates').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
     revalidatePath('/admin/pickup-locations');
@@ -600,7 +607,7 @@ export async function removePickupUnavailableDateAction(id: string): Promise<Act
 
 export async function getStaffPickupOrders(): Promise<ActionResult<OrderWithPickup[]>> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const { data, error } = await supabase
       .from('orders')
       .select('*, pickup_location:pickup_locations(*)')
@@ -620,7 +627,7 @@ export async function getStaffPickupOrders(): Promise<ActionResult<OrderWithPick
 
 export async function getPickupLocationDetails(locationId: string) {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('pickup:manage');
     const [{ data: location }, { data: hours }, { data: slots }, { data: unavailable }] =
       await Promise.all([
         supabase.from('pickup_locations').select('*').eq('id', locationId).single(),

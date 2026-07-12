@@ -14,7 +14,7 @@ import {
 
 export { filterProducts, getUniqueMaterials, getUniqueStandards };
 
-const PRODUCT_SELECT = '*, category:categories(*), images:product_images(*)';
+const PRODUCT_SELECT = '*, category:categories(*), images:product_images(*), documents:product_documents(*), variants:product_variants(*)';
 const PRODUCT_SELECT_FALLBACK = '*, category:categories(*)';
 
 function normalizeImageUrl(url: string | null): string | null {
@@ -39,6 +39,14 @@ function normalizeProduct(product: Product): Product {
     fast_selling: product.fast_selling ?? false,
     upcoming: product.upcoming ?? false,
     future_product: product.future_product ?? false,
+    new_arrival: product.new_arrival ?? false,
+    clearance: product.clearance ?? false,
+    recommended: product.recommended ?? false,
+    marine_grade: product.marine_grade ?? false,
+    industrial_grade: product.industrial_grade ?? false,
+    best_seller: product.best_seller ?? false,
+    most_viewed: product.most_viewed ?? false,
+    recently_added: product.recently_added ?? false,
     tags: product.tags ?? null,
   };
 }

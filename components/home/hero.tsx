@@ -5,8 +5,9 @@ import { company } from '@/config/company';
 import { RippleButton } from '@/components/ui/ripple-button';
 import { SearchBar } from '@/components/SearchBar';
 import { staggerContainer, fadeIn, defaultTransition } from '@/lib/motion';
+import type { HeroContent } from '@/types/cms';
 
-const features = [
+const defaultFeatures = [
   {
     title: 'Marine Supplies',
     description:
@@ -24,7 +25,19 @@ const features = [
   },
 ];
 
-export function Hero() {
+type Props = {
+  content?: Partial<HeroContent>;
+};
+
+export function Hero({ content }: Props) {
+  const eyebrow = content?.eyebrow ?? 'Industrial & Marine Supplies';
+  const subtitle = content?.subtitle || company.tagline;
+  const body =
+    content?.body ??
+    `Joseph Bezzina & Co. Ltd is Malta's trusted marine and industrial supplier, delivering dependable products, practical expertise, and responsive service since ${company.founded}.`;
+  const features =
+    content?.features && content.features.length > 0 ? content.features : defaultFeatures;
+
   return (
     <section
       className="w-full bg-linear-to-br from-slate-950 via-slate-900 to-blue-950 text-white"
@@ -43,14 +56,14 @@ export function Hero() {
             transition={{ delay: 0.1, ...defaultTransition }}
             className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-300"
           >
-            Industrial & Marine Supplies
+            {eyebrow}
           </motion.p>
 
           <h1
             id="home-hero-title"
             className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl"
           >
-            {company.name}
+            {content?.title ?? company.name}
           </h1>
 
           <motion.p
@@ -59,7 +72,7 @@ export function Hero() {
             transition={{ delay: 0.2, ...defaultTransition }}
             className="mt-4 text-xl font-medium text-slate-200 sm:text-2xl"
           >
-            {company.tagline}
+            {subtitle}
           </motion.p>
 
           <motion.p
@@ -68,9 +81,7 @@ export function Hero() {
             transition={{ delay: 0.3, ...defaultTransition }}
             className="mt-6 max-w-3xl text-base leading-8 text-slate-200 sm:text-lg"
           >
-            Joseph Bezzina & Co. Ltd is Malta&apos;s trusted marine and
-            industrial supplier, delivering dependable products, practical
-            expertise, and responsive service since {company.founded}.
+            {body}
           </motion.p>
 
           <motion.div
@@ -88,10 +99,12 @@ export function Hero() {
             transition={{ delay: 0.4, ...defaultTransition }}
             className="mt-6 flex flex-col gap-4 sm:flex-row"
           >
-            <RippleButton href="/products" variant="secondary" className="!bg-white !text-slate-950 hover:!bg-slate-100">
-              Browse Products
+            <RippleButton href={content?.primaryButtonHref ?? '/products'} variant="secondary" className="!bg-white !text-slate-950 hover:!bg-slate-100">
+              {content?.primaryButtonLabel ?? 'Browse Products'}
             </RippleButton>
-            <RippleButton href="/quote">Request a Quote</RippleButton>
+            <RippleButton href={content?.secondaryButtonHref ?? '/quote'}>
+              {content?.secondaryButtonLabel ?? 'Request a Quote'}
+            </RippleButton>
           </motion.div>
         </motion.div>
 

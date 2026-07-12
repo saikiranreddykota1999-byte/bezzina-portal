@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireStaffUser } from '@/lib/auth/server-session';
+import { requirePermission } from '@/lib/auth/server-session';
 import { categoryFormSchema } from '@/lib/validators/catalogue';
 import type { Category, CategoryDivision } from '@/types/product';
 
@@ -14,7 +14,7 @@ export type CategoryTree = {
 
 export async function getAdminCategoryTree(): Promise<ActionResult<CategoryTree>> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('categories:manage');
     const { data, error } = await supabase
       .from('categories')
       .select('*')
@@ -41,7 +41,7 @@ export async function getAdminCategoryTree(): Promise<ActionResult<CategoryTree>
 
 export async function createCategory(input: unknown): Promise<ActionResult<{ id: string }>> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('categories:manage');
     const parsed = categoryFormSchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
@@ -100,7 +100,7 @@ export async function createCategory(input: unknown): Promise<ActionResult<{ id:
 
 export async function updateCategory(id: string, input: unknown): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('categories:manage');
     const parsed = categoryFormSchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
@@ -148,7 +148,7 @@ export async function updateCategory(id: string, input: unknown): Promise<Action
 
 export async function deleteCategory(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('categories:manage');
 
     const { count: childCount } = await supabase
       .from('categories')

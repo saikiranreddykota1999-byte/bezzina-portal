@@ -53,7 +53,7 @@ export async function ProductsCatalogueSection({ searchParams, division }: Props
       })
     : subcategories;
 
-  let productsToFilter = filterProductsByParentCategory(
+  const productsToFilter = filterProductsByParentCategory(
     scopedProducts,
     categories,
     filters.categorySlug ? null : activeParentSlug,

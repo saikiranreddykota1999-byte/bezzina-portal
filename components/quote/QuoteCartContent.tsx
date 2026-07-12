@@ -5,9 +5,13 @@ import Link from 'next/link';
 import { Trash2, Minus, Plus } from 'lucide-react';
 import { useQuoteCart } from '@/context/quote-cart-context';
 import { QuoteSubmitForm } from '@/components/quote/QuoteSubmitForm';
+import { QuoteDraftsPanel } from '@/components/quote/quote-drafts-panel';
 import { RippleButton } from '@/components/ui/ripple-button';
+import type { QuoteDraft } from '@/types/quote';
 
-export function QuoteCartContent() {
+type Props = { drafts?: QuoteDraft[] };
+
+export function QuoteCartContent({ drafts = [] }: Props) {
   const { items, count, updateQuantity, removeItem, clear } = useQuoteCart();
   const [notes, setNotes] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -41,14 +45,17 @@ export function QuoteCartContent() {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
-        <p className="text-slate-700">Your quote cart is empty.</p>
-        <Link
-          href="/products"
-          className="mt-4 inline-block text-sm font-semibold text-orange-600 hover:underline"
-        >
-          Browse products →
-        </Link>
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
+          <p className="text-slate-700">Your quote cart is empty.</p>
+          <Link
+            href="/products"
+            className="mt-4 inline-block text-sm font-semibold text-orange-600 hover:underline"
+          >
+            Browse products →
+          </Link>
+        </div>
+        <QuoteDraftsPanel drafts={drafts} />
       </div>
     );
   }
@@ -133,9 +140,19 @@ export function QuoteCartContent() {
         />
       </div>
 
-      <RippleButton type="button" onClick={() => setShowForm(true)} className="w-full sm:w-auto" variant="primary">
-        Submit Quote Request
-      </RippleButton>
+      <div className="flex flex-wrap gap-3">
+        <RippleButton type="button" onClick={() => setShowForm(true)} className="w-full sm:w-auto" variant="primary">
+          Submit Quote Request
+        </RippleButton>
+        <Link
+          href="/products"
+          className="inline-flex items-center justify-center rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+        >
+          Continue Browsing
+        </Link>
+      </div>
+
+      <QuoteDraftsPanel drafts={drafts} notes={notes} />
 
       <p className="text-xs text-slate-600">
         <Link href="/account/login" className="text-orange-600 hover:underline">

@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { getAuthenticatedUser, requireStaffUser } from '@/lib/auth/server-session';
 import { submitQuoteCustomerSchema } from '@/lib/validators/quote';
+import { notifyStaff } from '@/services/notification.service';
+import { logActivity } from '@/services/activity-log.service';
 import type { QuoteCartItem } from '@/types/quote';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
@@ -104,10 +106,12 @@ export async function submitQuoteRequest(
         reference,
         status: 'pending',
         notes: notes?.trim() || null,
+        customer_notes: notes?.trim() || null,
         channel: 'web',
         customer_email: customer.email,
         customer_name: customer.name,
         customer_phone: customer.phone,
+        timeline: [{ status: 'pending', created_at: new Date().toISOString() }],
       })
       .select('id')
       .single();
@@ -128,6 +132,21 @@ export async function submitQuoteRequest(
     const { error: itemsError } = await supabase.from('quote_request_items').insert(rows);
 
     if (itemsError) return { success: false, error: itemsError.message };
+
+    await notifyStaff(
+      'quote_new',
+      `New quote request ${reference}`,
+      `${customer.name} submitted ${items.length} item(s)`,
+      '/admin/quotes',
+    );
+
+    await logActivity({
+      userId: session.user?.id ?? null,
+      action: 'quote.submit',
+      entity: 'quote_request',
+      entityId: quote.id,
+      newValue: { reference, items: items.length },
+    });
 
     revalidatePath('/account/quotes');
     return { success: true, data: { reference } };

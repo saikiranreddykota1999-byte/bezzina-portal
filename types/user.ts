@@ -1,4 +1,4 @@
-export type UserRole = 'customer' | 'admin' | 'staff';
+export type UserRole = 'customer' | 'admin' | 'super_admin' | 'staff';
 
 export interface Profile {
   id: string;
@@ -11,6 +11,7 @@ export interface Profile {
   vat_number: string | null;
   avatar_url: string | null;
   role: UserRole;
+  is_disabled?: boolean;
   created_at: string;
 }
 

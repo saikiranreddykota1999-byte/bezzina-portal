@@ -4,10 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
 } from 'react';
+import { useLocalStorage } from '@/lib/hooks/use-local-storage';
 import { detectCardBrand } from '@/lib/payment';
 import type { PaymentCard } from '@/types/payment';
 
@@ -22,16 +21,6 @@ type CardsContextValue = {
 const CardsContext = createContext<CardsContextValue | null>(null);
 const STORAGE_KEY = 'bezzina-cards';
 
-function readStoredCards(): PaymentCard[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
 export function maskCardNumber(value: string) {
   return value.replace(/\D/g, '').slice(0, 16);
 }
@@ -41,18 +30,7 @@ export function formatCardNumber(value: string) {
 }
 
 export function CardsProvider({ children }: { children: React.ReactNode }) {
-  const [cards, setCards] = useState<PaymentCard[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setCards(readStoredCards());
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
-  }, [cards, hydrated]);
+  const [cards, setCards] = useLocalStorage<PaymentCard[]>(STORAGE_KEY, []);
 
   const addCard = useCallback(
     (card: Omit<PaymentCard, 'id' | 'addedAt' | 'isDefault'> & { isDefault?: boolean }) => {
@@ -71,7 +49,7 @@ export function CardsProvider({ children }: { children: React.ReactNode }) {
         ];
       });
     },
-    [],
+    [setCards],
   );
 
   const removeCard = useCallback((id: string) => {
@@ -82,11 +60,11 @@ export function CardsProvider({ children }: { children: React.ReactNode }) {
       }
       return [...filtered];
     });
-  }, []);
+  }, [setCards]);
 
   const setDefaultCard = useCallback((id: string) => {
     setCards((prev) => prev.map((c) => ({ ...c, isDefault: c.id === id })));
-  }, []);
+  }, [setCards]);
 
   const defaultCard = useMemo(() => cards.find((c) => c.isDefault) ?? cards[0] ?? null, [cards]);
 
@@ -103,4 +81,3 @@ export function useCards() {
   if (!ctx) throw new Error('useCards must be used within CardsProvider');
   return ctx;
 }
-

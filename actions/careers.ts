@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireStaffUser } from '@/lib/auth/server-session';
+import { requirePermission } from '@/lib/auth/server-session';
 import { createClient } from '@/lib/supabase/server';
 import { jobApplicationSchema, vacancySchema } from '@/lib/validators/catalogue';
 import type { Vacancy } from '@/types/quote';
@@ -83,7 +83,6 @@ export async function submitJobApplication(
 
   if (uploadError) return { success: false, error: uploadError.message };
 
-  const { data: urlData } = supabase.storage.from('career-documents').getPublicUrl(path);
   const vacancyId = parsed.data.vacancyId ?? parsed.data.jobPostingId ?? null;
 
   const { error } = await supabase.from('job_applications').insert({
@@ -93,7 +92,7 @@ export async function submitJobApplication(
     phone: parsed.data.phone ?? null,
     linkedin_url: parsed.data.linkedinUrl || null,
     cover_letter: parsed.data.coverLetter ?? null,
-    cv_url: urlData.publicUrl,
+    cv_url: path,
   });
 
   if (error) return { success: false, error: error.message };
@@ -102,7 +101,7 @@ export async function submitJobApplication(
 
 export async function getAdminVacancies(): Promise<ActionResult<Vacancy[]>> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('careers:manage');
     const { data, error } = await supabase
       .from('vacancies')
       .select('*')
@@ -126,7 +125,7 @@ export async function getAdminJobPostings(): Promise<ActionResult<Vacancy[]>> {
 
 export async function upsertVacancy(input: unknown, id?: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('careers:manage');
     const parsed = vacancySchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
@@ -164,7 +163,7 @@ export async function upsertJobPosting(input: unknown, id?: string): Promise<Act
 
 export async function deleteVacancy(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('careers:manage');
     const { error } = await supabase.from('vacancies').delete().eq('id', id);
     if (error) return { success: false, error: error.message };
     revalidatePath('/careers');

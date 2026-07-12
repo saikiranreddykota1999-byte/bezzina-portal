@@ -6,8 +6,15 @@ import {
   createProduct,
   updateProduct,
   uploadProductImage,
+  saveProductVariants,
 } from '@/actions/admin-products';
-import type { Product } from '@/types/product';
+import { ProductImagesSection } from '@/components/admin/product-images-section';
+import { ProductDocumentsSection } from '@/components/admin/product-documents-section';
+import { ProductSpecsBuilder } from '@/components/admin/product-specs-builder';
+import { ProductVariantsSection } from '@/components/admin/product-variants-section';
+import { ProductFeatureToggles } from '@/components/admin/product-feature-toggles';
+import type { Product, TechnicalSpecRow, InventoryStatus } from '@/types/product';
+import { INVENTORY_STATUS_OPTIONS, PRODUCT_FEATURE_FLAGS } from '@/types/product';
 import type { CategoryTree } from '@/actions/admin-categories';
 
 type Props = {
@@ -17,6 +24,12 @@ type Props = {
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function parseSpecs(product?: Product): TechnicalSpecRow[] {
+  if (!product?.technical_specs) return [];
+  if (Array.isArray(product.technical_specs)) return product.technical_specs;
+  return Object.entries(product.technical_specs).map(([property, value]) => ({ property, value }));
 }
 
 const inputClass =
@@ -41,6 +54,29 @@ export function ProductForm({ categoryTree, product }: Props) {
   const [inStock, setInStock] = useState(product?.in_stock ?? true);
   const [stockQty, setStockQty] = useState(product?.stock_quantity?.toString() ?? '0');
   const [isActive, setIsActive] = useState(product?.is_active ?? true);
+  const [publishStatus, setPublishStatus] = useState<'draft' | 'published'>(
+    product?.publish_status ?? 'published',
+  );
+  const [availability, setAvailability] = useState<InventoryStatus>(
+    (product?.availability as InventoryStatus) ?? 'available',
+  );
+  const [longDescription, setLongDescription] = useState(product?.long_description ?? '');
+  const [seoTitle, setSeoTitle] = useState(product?.seo_title ?? '');
+  const [seoDescription, setSeoDescription] = useState(product?.seo_description ?? '');
+  const [searchKeywords, setSearchKeywords] = useState(product?.search_keywords ?? '');
+  const [internalNotes, setInternalNotes] = useState(product?.internal_notes ?? '');
+  const [videoUrl, setVideoUrl] = useState(product?.video_url ?? '');
+  const [youtubeUrl, setYoutubeUrl] = useState(product?.youtube_url ?? '');
+  const [weightKg, setWeightKg] = useState(product?.weight_kg?.toString() ?? '');
+  const [specs, setSpecs] = useState<TechnicalSpecRow[]>(parseSpecs(product));
+  const [variants, setVariants] = useState(
+    (product?.variants ?? []).map(({ id: _id, product_id: _pid, ...rest }) => rest),
+  );
+  const [featureFlags, setFeatureFlags] = useState(
+    Object.fromEntries(
+      PRODUCT_FEATURE_FLAGS.map(({ key }) => [key, Boolean(product?.[key as keyof Product])]),
+    ) as Record<(typeof PRODUCT_FEATURE_FLAGS)[number]['key'], boolean>,
+  );
   const [uploading, setUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
@@ -76,12 +112,24 @@ export function ProductForm({ categoryTree, product }: Props) {
       name,
       slug,
       description,
+      long_description: longDescription,
       category_id: categoryId,
       price: price ? Number(price) : 1.0,
       unit,
       in_stock: inStock,
       stock_quantity: Number(stockQty) || 0,
       is_active: isActive,
+      publish_status: publishStatus,
+      availability,
+      weight_kg: weightKg ? Number(weightKg) : null,
+      video_url: videoUrl,
+      youtube_url: youtubeUrl,
+      technical_specs: specs.filter((s) => s.property && s.value),
+      seo_title: seoTitle,
+      seo_description: seoDescription,
+      search_keywords: searchKeywords,
+      internal_notes: internalNotes,
+      ...featureFlags,
     };
 
     startTransition(async () => {
@@ -96,10 +144,13 @@ export function ProductForm({ categoryTree, product }: Props) {
         }
 
         const productId = product?.id ?? result.data?.id;
-        if (productId && imageFile) {
-          setUploading(true);
-          await uploadSelectedImage(productId);
-          setUploading(false);
+        if (productId) {
+          if (imageFile) {
+            setUploading(true);
+            await uploadSelectedImage(productId);
+            setUploading(false);
+          }
+          await saveProductVariants(productId, variants);
         }
 
         if (!product && result.data?.id) {
@@ -109,7 +160,7 @@ export function ProductForm({ categoryTree, product }: Props) {
         }
       } catch (uploadError) {
         setUploading(false);
-        setError(uploadError instanceof Error ? uploadError.message : 'Image upload failed');
+        setError(uploadError instanceof Error ? uploadError.message : 'Save failed');
       }
     });
   }
@@ -134,7 +185,7 @@ export function ProductForm({ categoryTree, product }: Props) {
   }
 
   return (
-    <form onSubmit={handleSave} className="max-w-2xl space-y-5">
+    <form onSubmit={handleSave} className="max-w-4xl space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
@@ -154,34 +205,19 @@ export function ProductForm({ categoryTree, product }: Props) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
-          <select
-            value={parentCategoryId}
-            onChange={(e) => handleParentChange(e.target.value)}
-            className={inputClass}
-            required
-          >
+          <select value={parentCategoryId} onChange={(e) => handleParentChange(e.target.value)} className={inputClass} required>
             <option value="">Select category</option>
             {categoryTree.parents.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">Subcategory</label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className={inputClass}
-            required
-            disabled={!parentCategoryId}
-          >
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass} required disabled={!parentCategoryId}>
             <option value="">Select subcategory</option>
             {subcategoriesForParent.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
@@ -192,7 +228,48 @@ export function ProductForm({ categoryTree, product }: Props) {
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputClass} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700">Long Description</label>
+        <textarea value={longDescription} onChange={(e) => setLongDescription(e.target.value)} rows={6} className={inputClass} />
+      </div>
+
+      <ProductSpecsBuilder specs={specs} onChange={setSpecs} />
+      <ProductVariantsSection variants={variants} onChange={setVariants} />
+      <ProductFeatureToggles flags={featureFlags} onChange={setFeatureFlags} />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">SEO Title</label>
+          <input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Search Keywords</label>
+          <input value={searchKeywords} onChange={(e) => setSearchKeywords(e.target.value)} className={inputClass} />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700">SEO Description</label>
+        <textarea value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} rows={2} className={inputClass} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Video URL</label>
+          <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className={inputClass} placeholder="https://..." />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">YouTube URL</label>
+          <input value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} className={inputClass} placeholder="https://youtube.com/..." />
+        </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700">Internal Notes (admin only)</label>
+        <textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} className={inputClass} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-4">
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">Price (€)</label>
           <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClass} />
@@ -202,9 +279,22 @@ export function ProductForm({ categoryTree, product }: Props) {
           <input value={unit} onChange={(e) => setUnit(e.target.value)} className={inputClass} />
         </div>
         <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Weight (kg)</label>
+          <input type="number" step="0.001" min="0" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className={inputClass} />
+        </div>
+        <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">Stock qty</label>
           <input type="number" min="0" value={stockQty} onChange={(e) => setStockQty(e.target.value)} className={inputClass} />
         </div>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700">Inventory Status</label>
+        <select value={availability} onChange={(e) => setAvailability(e.target.value as InventoryStatus)} className={inputClass}>
+          {INVENTORY_STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-wrap gap-6">
@@ -214,21 +304,32 @@ export function ProductForm({ categoryTree, product }: Props) {
         </label>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-          Active (visible on site)
+          Active
         </label>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Product image</label>
-        <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading || pending} className="text-sm text-slate-700" />
-        {uploading && <p className="mt-1 text-xs text-slate-600">Uploading…</p>}
-        {!product && imageFile && (
-          <p className="mt-1 text-xs text-slate-600">Selected: {imageFile.name} (uploads after save)</p>
-        )}
-        {product?.image_url && (
-          <p className="mt-2 text-xs text-slate-500">Current image on file. Upload to replace.</p>
-        )}
+        <label className="mb-1 block text-sm font-medium text-slate-700">Publish Status</label>
+        <select value={publishStatus} onChange={(e) => setPublishStatus(e.target.value as 'draft' | 'published')} className={inputClass}>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+        </select>
       </div>
+
+      {!product && (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Product image</label>
+          <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading || pending} className="text-sm text-slate-700" />
+          {imageFile && <p className="mt-1 text-xs text-slate-600">Selected: {imageFile.name} (uploads after save)</p>}
+        </div>
+      )}
+
+      {product && (
+        <>
+          <ProductImagesSection productId={product.id} images={product.images ?? []} />
+          <ProductDocumentsSection productId={product.id} documents={product.documents ?? []} />
+        </>
+      )}
 
       {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
 

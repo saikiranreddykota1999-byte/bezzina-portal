@@ -58,6 +58,14 @@ export async function updateSession(request: NextRequest) {
   } catch (error) {
     console.error('middleware session check failed:', error);
 
+    if (path.startsWith('/admin') && path !== ADMIN_LOGIN) {
+      const url = request.nextUrl.clone();
+      url.pathname = ADMIN_LOGIN;
+      url.searchParams.set('redirect', path);
+      url.searchParams.set('error', 'session_timeout');
+      return NextResponse.redirect(url);
+    }
+
     if (path.startsWith('/account') && !isPublicAccountPath(path)) {
       const url = request.nextUrl.clone();
       url.pathname = '/account/login';
@@ -79,9 +87,16 @@ export async function updateSession(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_disabled')
       .eq('id', user.id)
       .maybeSingle();
+
+    if (profile?.is_disabled) {
+      const url = request.nextUrl.clone();
+      url.pathname = ADMIN_LOGIN;
+      url.searchParams.set('error', 'disabled');
+      return NextResponse.redirect(url);
+    }
 
     if (!isStaffRole(profile?.role)) {
       const url = request.nextUrl.clone();

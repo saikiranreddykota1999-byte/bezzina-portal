@@ -1,14 +1,27 @@
-'use client';
+import { AdminLayoutClient } from './admin-layout-client';
+import { getAuthenticatedUser } from '@/lib/auth/server-session';
+import { getUnreadNotificationCount } from '@/actions/notifications';
+import { isStaffRole } from '@/lib/auth/roles';
 
-import { usePathname } from 'next/navigation';
-import { AdminShell } from '@/components/admin/admin-shell';
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getAuthenticatedUser();
+  const userName =
+    session.profile?.full_name?.trim() ||
+    session.user?.email?.split('@')[0] ||
+    'Admin';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const unreadNotifications =
+    session.user && isStaffRole(session.profile?.role)
+      ? await getUnreadNotificationCount()
+      : 0;
 
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
-
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <AdminLayoutClient
+      userRole={session.profile?.role ?? null}
+      userName={userName}
+      unreadNotifications={unreadNotifications}
+    >
+      {children}
+    </AdminLayoutClient>
+  );
 }

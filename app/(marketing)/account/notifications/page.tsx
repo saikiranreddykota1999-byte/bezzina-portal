@@ -1,11 +1,18 @@
-import { AccountPlaceholder } from '@/components/account/account-placeholder';
+import { redirect } from 'next/navigation';
+import { getCustomerNotifications } from '@/actions/customer-portal';
+import { NotificationList } from '@/components/account/notification-list';
 
-export default function NotificationsPage() {
+export const metadata = { title: 'Notifications | Account' };
+
+export default async function NotificationsPage() {
+  const result = await getCustomerNotifications();
+  if (!result.success && result.error === 'Sign in required') redirect('/account/login');
+
   return (
-    <AccountPlaceholder
-      title="Notifications"
-      description="Manage email updates and order notifications."
-      features={['Order status emails', 'Promotional updates', 'Stock alerts']}
-    />
+    <div>
+      <h1 className="mb-2 text-2xl font-bold text-slate-900">Notifications</h1>
+      <p className="mb-6 text-sm text-slate-600">Quote updates, account alerts, and order notifications.</p>
+      <NotificationList notifications={result.success ? result.data ?? [] : []} />
+    </div>
   );
 }

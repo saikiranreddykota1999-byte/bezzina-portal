@@ -4,10 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
 } from 'react';
+import { useLocalStorage } from '@/lib/hooks/use-local-storage';
 import type { WishlistItem } from '@/types/user';
 
 type WishlistContextValue = {
@@ -20,28 +19,8 @@ type WishlistContextValue = {
 const WishlistContext = createContext<WishlistContextValue | null>(null);
 const STORAGE_KEY = 'bezzina-wishlist';
 
-function readStoredWishlist(): WishlistItem[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-}
-
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<WishlistItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setItems(readStoredWishlist());
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [items, hydrated]);
+  const [items, setItems] = useLocalStorage<WishlistItem[]>(STORAGE_KEY, []);
 
   const toggle = useCallback((item: Omit<WishlistItem, 'addedAt'>) => {
     setItems((prev) => {
@@ -49,11 +28,11 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       if (exists) return prev.filter((i) => i.productId !== item.productId);
       return [...prev, { ...item, addedAt: new Date().toISOString() }];
     });
-  }, []);
+  }, [setItems]);
 
   const remove = useCallback((productId: string) => {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
-  }, []);
+  }, [setItems]);
 
   const has = useCallback(
     (productId: string) => items.some((i) => i.productId === productId),

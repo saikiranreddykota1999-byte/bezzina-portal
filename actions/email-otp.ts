@@ -23,11 +23,16 @@ async function ensureEmailUser(admin: ReturnType<typeof createAdminClient>, emai
   const existingUser = await findUserByEmail(admin, email);
 
   if (existingUser) {
+    const { data: existingProfile } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', existingUser.id)
+      .maybeSingle();
     await admin.from('profiles').upsert({
       id: existingUser.id,
       email,
       contact_email: email,
-      role: 'customer',
+      ...(existingProfile?.role ? { role: existingProfile.role } : { role: 'customer' as const }),
     });
     return { userId: existingUser.id, email };
   }
@@ -43,11 +48,16 @@ async function ensureEmailUser(admin: ReturnType<typeof createAdminClient>, emai
     if (!fallback) {
       throw new Error(error.message);
     }
+    const { data: fallbackProfile } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', fallback.id)
+      .maybeSingle();
     await admin.from('profiles').upsert({
       id: fallback.id,
       email,
       contact_email: email,
-      role: 'customer',
+      ...(fallbackProfile?.role ? { role: fallbackProfile.role } : { role: 'customer' as const }),
     });
     return { userId: fallback.id, email };
   }
