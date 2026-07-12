@@ -4,6 +4,7 @@ export const navigation = [
   { title: "Marine Supplies", href: "/marine" },
   { title: "Industrial Equipment", href: "/industrial" },
   { title: "Products", href: "/products" },
+  { title: "Search", href: "/search" },
   { title: "Services", href: "/services" },
   { title: "Careers", href: "/careers" },
   { title: "Request Quote", href: "/quote" },

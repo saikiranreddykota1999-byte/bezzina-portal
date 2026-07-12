@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { ADMIN_NAV } from '@/config/admin-nav';
+import { guardAdminPage } from '@/lib/admin/guard-page';
+import { getAdminPermissionForSection } from '@/lib/admin/section-permission';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import {
   adminButtonPrimaryClass,
@@ -44,6 +46,7 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function AdminSectionPage({ params }: Props) {
   const { section } = await params;
+  await guardAdminPage(getAdminPermissionForSection(section));
   const title = SECTION_MAP[section] ?? section.replace(/-/g, ' ');
   const features = MODULE_FEATURES[section] ?? [
     'Module configured and ready for data integration.',

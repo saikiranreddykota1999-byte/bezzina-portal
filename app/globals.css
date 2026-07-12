@@ -5,9 +5,13 @@
   --foreground: #0f172a;
   --muted: #475569;
   --muted-light: #64748b;
-  --primary: #0b1f3a;
-  --secondary: #1f5e99;
-  --accent: #f58220;
+  --primary: #0b3d91;
+  --secondary: #071b35;
+  --accent: #d8a106;
+  --brand-blue: #0b3d91;
+  --brand-blue-hover: #09407a;
+  --brand-gold: #d8a106;
+  --brand-navy: #071b35;
   --border: #cbd5e1;
   --surface: #ffffff;
 }
@@ -20,6 +24,9 @@
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-gold: var(--brand-gold);
+  --color-brand-navy: var(--brand-navy);
   --color-border: var(--border);
   --color-surface: var(--surface);
   --font-sans: var(--font-geist-sans);

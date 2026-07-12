@@ -14,7 +14,7 @@ type RippleButtonProps = {
 };
 
 const variants = {
-  primary: 'bg-orange-500 text-white hover:bg-orange-600',
+  primary: 'bg-[#0B3D91] text-white hover:bg-[#09407a]',
   secondary: 'bg-slate-900 text-white hover:bg-slate-800',
   ghost: 'border border-slate-300 text-slate-900 hover:bg-slate-50',
 };

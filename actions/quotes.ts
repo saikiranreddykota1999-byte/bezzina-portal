@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getAuthenticatedUser, requireStaffUser } from '@/lib/auth/server-session';
 import { submitQuoteCustomerSchema } from '@/lib/validators/quote';
 import { notifyStaff } from '@/services/notification.service';
+import { sendQuoteConfirmationEmail } from '@/services/quote-email.service';
 import { logActivity } from '@/services/activity-log.service';
 import type { QuoteCartItem } from '@/types/quote';
 
@@ -139,6 +140,18 @@ export async function submitQuoteRequest(
       `${customer.name} submitted ${items.length} item(s)`,
       '/admin/quotes',
     );
+
+    try {
+      await sendQuoteConfirmationEmail({
+        reference,
+        customerName: customer.name,
+        customerEmail: customer.email,
+        items,
+        notes: notes?.trim(),
+      });
+    } catch (emailError) {
+      console.error('Quote confirmation email failed:', emailError);
+    }
 
     await logActivity({
       userId: session.user?.id ?? null,

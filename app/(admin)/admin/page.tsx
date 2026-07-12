@@ -1,12 +1,12 @@
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { DashboardStatsGrid } from '@/components/admin/dashboard-stats';
-import { requirePermission } from '@/lib/auth/server-session';
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getDashboardStats } from '@/services/admin-dashboard.service';
 
 export const metadata = { title: 'Admin Dashboard | Bezzina Portal' };
 
 export default async function AdminDashboardPage() {
-  await requirePermission('dashboard:view');
+  await guardAdminPage('dashboard:view');
   const stats = await getDashboardStats();
 
   return (

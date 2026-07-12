@@ -38,7 +38,7 @@ function FeatureIcon() {
     <svg
       aria-hidden="true"
       viewBox="0 0 24 24"
-      className="h-6 w-6 text-orange-500"
+      className="h-6 w-6 text-[#0B3D91]"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
@@ -60,7 +60,7 @@ export function WhyChoose({ content }: Props) {
     <section className="bg-white py-16 sm:py-20" aria-labelledby="why-choose-title">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
             {content?.eyebrow ?? 'Why Choose Us'}
           </p>
           <h2
@@ -81,7 +81,7 @@ export function WhyChoose({ content }: Props) {
               key={reason.title}
               className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8EFF9]">
                 <FeatureIcon />
               </div>
               <h3 className="mt-5 text-xl font-semibold text-slate-900">{reason.title}</h3>

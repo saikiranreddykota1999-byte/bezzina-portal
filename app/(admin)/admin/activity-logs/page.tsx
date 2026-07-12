@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getActivityLogs } from '@/actions/admin-activity-log';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { ActivityLogTable } from '@/components/admin/activity-log-table';
@@ -5,6 +6,7 @@ import { ActivityLogTable } from '@/components/admin/activity-log-table';
 export const metadata = { title: 'Activity Logs | Admin' };
 
 export default async function ActivityLogsPage() {
+  await guardAdminPage('dashboard:view');
   const result = await getActivityLogs(100);
   const logs = result.success ? result.data ?? [] : [];
 

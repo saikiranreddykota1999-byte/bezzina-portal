@@ -20,7 +20,7 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <LiftCard>
       <div className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors hover:border-slate-300">
-        <div className="absolute right-2 top-2 z-10 flex flex-col gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="absolute right-2 top-2 z-10 flex flex-col gap-1.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
           <button
             type="button"
             aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}

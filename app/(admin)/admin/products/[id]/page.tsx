@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { notFound } from 'next/navigation';
 import { getAdminProduct, getAdminCategoryOptions } from '@/actions/admin-products';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
@@ -18,6 +19,7 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function EditProductPage({ params }: Props) {
+  await guardAdminPage('products:manage');
   const { id } = await params;
   const [productResult, categoriesResult] = await Promise.all([
     getAdminProduct(id),

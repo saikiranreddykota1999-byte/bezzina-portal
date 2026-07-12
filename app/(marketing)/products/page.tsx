@@ -1,12 +1,16 @@
 import { Suspense } from 'react';
 import { ProductsCatalogueSection } from '@/components/products/products-catalogue-section';
 import { CatalogueSkeleton } from '@/components/products/catalogue-skeleton';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 import type { CatalogueSearchParams } from '@/lib/catalogue-params';
 
-export const metadata = {
-  title: 'Product Catalogue | Joseph Bezzina & Co Ltd',
-  description: 'Browse our full range of marine and industrial products.',
-};
+export async function generateMetadata() {
+  return buildPageMetadata({
+    path: '/products',
+    fallbackTitle: 'Product Catalogue | Joseph Bezzina & Co Ltd',
+    fallbackDescription: 'Browse our full range of marine and industrial products.',
+  });
+}
 
 export const revalidate = 60;
 

@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getAdminCategoryOptions } from '@/actions/admin-products';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { ProductForm } from '@/components/admin/product-form';
@@ -5,6 +6,7 @@ import { ProductForm } from '@/components/admin/product-form';
 export const metadata = { title: 'New Product | Admin' };
 
 export default async function NewProductPage() {
+  await guardAdminPage('products:manage');
   const categoriesResult = await getAdminCategoryOptions();
   const categoryTree = categoriesResult.success
     ? categoriesResult.data ?? { parents: [], subcategories: [], all: [] }

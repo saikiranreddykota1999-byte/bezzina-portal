@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getAdminProducts } from '@/actions/admin-products';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { ProductsTable } from '@/components/admin/products-table';
@@ -7,6 +8,7 @@ import { adminButtonPrimaryClass, adminButtonSecondaryClass } from '@/components
 export const metadata = { title: 'Products | Admin' };
 
 export default async function AdminProductsPage() {
+  await guardAdminPage('products:manage');
   const result = await getAdminProducts();
 
   if (!result.success) {

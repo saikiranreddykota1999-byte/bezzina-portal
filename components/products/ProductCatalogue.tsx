@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
 import {
@@ -55,10 +55,7 @@ export default function ProductCatalogue({
 
   const showParentFilter = !division && parentCategories.length > 0;
 
-  const selectedSubcategoryId = useMemo(() => {
-    if (!filters.categorySlug) return 'all';
-    return subcategories.find((c) => c.slug === filters.categorySlug)?.id ?? 'all';
-  }, [filters.categorySlug, subcategories]);
+  const selectedSubcategorySlug = filters.categorySlug ?? 'all';
 
   const navigate = useCallback(
     (updates: Partial<ParsedCatalogueParams>) => {
@@ -136,14 +133,13 @@ export default function ProductCatalogue({
             </label>
             <select
               id="catalogue-subcategory"
-              value={selectedSubcategoryId}
+              value={selectedSubcategorySlug}
               onChange={(e) => {
-                if (e.target.value === 'all') {
-                  navigate({ categorySlug: null, page: 1 });
-                  return;
-                }
-                const category = subcategories.find((c) => c.id === e.target.value);
-                navigate({ categorySlug: category?.slug ?? null, page: 1 });
+                const value = e.target.value;
+                navigate({
+                  categorySlug: value === 'all' ? null : value,
+                  page: 1,
+                });
               }}
               className={selectClass}
             >
@@ -151,7 +147,7 @@ export default function ProductCatalogue({
                 {showParentFilter ? 'All subcategories' : 'All categories'}
               </option>
               {subcategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
+                <option key={cat.id} value={cat.slug}>
                   {cat.name}
                 </option>
               ))}

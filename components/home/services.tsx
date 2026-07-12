@@ -1,38 +1,21 @@
-import type { ServicesContent } from '@/types/cms';
+'use client';
 
-const DEFAULT_SERVICES = [
-  {
-    title: 'Marine Chandlery',
-    description:
-      'Essential marine consumables, equipment, and supply support for vessels and maritime operators.',
-  },
-  {
-    title: 'Steel & Metal Stock',
-    description:
-      'Practical sourcing for steel, metals, and related materials used in fabrication and maintenance.',
-  },
-  {
-    title: 'Engineering Supplies',
-    description:
-      'A broad range of technical products to support workshops, industrial teams, and repair work.',
-  },
-  {
-    title: 'Bulk Industrial Orders',
-    description:
-      'Dependable support for higher-volume purchasing requirements with responsive quotation turnaround.',
-  },
-];
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+import { SERVICE_ITEMS } from '@/lib/services/page-content';
+import { ServiceCard } from '@/components/services/service-card';
+import type { ServicesContent } from '@/types/cms';
 
 type Props = { content?: Partial<ServicesContent> };
 
 export function Services({ content }: Props) {
-  const services = content?.items?.length ? content.items : DEFAULT_SERVICES;
+  const services = SERVICE_ITEMS.slice(0, 4);
 
   return (
     <section className="bg-white py-16 sm:py-20" aria-labelledby="services-title">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
             {content?.eyebrow ?? 'Services'}
           </p>
           <h2
@@ -44,15 +27,19 @@ export function Services({ content }: Props) {
         </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {services.map((service) => (
-            <article
-              key={service.title}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm"
-            >
-              <h3 className="text-xl font-semibold text-slate-900">{service.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-slate-600">{service.description}</p>
-            </article>
+          {services.map((service, index) => (
+            <ServiceCard key={service.id} service={service} index={index} />
           ))}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link
+            href="/services"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#0B3D91] transition hover:text-[#09407a]"
+          >
+            View all services
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
       </div>
     </section>

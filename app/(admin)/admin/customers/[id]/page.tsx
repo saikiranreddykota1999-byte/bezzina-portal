@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import Link from 'next/link';
 import { getAdminCustomer, resetCustomerPasswordAction } from '@/actions/admin-customers';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
@@ -17,6 +18,7 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function AdminCustomerDetailPage({ params }: Props) {
+  await guardAdminPage('customers:manage');
   const { id } = await params;
   const result = await getAdminCustomer(id);
 

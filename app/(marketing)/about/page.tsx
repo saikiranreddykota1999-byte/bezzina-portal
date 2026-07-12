@@ -1,23 +1,15 @@
-import { ContentPage, ContentPageActions } from '@/components/layout/content-page';
+import { AboutPageContent } from '@/components/about/about-page-content';
+import { buildPageMetadata } from '@/lib/seo/metadata';
+import { ABOUT_PAGE_CONTENT } from '@/lib/about/page-content';
 
-export const metadata = {
-  title: 'About Us | Joseph Bezzina & Co Ltd',
-  description:
-    'Learn about Joseph Bezzina & Co. Ltd, Malta\'s trusted marine and industrial supplier since 1969.',
-};
+export async function generateMetadata() {
+  return buildPageMetadata({
+    path: '/about',
+    fallbackTitle: 'About Us | Joseph Bezzina & Co Ltd',
+    fallbackDescription: ABOUT_PAGE_CONTENT.intro,
+  });
+}
 
 export default function AboutPage() {
-  return (
-    <ContentPage
-      title="About Us"
-      description="Joseph Bezzina & Co. Ltd has been serving Malta with industrial, marine, and engineering supplies since 1969. We combine dependable sourcing with practical expertise to support vessels, workshops, plants, and trade professionals across the island."
-    >
-      <p className="text-base leading-7 text-slate-600">
-        From fasteners and hardware to marine chandlery and industrial equipment,
-        our team focuses on responsive service, reliable stock, and technical
-        support you can count on.
-      </p>
-      <ContentPageActions />
-    </ContentPage>
-  );
+  return <AboutPageContent />;
 }

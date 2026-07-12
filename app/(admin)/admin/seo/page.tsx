@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getSeoPagesAction } from '@/actions/admin-seo';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { SeoManager } from '@/components/admin/seo-manager';
@@ -5,6 +6,7 @@ import { SeoManager } from '@/components/admin/seo-manager';
 export const metadata = { title: 'SEO Manager | Admin' };
 
 export default async function AdminSeoPage() {
+  await guardAdminPage('seo:manage');
   const result = await getSeoPagesAction();
   if (!result.success) return <p className="text-[var(--admin-danger)]">{result.error}</p>;
 

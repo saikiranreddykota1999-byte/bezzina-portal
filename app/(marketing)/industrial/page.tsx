@@ -1,13 +1,17 @@
 import { Suspense } from 'react';
 import { ProductsCatalogueSection } from '@/components/products/products-catalogue-section';
 import { CatalogueSkeleton } from '@/components/products/catalogue-skeleton';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 import type { CatalogueSearchParams } from '@/lib/catalogue-params';
 
-export const metadata = {
-  title: 'Industrial Equipment | Joseph Bezzina & Co Ltd',
-  description:
-    'Full industrial equipment catalogue — tools, hydraulics, electrical, safety, and more.',
-};
+export async function generateMetadata() {
+  return buildPageMetadata({
+    path: '/industrial',
+    fallbackTitle: 'Industrial Equipment | Joseph Bezzina & Co Ltd',
+    fallbackDescription:
+      'Full industrial equipment catalogue — tools, hydraulics, electrical, safety, and more.',
+  });
+}
 
 export const revalidate = 60;
 

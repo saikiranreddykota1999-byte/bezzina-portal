@@ -1,10 +1,13 @@
 import { ContentPage } from '@/components/layout/content-page';
+import { ContactForm } from '@/components/contact/contact-form';
 import { LocationMap } from '@/components/contact/location-map';
 import { FacebookIcon } from '@/components/icons/facebook';
+import { JsonLd } from '@/components/seo/json-ld';
 import { getSiteSetting, getHomepageSection } from '@/services/cms.service';
 import { buildPageMetadata } from '@/lib/seo/metadata';
+import { getLocalBusinessSchema } from '@/lib/structuredData';
 import { company } from '@/config/company';
-import type { SocialSettings } from '@/types/cms';
+import type { SocialSettings, CompanySettings } from '@/types/cms';
 
 type ContactSettings = {
   offices?: Array<{
@@ -28,9 +31,19 @@ export async function generateMetadata() {
 }
 
 export default async function ContactPage() {
-  const [contactSection, siteCompany, socialSettings] = await Promise.all([
+  const defaultCompanySettings: CompanySettings = {
+    name: company.name,
+    tagline: company.tagline,
+    email: company.contact.email,
+    phone: company.contact.phone1,
+    whatsapp: company.contact.whatsapp,
+    address: `${company.address.line1}, ${company.address.city}, ${company.address.postalCode}, ${company.address.country}`,
+    logoUrl: company.logoUrl,
+  };
+
+  const [contactSection, companySettings, socialSettings] = await Promise.all([
     getHomepageSection('contact'),
-    getSiteSetting('company', company),
+    getSiteSetting<CompanySettings>('company', defaultCompanySettings),
     getSiteSetting<SocialSettings>('social', company.social),
   ]);
 
@@ -47,18 +60,36 @@ export default async function ContactPage() {
   ];
 
   const primaryOffice = offices[0];
+  const localBusinessSchema = getLocalBusinessSchema({
+    name: companySettings.name ?? primaryOffice.name,
+    imageUrl: companySettings.logoUrl ?? company.logoUrl,
+    telephone: primaryOffice.phone ?? companySettings.phone ?? company.contact.phone1,
+  });
 
   return (
     <ContentPage
       title="Contact Us"
       description="Reach our team for quotations, product enquiries, and technical assistance."
     >
+      <JsonLd data={localBusinessSchema} />
       <LocationMap
         embedUrl={primaryOffice.mapEmbedUrl ?? company.maps.embedUrl}
         mapsUrl={company.maps.shortUrl}
         placeName={primaryOffice.name}
         address={primaryOffice.address}
       />
+
+      <section className="mt-10 rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8" aria-labelledby="contact-form-title">
+        <h2 id="contact-form-title" className="text-xl font-bold text-[#071B35] sm:text-2xl">
+          Send an enquiry
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Complete the form and our team will respond to your quotation or technical enquiry.
+        </p>
+        <div className="mt-6">
+          <ContactForm />
+        </div>
+      </section>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-2">
         {offices.map((office) => (
@@ -95,7 +126,7 @@ export default async function ContactPage() {
         {settings.whatsapp && (
           <div className="rounded-2xl border border-slate-200 p-5">
             <h3 className="font-semibold text-slate-900">WhatsApp</h3>
-            <a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, '')}`} className="mt-2 inline-block text-sm text-orange-600 hover:underline">
+            <a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, '')}`} className="mt-2 inline-block text-sm font-semibold text-[#0B3D91] hover:underline">
               Chat on WhatsApp
             </a>
           </div>
@@ -119,7 +150,7 @@ export default async function ContactPage() {
       </div>
 
       <p className="mt-6 text-xs text-slate-500">
-        Registration: {(siteCompany as typeof company).registrationNumber ?? company.registrationNumber}
+        Registration: {company.registrationNumber}
       </p>
     </ContentPage>
   );

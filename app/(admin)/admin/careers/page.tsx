@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getAdminVacancies } from '@/actions/careers';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { AdminCareersManager } from '@/components/admin/careers-manager';
@@ -5,6 +6,7 @@ import { AdminCareersManager } from '@/components/admin/careers-manager';
 export const metadata = { title: 'Vacancies | Admin' };
 
 export default async function AdminCareersPage() {
+  await guardAdminPage('careers:manage');
   const result = await getAdminVacancies();
   const vacancies = result.success ? result.data ?? [] : [];
 

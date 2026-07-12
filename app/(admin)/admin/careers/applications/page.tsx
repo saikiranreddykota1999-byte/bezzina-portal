@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getJobApplicationsAction } from '@/actions/admin-careers-applications';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { CareerApplicationsManager } from '@/components/admin/career-applications-manager';
@@ -5,6 +6,7 @@ import { CareerApplicationsManager } from '@/components/admin/career-application
 export const metadata = { title: 'Job Applications | Admin' };
 
 export default async function AdminCareerApplicationsPage() {
+  await guardAdminPage('careers:manage');
   const result = await getJobApplicationsAction();
   if (!result.success) return <p className="text-[var(--admin-danger)]">{result.error}</p>;
 

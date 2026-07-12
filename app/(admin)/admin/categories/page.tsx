@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getAdminCategoryTree } from '@/actions/admin-categories';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { CategoryManager } from '@/components/admin/category-manager';
@@ -5,6 +6,7 @@ import { CategoryManager } from '@/components/admin/category-manager';
 export const metadata = { title: 'Categories | Admin' };
 
 export default async function AdminCategoriesPage() {
+  await guardAdminPage('categories:manage');
   const result = await getAdminCategoryTree();
 
   if (!result.success) {

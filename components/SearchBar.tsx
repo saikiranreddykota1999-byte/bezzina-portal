@@ -16,7 +16,7 @@ import { quickSearchProductsAction } from '@/actions/search';
 import { formatPrice, resolveProductPrice } from '@/lib/pricing';
 import type { ProductSearchHit } from '@/lib/product-search';
 
-type SearchBarVariant = 'hero' | 'default';
+type SearchBarVariant = 'hero' | 'default' | 'header';
 
 type SearchBarProps = {
   variant?: SearchBarVariant;
@@ -37,7 +37,14 @@ const variantStyles: Record<
   },
   default: {
     input:
-      'border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 focus:ring-orange-500',
+      'border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 focus:ring-[#0B3D91]',
+    dropdown: 'border-slate-200 bg-white text-slate-900 shadow-lg',
+    result: 'hover:bg-slate-50',
+    muted: 'text-slate-500',
+  },
+  header: {
+    input:
+      'border-slate-200 bg-slate-50 py-2.5 pl-10 pr-24 text-sm text-slate-900 placeholder:text-slate-500 focus:border-[#0B3D91] focus:bg-white focus:ring-[#0B3D91]',
     dropdown: 'border-slate-200 bg-white text-slate-900 shadow-lg',
     result: 'hover:bg-slate-50',
     muted: 'text-slate-500',
@@ -62,6 +69,7 @@ export function SearchBar({
   const [hasSearched, setHasSearched] = useState(false);
 
   const styles = variantStyles[variant];
+  const isCompact = variant === 'header';
 
   const runSearch = useCallback(async (value: string) => {
     const trimmed = value.trim();
@@ -147,7 +155,10 @@ export function SearchBar({
   const showDropdown = open && query.trim().length >= 2;
 
   return (
-    <div ref={containerRef} className={`relative w-full max-w-2xl ${className}`}>
+    <div
+      ref={containerRef}
+      className={`relative w-full ${variant === 'header' ? 'max-w-md' : 'max-w-2xl'} ${className}`}
+    >
       <form onSubmit={handleSubmit} role="search">
         <label htmlFor={`${listboxId}-input`} className="sr-only">
           Search products
@@ -174,11 +185,15 @@ export function SearchBar({
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className={`w-full rounded-full border py-3.5 pl-12 pr-28 text-sm transition focus:outline-none focus:ring-2 sm:text-base ${styles.input}`}
+            className={`w-full rounded-full border transition focus:outline-none focus:ring-2 ${
+              isCompact ? 'pl-10 pr-20 text-sm' : 'py-3.5 pl-12 pr-28 text-sm sm:text-base'
+            } ${styles.input}`}
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+            className={`absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-[#0B3D91] font-semibold text-white transition hover:bg-[#09407a] ${
+              isCompact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'
+            }`}
           >
             Search
           </button>
@@ -252,7 +267,7 @@ export function SearchBar({
             <button
               type="button"
               onClick={() => navigateToFullSearch(query)}
-              className={`w-full border-t px-4 py-3 text-left text-sm font-medium text-orange-500 transition ${styles.result}`}
+              className={`w-full border-t px-4 py-3 text-left text-sm font-medium text-[#0B3D91] transition ${styles.result}`}
             >
               View all results for “{query.trim()}”
             </button>

@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getAuthenticatedUser } from '@/lib/auth/server-session';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { AdminProfileForm } from '@/components/admin/admin-profile-form';
@@ -5,6 +6,7 @@ import { AdminProfileForm } from '@/components/admin/admin-profile-form';
 export const metadata = { title: 'Admin Profile' };
 
 export default async function AdminProfilePage() {
+  await guardAdminPage('dashboard:view');
   const session = await getAuthenticatedUser();
 
   return (

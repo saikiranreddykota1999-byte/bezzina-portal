@@ -1,17 +1,20 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ShoppingCart, User, ClipboardList } from "lucide-react";
+import { Heart, ShoppingCart, User, ClipboardList, Phone } from "lucide-react";
 import { navigation } from "@/config/navigation";
 import { company } from "@/config/company";
+import { brandClasses } from "@/lib/brand";
 import { isActivePath } from "@/lib/navigation";
 import { useCart } from "@/context/cart-context";
 import { useWishlist } from "@/context/wishlist-context";
 import { useQuoteCart } from "@/context/quote-cart-context";
 import { QuoteCartDrawer } from "@/components/quote/quote-cart-drawer";
+import { SearchBar } from "@/components/SearchBar";
 import { MobileNav } from "./mobile-nav";
 
 export function Header() {
@@ -52,12 +55,17 @@ export function Header() {
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+          className="flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91]"
           aria-label={`${company.name} home`}
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white">
-            JB
-          </div>
+          <Image
+            src={company.logoUrl}
+            alt=""
+            width={44}
+            height={44}
+            className="h-11 w-11 rounded-lg object-contain"
+            priority
+          />
           <div className="hidden sm:block">
             <p className="text-sm font-semibold leading-none text-slate-900">
               {company.name}
@@ -66,7 +74,7 @@ export function Header() {
           </div>
         </Link>
 
-        <nav aria-label="Primary" className="hidden items-center gap-6 xl:gap-8 lg:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-6 xl:gap-8 xl:flex">
           {desktopLinks.map((item) => {
             const active = isActivePath(pathname, item.href);
             return (
@@ -85,7 +93,24 @@ export function Header() {
           })}
         </nav>
 
+        <div className="hidden min-w-0 flex-1 md:block lg:max-w-md xl:max-w-lg">
+          <SearchBar
+            variant="header"
+            placeholder="Search products…"
+            className="mx-auto"
+          />
+        </div>
+
         <div className="flex items-center gap-2 sm:gap-3">
+          <a
+            href={`tel:${company.contact.phone1.replace(/\s/g, '')}`}
+            className="hidden items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 xl:inline-flex"
+            aria-label={`Call ${company.contact.phone1}`}
+          >
+            <Phone className="h-4 w-4 shrink-0 text-[#0B3D91]" aria-hidden="true" />
+            <span className="hidden 2xl:inline">{company.contact.phone1}</span>
+          </a>
+
           <button
             type="button"
             onClick={() => setQuoteDrawerOpen(true)}
@@ -94,7 +119,7 @@ export function Header() {
           >
             <ClipboardList className="h-5 w-5" />
             {quoteCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white">
                 {quoteCount}
               </span>
             )}
@@ -107,7 +132,7 @@ export function Header() {
           >
             <Heart className="h-5 w-5" />
             {wishlistItems.length > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white">
                 {wishlistItems.length}
               </span>
             )}
@@ -120,7 +145,7 @@ export function Header() {
           >
             <ShoppingCart className="h-5 w-5" />
             {cartCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white">
                 {cartCount}
               </span>
             )}
@@ -137,7 +162,7 @@ export function Header() {
           {quoteLink ? (
             <Link
               href={quoteLink.href}
-              className="hidden rounded-full bg-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 sm:inline-flex"
+              className={`hidden sm:inline-flex ${brandClasses.btnPrimary}`}
             >
               Request a Quote
             </Link>
@@ -145,7 +170,7 @@ export function Header() {
 
           <button
             type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-slate-200 text-slate-800 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-slate-200 text-slate-800 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] lg:hidden"
             aria-expanded={isMobileOpen}
             aria-controls="mobile-navigation"
             aria-label={isMobileOpen ? "Close menu" : "Open menu"}

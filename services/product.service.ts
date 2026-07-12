@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { PRODUCT_CATEGORIES } from '@/config/categories';
 import {
   Product,
   Category,
@@ -255,5 +256,78 @@ export async function getRandomProducts(limit = 12): Promise<Product[]> {
     } catch {
       return [];
     }
+  }
+}
+
+export type HomepageCategory = {
+  name: string;
+  slug: string;
+  description: string;
+};
+
+export async function getHomepageCategories(limit = 20): Promise<HomepageCategory[]> {
+  const fallback = PRODUCT_CATEGORIES.slice(0, limit).map((category) => ({
+    name: category.name,
+    slug: category.slug,
+    description: category.description,
+  }));
+
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('name, slug, description')
+      .is('parent_id', null)
+      .order('sort_order', { ascending: true })
+      .limit(limit);
+
+    if (error || !data?.length) {
+      return fallback;
+    }
+
+    return data.map((category) => ({
+      name: category.name,
+      slug: category.slug,
+      description: category.description?.trim() || `Browse ${category.name} products.`,
+    }));
+  } catch (error) {
+    console.error('getHomepageCategories error:', error);
+    return fallback;
+  }
+}
+
+export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
+  try {
+    if (product.related_product_ids?.length) {
+      const { data, error } = await supabase
+        .from('products')
+        .select(PRODUCT_SELECT)
+        .in('id', product.related_product_ids)
+        .eq('is_active', true)
+        .limit(limit);
+
+      if (!error && data?.length) {
+        return (data as unknown as Product[]).map(normalizeProduct);
+      }
+    }
+
+    if (product.category_id) {
+      const { data, error } = await supabase
+        .from('products')
+        .select(PRODUCT_SELECT)
+        .eq('category_id', product.category_id)
+        .eq('is_active', true)
+        .neq('id', product.id)
+        .limit(limit);
+
+      if (!error && data?.length) {
+        return (data as unknown as Product[]).map(normalizeProduct);
+      }
+    }
+
+    const random = await getRandomProducts(limit);
+    return random.filter((item) => item.id !== product.id).slice(0, limit);
+  } catch (error) {
+    console.error('getRelatedProducts error:', error);
+    return [];
   }
 }

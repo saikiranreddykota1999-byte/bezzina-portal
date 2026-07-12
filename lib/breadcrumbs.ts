@@ -1,0 +1,35 @@
+import type { Product } from '@/types/product';
+
+export type BreadcrumbItem = {
+  label: string;
+  href?: string;
+};
+
+type BuildProductBreadcrumbsOptions = {
+  includeCurrentProduct?: boolean;
+};
+
+export function buildProductBreadcrumbs(
+  product: Product,
+  options: BuildProductBreadcrumbsOptions = {},
+): BreadcrumbItem[] {
+  const crumbs: BreadcrumbItem[] = [{ label: 'Products', href: '/products' }];
+
+  if (product.category?.division) {
+    const divisionHref = product.category.division === 'marine' ? '/marine' : '/industrial';
+    crumbs.push({
+      label: product.category.division === 'marine' ? 'Marine Supplies' : 'Industrial Equipment',
+      href: divisionHref,
+    });
+  }
+
+  if (product.category?.name) {
+    crumbs.push({ label: product.category.name });
+  }
+
+  if (options.includeCurrentProduct) {
+    crumbs.push({ label: product.name, href: `/products/${product.slug}` });
+  }
+
+  return crumbs;
+}

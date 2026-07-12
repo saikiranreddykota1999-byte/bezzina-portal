@@ -1,13 +1,17 @@
 import { Suspense } from 'react';
 import { ProductsCatalogueSection } from '@/components/products/products-catalogue-section';
 import { CatalogueSkeleton } from '@/components/products/catalogue-skeleton';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 import type { CatalogueSearchParams } from '@/lib/catalogue-params';
 
-export const metadata = {
-  title: 'Marine Supplies | Joseph Bezzina & Co Ltd',
-  description:
-    'Full marine supplies catalogue — anchors, pumps, safety equipment, navigation, and more.',
-};
+export async function generateMetadata() {
+  return buildPageMetadata({
+    path: '/marine',
+    fallbackTitle: 'Marine Supplies | Joseph Bezzina & Co Ltd',
+    fallbackDescription:
+      'Full marine supplies catalogue — anchors, pumps, safety equipment, navigation, and more.',
+  });
+}
 
 export const revalidate = 60;
 

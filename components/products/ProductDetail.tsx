@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingCart, ClipboardList, FileText, ZoomIn, X } from 'lucide-react';
 import { Product, INVENTORY_STATUS_OPTIONS, type TechnicalSpecRow } from '@/types/product';
+import { buildProductBreadcrumbs } from '@/lib/breadcrumbs';
 import { useCart } from '@/context/cart-context';
 import { useQuoteCart } from '@/context/quote-cart-context';
 import { formatPrice, resolveProductPrice } from '@/lib/pricing';
@@ -38,19 +39,6 @@ function inventoryLabel(status?: string | null) {
   return INVENTORY_STATUS_OPTIONS.find((o) => o.value === status)?.label ?? 'Available';
 }
 
-function buildBreadcrumb(product: Product): { label: string; href?: string }[] {
-  const crumbs: { label: string; href?: string }[] = [{ label: 'Products', href: '/products' }];
-  if (product.category?.division) {
-    const divisionHref = product.category.division === 'marine' ? '/marine' : '/industrial';
-    crumbs.push({
-      label: product.category.division === 'marine' ? 'Marine Supplies' : 'Industrial Equipment',
-      href: divisionHref,
-    });
-  }
-  if (product.category?.name) crumbs.push({ label: product.category.name });
-  return crumbs;
-}
-
 export default function ProductDetail({ product }: { product: Product }) {
   const { addItem } = useCart();
   const { addItem: addToQuote } = useQuoteCart();
@@ -67,7 +55,7 @@ export default function ProductDetail({ product }: { product: Product }) {
 
   const [activeImage, setActiveImage] = useState(images[0]?.url ?? null);
   const specs = buildSpecs(product);
-  const breadcrumbs = buildBreadcrumb(product);
+  const breadcrumbs = buildProductBreadcrumbs(product);
   const availabilityLabel = inventoryLabel(product.availability);
 
   return (

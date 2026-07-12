@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getAdminCustomers } from '@/actions/admin-customers';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { CustomersManager } from '@/components/admin/customers-manager';
@@ -5,6 +6,7 @@ import { CustomersManager } from '@/components/admin/customers-manager';
 export const metadata = { title: 'Customers | Admin' };
 
 export default async function AdminCustomersPage() {
+  await guardAdminPage('customers:manage');
   const result = await getAdminCustomers();
   if (!result.success) return <p className="text-[var(--admin-danger)]">{result.error}</p>;
 

@@ -1,11 +1,15 @@
 import { ContentPage } from '@/components/layout/content-page';
 import { QuoteCartContent } from '@/components/quote/QuoteCartContent';
+import { buildPageMetadata } from '@/lib/seo/metadata';
 import { getQuoteDrafts } from '@/actions/quote-drafts';
 
-export const metadata = {
-  title: 'Request a Quote | Joseph Bezzina & Co Ltd',
-  description: 'Review your quote cart and submit a multi-product quotation request.',
-};
+export async function generateMetadata() {
+  return buildPageMetadata({
+    path: '/quote',
+    fallbackTitle: 'Request a Quote | Joseph Bezzina & Co Ltd',
+    fallbackDescription: 'Review your quote cart and submit a multi-product quotation request.',
+  });
+}
 
 export default async function QuotePage() {
   const draftsResult = await getQuoteDrafts();

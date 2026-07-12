@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { WebsiteContentEditor } from '@/components/admin/website-content-editor';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { getHomepageSectionsAction } from '@/actions/admin-homepage';
@@ -6,6 +7,7 @@ import type { HomepageSectionKey } from '@/types/cms';
 export const metadata = { title: 'Website Content | Admin' };
 
 export default async function AdminWebsiteContentPage() {
+  await guardAdminPage('homepage:manage');
   const result = await getHomepageSectionsAction();
   if (!result.success) return <p className="text-[var(--admin-danger)]">{result.error}</p>;
 

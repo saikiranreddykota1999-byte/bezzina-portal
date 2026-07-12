@@ -54,7 +54,7 @@ export function Hero({ content }: Props) {
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1, ...defaultTransition }}
-            className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-300"
+            className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]"
           >
             {eyebrow}
           </motion.p>

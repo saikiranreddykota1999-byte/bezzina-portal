@@ -1,3 +1,4 @@
+import { guardAdminPage } from '@/lib/admin/guard-page';
 import { getAllSiteSettingsForAdmin } from '@/actions/admin-settings';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { SettingsManager } from '@/components/admin/settings-manager';
@@ -5,6 +6,7 @@ import { SettingsManager } from '@/components/admin/settings-manager';
 export const metadata = { title: 'Settings | Admin' };
 
 export default async function AdminSettingsPage() {
+  await guardAdminPage('settings:manage');
   const result = await getAllSiteSettingsForAdmin();
   if (!result.success) return <p className="text-[var(--admin-danger)]">{result.error}</p>;
 

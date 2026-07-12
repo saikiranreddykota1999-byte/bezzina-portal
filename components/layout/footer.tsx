@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { company } from '@/config/company';
 import { navigation } from '@/config/navigation';
 import { FacebookIcon } from '@/components/icons/facebook';
+import { FooterNewsletter } from '@/components/layout/footer-newsletter';
 import { getHomepageSection, getSiteSetting } from '@/services/cms.service';
 import type { FooterContent, CompanySettings, SocialSettings } from '@/types/cms';
 
@@ -28,7 +29,7 @@ export async function Footer() {
 
   return (
     <footer className="border-t border-slate-200 bg-slate-950 text-slate-200">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-3 lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:px-8 xl:grid-cols-4">
         <section aria-labelledby="footer-company">
           <h2 id="footer-company" className="text-lg font-semibold text-white">
             {settings.name ?? company.name}
@@ -88,15 +89,34 @@ export async function Footer() {
             )}
           </address>
         </section>
+
+        <FooterNewsletter />
       </div>
 
       <div className="border-t border-slate-800">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 text-sm text-slate-300 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-sm text-slate-300 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <p>
             {footer.copyright ??
               `© ${new Date().getFullYear()} ${settings.name ?? company.name}. All rights reserved.`}
           </p>
-          <p>Industrial & Marine Supplies, Malta</p>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1">
+            <Link href="/privacy" className="hover:text-white">Privacy</Link>
+            <Link href="/terms" className="hover:text-white">Terms</Link>
+            <Link href="/cookies" className="hover:text-white">Cookies</Link>
+            {company.contact.whatsapp && (
+              <a
+                href={`https://wa.me/${company.contact.whatsapp.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white"
+              >
+                WhatsApp
+              </a>
+            )}
+          </nav>
+          <p className="text-slate-400">
+            Reg. {company.registrationNumber} · Industrial & Marine Supplies, Malta
+          </p>
         </div>
       </div>
     </footer>
