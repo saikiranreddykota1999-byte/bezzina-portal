@@ -1,5 +1,20 @@
 const UNSUPPORTED_COLOR_PATTERN = /lab\(|oklch\(|color\(/i;
 
+const COLOR_STYLE_PROPERTIES = new Set([
+  'color',
+  'background',
+  'background-color',
+  'border-color',
+  'border-top-color',
+  'border-right-color',
+  'border-bottom-color',
+  'border-left-color',
+  'outline-color',
+  'text-decoration-color',
+  'fill',
+  'stroke',
+]);
+
 const SKIP_STYLE_PROPERTIES = new Set([
   'transition',
   'transition-property',
@@ -11,14 +26,18 @@ const SKIP_STYLE_PROPERTIES = new Set([
   'animation-duration',
 ]);
 
-function normalizeColor(value: string): string {
+function forceRgbColor(value: string): string {
   const trimmed = value.trim();
   if (!trimmed || trimmed === 'transparent' || trimmed === 'rgba(0, 0, 0, 0)') {
     return trimmed;
   }
 
-  if (!UNSUPPORTED_COLOR_PATTERN.test(trimmed)) {
+  if (/url\(|gradient/i.test(trimmed) && !UNSUPPORTED_COLOR_PATTERN.test(trimmed)) {
     return trimmed;
+  }
+
+  if (/url\(|gradient/i.test(trimmed) && UNSUPPORTED_COLOR_PATTERN.test(trimmed)) {
+    return trimmed.includes('gradient') ? 'none' : trimmed;
   }
 
   const canvas = document.createElement('canvas');
@@ -38,9 +57,11 @@ function normalizeColor(value: string): string {
 
 function sanitizeStyleValue(property: string, value: string): string {
   if (!value) return value;
-  if (!UNSUPPORTED_COLOR_PATTERN.test(value)) return value;
-  if (property === 'box-shadow') return 'none';
-  return normalizeColor(value);
+  if (property === 'box-shadow' && UNSUPPORTED_COLOR_PATTERN.test(value)) return 'none';
+  if (COLOR_STYLE_PROPERTIES.has(property) || UNSUPPORTED_COLOR_PATTERN.test(value)) {
+    return forceRgbColor(value);
+  }
+  return value;
 }
 
 function inlineComputedStyles(source: Element, target: Element): void {
@@ -137,6 +158,47 @@ export const INVOICE_IFRAME_CSS = `
     font-family: Arial, Helvetica, sans-serif;
   }
 `;
+
+export function suspendMainDocumentStyles(): () => void {
+  const restores: Array<() => void> = [];
+
+  document.querySelectorAll('link[rel="stylesheet"]').forEach((node) => {
+    if (node instanceof HTMLLinkElement) {
+      const previous = node.disabled;
+      node.disabled = true;
+      restores.push(() => {
+        node.disabled = previous;
+      });
+    }
+  });
+
+  const removedStyles: Array<{
+    node: HTMLStyleElement;
+    parent: Node | null;
+    next: ChildNode | null;
+  }> = [];
+
+  document.querySelectorAll('style').forEach((node) => {
+    if (node instanceof HTMLStyleElement) {
+      removedStyles.push({
+        node,
+        parent: node.parentNode,
+        next: node.nextSibling,
+      });
+      node.remove();
+    }
+  });
+
+  restores.push(() => {
+    removedStyles.forEach(({ node, parent, next }) => {
+      parent?.insertBefore(node, next);
+    });
+  });
+
+  return () => {
+    restores.reverse().forEach((restore) => restore());
+  };
+}
 
 export function mountInvoiceInIframe(source: HTMLElement): {
   iframe: HTMLIFrameElement;

@@ -2,22 +2,72 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountSessionError } from '@/components/auth/account-session-error';
+import {
+  AccountDashboardGrid,
+  type AccountDashboardLink,
+} from '@/components/account/account-dashboard-grid';
 import { getAuthenticatedUser } from '@/lib/auth/server-session';
 
-const ACCOUNT_LINKS = [
-  { title: 'Profile', href: '/account/profile', description: 'Name, phone, and profile picture' },
-  { title: 'Addresses', href: '/account/addresses', description: 'Manage delivery addresses' },
-  { title: 'Payment Cards', href: '/account/cards', description: 'Add and manage saved cards' },
-  { title: 'Orders', href: '/account/orders', description: 'Order history and invoices' },
-  { title: 'Quote History', href: '/account/quotes', description: 'Submitted quotation requests' },
-  { title: 'Saved Quote Drafts', href: '/quote', description: 'Resume saved quote carts' },
-  { title: 'Recently Viewed', href: '/account/recently-viewed', description: 'Products you browsed recently' },
-  { title: 'Downloads', href: '/account/downloads', description: 'Datasheets and product documents' },
-  { title: 'Favourite Products', href: '/account/wishlist', description: 'Saved products' },
+const ACCOUNT_LINKS: AccountDashboardLink[] = [
+  {
+    title: 'Profile',
+    href: '/account/profile',
+    description: 'Name, phone, and profile picture',
+    variant: 'profile',
+  },
+  {
+    title: 'Addresses',
+    href: '/account/addresses',
+    description: 'Manage delivery addresses',
+    variant: 'addresses',
+  },
+  {
+    title: 'Payment Cards',
+    href: '/account/cards',
+    description: 'Add and manage saved cards',
+    variant: 'payment-cards',
+  },
+  {
+    title: 'Orders',
+    href: '/account/orders',
+    description: 'Order history and invoices',
+    variant: 'orders',
+  },
+  {
+    title: 'Quote History',
+    href: '/account/quotes',
+    description: 'Submitted quotation requests',
+    variant: 'quote-history',
+  },
+  {
+    title: 'Saved Quote Drafts',
+    href: '/quote',
+    description: 'Resume saved quote carts',
+    variant: 'quote-drafts',
+  },
+  {
+    title: 'Recently Viewed',
+    href: '/account/recently-viewed',
+    description: 'Products you browsed recently',
+    variant: 'recently-viewed',
+  },
+  {
+    title: 'Downloads',
+    href: '/account/downloads',
+    description: 'Datasheets and product documents',
+    variant: 'downloads',
+  },
+  {
+    title: 'Favourite Products',
+    href: '/account/wishlist',
+    description: 'Saved products',
+    variant: 'favourites',
+  },
   {
     title: 'Delivery Tracking',
     href: '/account/tracking',
     description: 'Track shipments by order or tracking number',
+    variant: 'tracking',
   },
   { title: 'Cart', href: '/account/cart', description: 'Review items before checkout' },
   { title: 'Checkout', href: '/account/checkout', description: 'Review order before payment' },
@@ -70,18 +120,7 @@ export async function AccountDashboardSection({ searchParams }: Props) {
         </p>
       )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        {ACCOUNT_LINKS.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-orange-300 hover:shadow-sm"
-          >
-            <h2 className="font-semibold text-slate-900">{link.title}</h2>
-            <p className="mt-1 text-sm text-slate-500">{link.description}</p>
-          </Link>
-        ))}
-      </div>
+      <AccountDashboardGrid links={ACCOUNT_LINKS} />
     </div>
   );
 }

@@ -1,20 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { mapInvoicePdfError } from '@/lib/receipt-pdf';
 
-describe('invoice PDF color sanitizer', () => {
-  it('isolates invoice capture in an iframe without Tailwind stylesheets', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'lib/invoice-pdf-colors.ts'),
-      'utf8',
-    );
+describe('invoice PDF export', () => {
+  it('isolates invoice capture and suspends main document styles', () => {
+    const colors = readFileSync(resolve(process.cwd(), 'lib/invoice-pdf-colors.ts'), 'utf8');
     const receiptPdf = readFileSync(resolve(process.cwd(), 'lib/receipt-pdf.ts'), 'utf8');
 
-    expect(source).toContain('mountInvoiceInIframe');
-    expect(source).toContain('createIsolatedInvoiceNode');
-    expect(source).toContain('removeAttribute(\'class\')');
-    expect(receiptPdf).toContain('mountInvoiceInIframe(element)');
-    expect(receiptPdf).toContain("import('html2canvas')");
-    expect(receiptPdf).not.toContain('html2pdf');
+    expect(colors).toContain('suspendMainDocumentStyles');
+    expect(colors).toContain('mountInvoiceInIframe');
+    expect(receiptPdf).toContain('suspendMainDocumentStyles()');
+  });
+
+  it('maps user-friendly invoice PDF errors', () => {
+    expect(mapInvoicePdfError(new Error('Invoice document not found'))).toContain(
+      'Invoice not yet available',
+    );
+    expect(mapInvoicePdfError(new Error('Attempting to parse an unsupported color function "lab"'))).toContain(
+      'PDF rendering failed',
+    );
   });
 });

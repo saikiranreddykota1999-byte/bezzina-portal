@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Download, Printer } from 'lucide-react';
+import { Download, Loader2, Printer } from 'lucide-react';
 import { TaxInvoiceDocument } from '@/components/orders/tax-invoice-document';
-import { exportInvoicePdf } from '@/lib/receipt-pdf';
+import { exportInvoicePdf, mapInvoicePdfError } from '@/lib/receipt-pdf';
 import type { OrderWithPickup } from '@/types/pickup';
 
 type Props = {
@@ -13,37 +13,66 @@ type Props = {
 
 export function OrderReceipt({ order }: Props) {
   const [exporting, setExporting] = useState(false);
+  const [exportAction, setExportAction] = useState<'download' | 'print' | null>(null);
   const [error, setError] = useState('');
   const filename = `invoice-${order.order_number ?? 'order'}.pdf`;
+  const invoiceReady = Boolean(order.order_number && (order.items?.length ?? 0) > 0);
 
   async function handleDownloadPdf() {
+    if (!invoiceReady) {
+      setError('Invoice not yet available for this order.');
+      return;
+    }
+
     setExporting(true);
+    setExportAction('download');
     setError('');
 
     try {
       await exportInvoicePdf({ filename, action: 'save' });
     } catch (exportError) {
-      setError(
-        exportError instanceof Error ? exportError.message : 'Unable to generate invoice PDF',
-      );
+      console.error('Invoice PDF download failed:', exportError);
+      setError(mapInvoicePdfError(exportError));
     } finally {
       setExporting(false);
+      setExportAction(null);
     }
   }
 
   async function handlePrintReceipt() {
+    if (!invoiceReady) {
+      setError('Invoice not yet available for this order.');
+      return;
+    }
+
     setExporting(true);
+    setExportAction('print');
     setError('');
 
     try {
       await exportInvoicePdf({ filename, action: 'open' });
     } catch (exportError) {
-      setError(
-        exportError instanceof Error ? exportError.message : 'Unable to open invoice for printing',
-      );
+      console.error('Invoice PDF print failed:', exportError);
+      setError(mapInvoicePdfError(exportError));
     } finally {
       setExporting(false);
+      setExportAction(null);
     }
+  }
+
+  if (!invoiceReady) {
+    return (
+      <div className="mx-auto max-w-4xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
+        <h1 className="text-lg font-semibold text-amber-950">Invoice not yet available</h1>
+        <p className="mt-2">
+          This order does not have enough data to generate a receipt yet. Please check back shortly
+          or contact support if the issue persists.
+        </p>
+        <Link href="/account/orders" className="mt-4 inline-block text-orange-700 hover:underline">
+          Back to orders
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -55,8 +84,12 @@ export function OrderReceipt({ order }: Props) {
           disabled={exporting}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
         >
-          <Printer className="h-4 w-4" aria-hidden />
-          {exporting ? 'Preparing...' : 'Print receipt'}
+          {exporting && exportAction === 'print' ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Printer className="h-4 w-4" aria-hidden />
+          )}
+          {exporting && exportAction === 'print' ? 'Preparing...' : 'Print receipt'}
         </button>
         <button
           type="button"
@@ -64,8 +97,12 @@ export function OrderReceipt({ order }: Props) {
           disabled={exporting}
           className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
         >
-          <Download className="h-4 w-4" aria-hidden />
-          {exporting ? 'Generating PDF...' : 'Download PDF'}
+          {exporting && exportAction === 'download' ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Download className="h-4 w-4" aria-hidden />
+          )}
+          {exporting && exportAction === 'download' ? 'Generating PDF...' : 'Download PDF'}
         </button>
         <p className="w-full text-xs text-slate-500">
           PDF export includes your company logo and invoice details without browser date, URL, or
