@@ -16,7 +16,7 @@ export function MobileNav({ isOpen, pathname, onNavigate }: MobileNavProps) {
     <nav
       id="mobile-navigation"
       aria-label="Mobile"
-      className="border-t border-slate-200 bg-white lg:hidden"
+      className="border-t border-slate-200 bg-white xl:hidden"
     >
       <div className="mx-auto flex max-w-7xl flex-col px-4 py-4 sm:px-6">
         <SearchBar variant="default" placeholder="Search products…" className="mb-4 md:hidden" />

@@ -44,7 +44,7 @@ const variantStyles: Record<
   },
   header: {
     input:
-      'border-slate-200 bg-slate-50 py-2.5 pl-10 pr-24 text-sm text-slate-900 placeholder:text-slate-500 focus:border-[#0B3D91] focus:bg-white focus:ring-[#0B3D91]',
+      'border-slate-200 bg-slate-50 py-2 pl-9 pr-[4.5rem] text-sm text-slate-900 placeholder:text-slate-500 focus:border-[#0B3D91] focus:bg-white focus:ring-[#0B3D91]',
     dropdown: 'border-slate-200 bg-white text-slate-900 shadow-lg',
     result: 'hover:bg-slate-50',
     muted: 'text-slate-500',
@@ -157,7 +157,7 @@ export function SearchBar({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full ${variant === 'header' ? 'max-w-md' : 'max-w-2xl'} ${className}`}
+      className={`relative w-full ${variant === 'header' ? '' : 'max-w-2xl'} ${className}`}
     >
       <form onSubmit={handleSubmit} role="search">
         <label htmlFor={`${listboxId}-input`} className="sr-only">
@@ -165,9 +165,9 @@ export function SearchBar({
         </label>
         <div className="relative">
           <Search
-            className={`pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 ${
-              variant === 'hero' ? 'text-slate-400' : 'text-slate-500'
-            }`}
+            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-slate-500 ${
+              isCompact ? 'left-3 h-4 w-4' : 'left-4 h-5 w-5'
+            } ${variant === 'hero' ? 'text-slate-400' : ''}`}
             aria-hidden
           />
           <input
@@ -186,7 +186,7 @@ export function SearchBar({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className={`w-full rounded-full border transition focus:outline-none focus:ring-2 ${
-              isCompact ? 'pl-10 pr-20 text-sm' : 'py-3.5 pl-12 pr-28 text-sm sm:text-base'
+              isCompact ? 'py-2 pl-9 pr-[4.5rem] text-sm' : 'py-3.5 pl-12 pr-28 text-sm sm:text-base'
             } ${styles.input}`}
           />
           <button
