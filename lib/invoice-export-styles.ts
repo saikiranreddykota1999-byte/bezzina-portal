@@ -20,15 +20,18 @@ export const INVOICE_EXPORT_CSS = `
     line-height: 1.45;
   }
 
-  .receipt-watermark-layer {
+  .receipt-watermark-img {
     position: absolute;
-    inset: 0;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(92%, 520px);
+    max-width: 520px;
+    height: auto;
+    opacity: 0.42;
     z-index: 0;
     pointer-events: none;
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: min(92%, 520px);
-    opacity: 0.45;
+    object-fit: contain;
   }
 
   .inv-body {
@@ -182,31 +185,35 @@ export const INVOICE_EXPORT_CSS = `
   }
 
   .inv-pickup-code {
-    display: inline-block;
+    display: block;
     margin-top: 12px;
     border: 1px solid #fdba74;
     border-radius: 6px;
     background: #fff7ed;
     padding: 8px 16px;
+    min-height: 52px;
   }
 
   .inv-pickup-code-label {
+    display: block;
     margin: 0;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #c2410c;
+    line-height: 1.3;
   }
 
   .inv-pickup-code-value {
+    display: block;
     margin: 4px 0 0;
-    font-family: Consolas, monospace;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 18px;
     font-weight: 700;
     color: #0f172a;
     line-height: 1.2;
-    -webkit-text-fill-color: #0f172a;
+    letter-spacing: 0.06em;
   }
 
   .inv-table-wrap {

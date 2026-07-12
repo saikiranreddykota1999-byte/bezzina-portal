@@ -62,7 +62,13 @@ export function TaxInvoiceDocument({ order }: Props) {
       id="invoice-document"
       className="relative overflow-hidden rounded-lg border border-slate-300 bg-white shadow-lg print:rounded-none print:border-slate-400 print:shadow-none"
     >
-      <div className="receipt-watermark-layer" aria-hidden />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={company.watermarkUrl}
+        alt=""
+        aria-hidden
+        className="receipt-watermark-img pointer-events-none absolute left-1/2 top-1/2 z-0 w-[min(92%,520px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.42]"
+      />
 
       <div className="inv-body relative z-10">
         <div className="invoice-header bg-[#0b1f3a] px-6 py-5 text-white print:bg-[#0b1f3a]">
@@ -90,7 +96,10 @@ export function TaxInvoiceDocument({ order }: Props) {
                 Tax Invoice / Receipt
               </div>
               <p className="inv-doc-ref mt-2 text-[11px] text-slate-300">Original Copy</p>
-              <p className="inv-doc-number mt-1 font-mono text-base font-bold tracking-wide text-white">
+              <p
+                className="inv-doc-number mt-1 font-mono text-base font-bold tracking-wide text-white"
+                style={{ color: '#ffffff' }}
+              >
                 {invoiceNumber}
               </p>
             </div>
@@ -141,13 +150,19 @@ export function TaxInvoiceDocument({ order }: Props) {
                   </p>
                 ) : null}
                 {order.pickup_code ? (
-                  <div className="inv-pickup-code mt-3 inline-block rounded-md border border-orange-300 bg-orange-50 px-4 py-2">
-                    <p className="inv-pickup-code-label text-[10px] font-bold uppercase tracking-wide text-orange-700">
+                  <div
+                    className="inv-pickup-code mt-3 block rounded-md border border-orange-300 bg-orange-50 px-4 py-2"
+                    data-pickup-code={order.pickup_code}
+                  >
+                    <div className="inv-pickup-code-label text-[10px] font-bold uppercase tracking-wide text-orange-700">
                       Pickup Code
-                    </p>
-                    <p className="inv-pickup-code-value font-mono text-lg font-bold text-slate-900">
+                    </div>
+                    <div
+                      className="inv-pickup-code-value text-lg font-bold text-slate-900"
+                      style={{ color: '#0f172a', fontSize: '18px', fontWeight: 700 }}
+                    >
                       {displayValue(order.pickup_code)}
-                    </p>
+                    </div>
                   </div>
                 ) : null}
               </>

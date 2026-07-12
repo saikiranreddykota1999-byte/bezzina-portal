@@ -33,6 +33,7 @@ async function renderInvoiceCanvas(node: HTMLElement) {
     useCORS: true,
     logging: false,
     backgroundColor: '#ffffff',
+    imageTimeout: 15000,
     width,
     height,
     windowWidth: width,

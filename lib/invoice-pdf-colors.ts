@@ -2,45 +2,92 @@ import { INVOICE_EXPORT_CSS } from '@/lib/invoice-export-styles';
 
 const PDF_PAGE_WIDTH_PX = 794;
 
+function absoluteAssetUrl(path: string): string {
+  return new URL(path, window.location.origin).href;
+}
+
 export async function waitForImages(root: ParentNode): Promise<void> {
   const images = Array.from(root.querySelectorAll('img'));
   await Promise.all(
     images.map(
       (image) =>
         new Promise<void>((resolve) => {
-          if (image.complete) {
+          if (image.complete && image.naturalWidth > 0) {
             resolve();
             return;
           }
-          image.addEventListener('load', () => resolve(), { once: true });
-          image.addEventListener('error', () => resolve(), { once: true });
+
+          const finish = () => resolve();
+          image.addEventListener('load', finish, { once: true });
+          image.addEventListener('error', finish, { once: true });
+
+          if (image.src) {
+            const retry = image.src;
+            image.src = '';
+            image.src = retry;
+          }
         }),
     ),
   );
 }
 
+function applyPickupCodeStyles(box: HTMLElement, pickupCode: string): void {
+  const labelNode = box.querySelector('.inv-pickup-code-label');
+  const valueNode = box.querySelector('.inv-pickup-code-value');
+
+  if (labelNode instanceof HTMLElement) {
+    labelNode.textContent = 'Pickup Code';
+    labelNode.style.display = 'block';
+    labelNode.style.color = '#c2410c';
+    labelNode.style.fontSize = '10px';
+    labelNode.style.fontWeight = '700';
+    labelNode.style.letterSpacing = '0.08em';
+    labelNode.style.textTransform = 'uppercase';
+  }
+
+  if (valueNode instanceof HTMLElement) {
+    const code = pickupCode.trim() || '—';
+    valueNode.textContent = code;
+    valueNode.style.display = 'block';
+    valueNode.style.color = '#0f172a';
+    valueNode.style.fontSize = '18px';
+    valueNode.style.fontWeight = '700';
+    valueNode.style.letterSpacing = '0.06em';
+    valueNode.style.lineHeight = '1.2';
+  }
+}
+
 function prepareInvoiceClone(source: HTMLElement): HTMLElement {
   const clone = source.cloneNode(true) as HTMLElement;
-  const origin = window.location.origin;
 
   clone.querySelectorAll('img').forEach((image) => {
     const src = image.getAttribute('src');
     if (src) {
-      image.src = new URL(src, origin).href;
+      image.src = absoluteAssetUrl(src);
+      image.removeAttribute('crossorigin');
     }
   });
 
-  const watermark = clone.querySelector('.receipt-watermark-layer');
-  if (watermark instanceof HTMLElement) {
-    watermark.style.backgroundImage = `url('${origin}/bezzina-watermark.png')`;
+  const watermark = clone.querySelector('.receipt-watermark-img');
+  if (watermark instanceof HTMLImageElement) {
+    watermark.src = absoluteAssetUrl('/bezzina-watermark.png');
+    watermark.style.opacity = '0.42';
+    watermark.style.visibility = 'visible';
   }
 
-  clone.querySelectorAll('.inv-pickup-code-value, .inv-doc-number').forEach((node) => {
+  clone.querySelectorAll('.inv-doc-number').forEach((node) => {
     if (node instanceof HTMLElement) {
-      node.style.color = '#0f172a';
+      node.style.color = '#ffffff';
+      node.style.fontSize = '15px';
       node.style.fontWeight = '700';
-      node.style.visibility = 'visible';
+      node.style.letterSpacing = '0.04em';
     }
+  });
+
+  clone.querySelectorAll('.inv-pickup-code').forEach((box) => {
+    if (!(box instanceof HTMLElement)) return;
+    const pickupCode = box.getAttribute('data-pickup-code') ?? '';
+    applyPickupCodeStyles(box, pickupCode);
   });
 
   return clone;

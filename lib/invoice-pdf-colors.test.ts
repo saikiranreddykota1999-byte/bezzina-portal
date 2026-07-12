@@ -9,7 +9,9 @@ describe('invoice PDF export', () => {
     const exportStyles = readFileSync(resolve(process.cwd(), 'lib/invoice-export-styles.ts'), 'utf8');
     const receiptPdf = readFileSync(resolve(process.cwd(), 'lib/receipt-pdf.ts'), 'utf8');
 
-    expect(colors).toContain('prepareInvoiceClone');
+    expect(colors).toContain('receipt-watermark-img');
+    expect(colors).toContain('data-pickup-code');
+    expect(colors).toContain('applyPickupCodeStyles');
     expect(colors).not.toContain('suspendMainDocumentStyles');
     expect(colors).toContain('INVOICE_EXPORT_CSS');
     expect(exportStyles).toContain('#invoice-document');
