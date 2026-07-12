@@ -69,13 +69,48 @@ const ACCOUNT_LINKS: AccountDashboardLink[] = [
     description: 'Track shipments by order or tracking number',
     variant: 'tracking',
   },
-  { title: 'Cart', href: '/account/cart', description: 'Review items before checkout' },
-  { title: 'Checkout', href: '/account/checkout', description: 'Review order before payment' },
-  { title: 'Payment', href: '/account/payment', description: 'Complete payment securely' },
-  { title: 'Notifications', href: '/account/notifications', description: 'Email and order updates' },
-  { title: 'Support Tickets', href: '/account/tickets', description: 'Get help from our team' },
-  { title: 'Suggestion Box', href: '/account/suggestions', description: 'Share product ideas' },
-  { title: 'Password', href: '/account/password', description: 'Change your password' },
+  {
+    title: 'Cart',
+    href: '/account/cart',
+    description: 'Review items before checkout',
+    variant: 'cart',
+  },
+  {
+    title: 'Checkout',
+    href: '/account/checkout',
+    description: 'Review order before payment',
+    variant: 'checkout',
+  },
+  {
+    title: 'Payment',
+    href: '/account/payment',
+    description: 'Complete payment securely',
+    variant: 'payment',
+  },
+  {
+    title: 'Notifications',
+    href: '/account/notifications',
+    description: 'Email and order updates',
+    variant: 'notifications',
+  },
+  {
+    title: 'Support Tickets',
+    href: '/account/tickets',
+    description: 'Get help from our team',
+    variant: 'support-tickets',
+  },
+  {
+    title: 'Suggestion Box',
+    href: '/account/suggestions',
+    description: 'Share product ideas',
+    variant: 'suggestions',
+  },
+  {
+    title: 'Password',
+    href: '/account/password',
+    description: 'Change your password',
+    variant: 'password',
+  },
 ];
 
 type Props = {

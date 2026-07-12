@@ -5,15 +5,15 @@ import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   AnimatedAccountIcon,
-  type AccountIconVariant,
 } from '@/components/account/animated-account-icon';
+import type { AccountIconVariant } from '@/lib/account-icon-variants';
 import { fadeInUp, staggerContainer, defaultTransition } from '@/lib/motion';
 
 export type AccountDashboardLink = {
   title: string;
   href: string;
   description: string;
-  variant?: AccountIconVariant;
+  variant: AccountIconVariant;
 };
 
 type Props = {
@@ -23,7 +23,7 @@ type Props = {
 function AccountDashboardCard({ link, index }: { link: AccountDashboardLink; index: number }) {
   const reduceMotion = useReducedMotion();
   const [isHovered, setIsHovered] = useState(false);
-  const variant = link.variant ?? 'default';
+  const variant = link.variant;
 
   return (
     <motion.div
