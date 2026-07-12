@@ -63,9 +63,6 @@ export default async function ContactPage() {
 
   const primaryOffice = offices[0];
   const mapEmbedUrl = resolveMapEmbedUrl(primaryOffice.mapEmbedUrl);
-  const mapAddress =
-    primaryOffice.address ||
-    `${company.address.line1}, ${company.address.city}, ${company.address.postalCode}`;
 
   const localBusinessSchema = getLocalBusinessSchema({
     name: companySettings.name ?? primaryOffice.name,
@@ -73,19 +70,29 @@ export default async function ContactPage() {
     telephone: primaryOffice.phone ?? companySettings.phone ?? company.contact.phone1,
   });
 
+  const addressLines = [
+    company.address.line1,
+    company.address.city,
+    company.address.postalCode,
+    company.address.country,
+  ];
+
   return (
     <>
       <JsonLd data={localBusinessSchema} />
       <ContactPageContent
+        companyName={companySettings.name ?? company.name}
+        logoUrl={companySettings.logoUrl ?? company.logoUrl}
+        addressLines={addressLines}
+        phone1={company.contact.phone1}
+        phone2={company.contact.phone2}
+        email={company.contact.email}
         facebookUrl={facebookUrl}
         registrationNumber={company.registrationNumber}
         mapEmbedUrl={mapEmbedUrl}
         mapsUrl={company.maps.shortUrl}
-        placeName={primaryOffice.name}
-        mapAddress={mapAddress}
-        offices={offices}
+        placeName={company.maps.placeName}
         businessHours={settings.businessHours}
-        emergencyContact={settings.emergencyContact}
         whatsapp={settings.whatsapp ?? company.contact.whatsapp}
       />
     </>
