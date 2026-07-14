@@ -25,7 +25,7 @@ export function ContentPageActions() {
   return (
     <div className="mt-10 flex flex-col gap-4 sm:flex-row">
       <Link href="/quote" className={brandClasses.btnPrimary}>
-        Request a Quote
+        Ask for quote
       </Link>
       <Link href="/contact" className={brandClasses.btnSecondary}>
         Contact Us

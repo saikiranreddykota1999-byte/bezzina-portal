@@ -145,7 +145,7 @@ export function ContactCard({
           variant="social"
           external
         />
-        <ActionButton href="/quote" label="Request Quote" icon={ClipboardList} variant="primary" />
+        <ActionButton href="/quote" label="Ask for quote" icon={ClipboardList} variant="primary" />
       </div>
     </motion.article>
   );

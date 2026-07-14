@@ -3,16 +3,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Heart, ClipboardList } from 'lucide-react';
+import { Heart, ShoppingCart } from 'lucide-react';
 import { Product } from '@/types/product';
 import { LiftCard } from '@/components/motion/lift-card';
-import { useQuoteCart } from '@/context/quote-cart-context';
+import { useCart } from '@/context/cart-context';
 import { useWishlist } from '@/context/wishlist-context';
 import { formatAvailabilityLabel } from '@/lib/pricing';
-import { ProductCartActions } from './ProductCartActions';
+import { buildCartLineItem } from '@/lib/products/build-cart-line-item';
+import { ProductPurchaseActions } from './product-purchase-actions';
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { addItem } = useQuoteCart();
+  const { addItem } = useCart();
   const { toggle, has } = useWishlist();
   const wished = has(product.id);
   const availabilityLabel = formatAvailabilityLabel(product.availability, product.in_stock);
@@ -42,22 +43,14 @@ export default function ProductCard({ product }: { product: Product }) {
           </button>
           <button
             type="button"
-            aria-label="Add to quote"
+            aria-label="Add to cart"
             onClick={(e) => {
               e.preventDefault();
-              addItem({
-                productId: product.id,
-                slug: product.slug,
-                name: product.name,
-                sku: product.sku,
-                price: 0,
-                unit: product.unit,
-                image_url: product.image_url,
-              });
+              addItem(buildCartLineItem(product));
             }}
             className="rounded-full bg-white p-2 text-slate-700 shadow-sm hover:bg-orange-50 hover:text-orange-600"
           >
-            <ClipboardList className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4" />
           </button>
         </div>
 
@@ -113,7 +106,7 @@ export default function ProductCard({ product }: { product: Product }) {
         </Link>
 
         <div className="border-t border-slate-100 px-4 pb-4 pt-3">
-          <ProductCartActions product={product} layout="card" />
+          <ProductPurchaseActions product={product} layout="card" />
         </div>
       </div>
     </LiftCard>

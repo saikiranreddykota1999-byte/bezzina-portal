@@ -19,7 +19,7 @@ const cards = (stats: DashboardStats) => [
   { title: 'Products', value: stats.products, icon: Package, href: '/admin/products' },
   { title: 'Quote Requests', value: stats.quotes, icon: FileText, href: '/admin/quotes' },
   { title: 'Customers', value: stats.customers, icon: Users, href: '/admin/customers' },
-  { title: 'Orders', value: stats.orders, icon: ShoppingBag, href: '/admin/pickup-orders' },
+  { title: 'Orders', value: stats.orders, icon: ShoppingBag, href: '/admin/orders' },
   { title: 'Vacancies', value: stats.vacancies, icon: Briefcase, href: '/admin/careers' },
   { title: 'Newsletter', value: stats.subscribers, icon: Mail, href: '/admin/newsletter' },
 ];
@@ -28,7 +28,7 @@ const widgetCards = (stats: DashboardStats) => [
   { title: "Today's Quotes", value: stats.todaysQuotes, icon: FileText, href: '/admin/quotes' },
   { title: 'New Customers', value: stats.newCustomers, icon: Users, href: '/admin/customers' },
   { title: 'Pending Careers', value: stats.pendingCareers, icon: Briefcase, href: '/admin/careers/applications' },
-  { title: 'Low Inventory', value: stats.lowInventory, icon: AlertTriangle, href: '/admin/products' },
+  { title: 'Low Inventory', value: stats.lowInventory, icon: AlertTriangle, href: '/admin/inventory' },
 ];
 
 export function DashboardStatsGrid({ stats }: Props) {

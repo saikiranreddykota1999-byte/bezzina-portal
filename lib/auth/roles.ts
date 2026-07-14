@@ -1,4 +1,5 @@
 import type { UserRole } from '@/types/user';
+import { isOmsPortalRole } from '@/lib/auth/oms-permissions';
 
 export const STAFF_ROLES: readonly UserRole[] = ['admin', 'super_admin', 'staff'];
 
@@ -12,4 +13,8 @@ export function isSuperAdminRole(role: string | null | undefined): boolean {
 
 export function isAdminRole(role: string | null | undefined): boolean {
   return role === 'admin' || role === 'staff' || role === 'super_admin';
+}
+
+export function isPortalRole(role: string | null | undefined): boolean {
+  return isStaffRole(role) || isOmsPortalRole(role);
 }

@@ -3,13 +3,27 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireSuperAdminUser } from '@/lib/auth/server-session';
+import { enterprisePasswordSchema } from '@/lib/auth/password-policy';
+import { logActivity } from '@/services/activity-log.service';
+import { signOutAllDevices } from '@/actions/auth';
 import type { UserRole } from '@/types/user';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
+const PORTAL_ROLES = [
+  'customer',
+  'admin',
+  'super_admin',
+  'sales_manager',
+  'salesman',
+  'warehouse_manager',
+  'warehouse_staff',
+  'delivery_driver',
+] as const;
+
 const updateRoleSchema = z.object({
   userId: z.string().uuid(),
-  role: z.enum(['customer', 'admin', 'super_admin']),
+  role: z.enum(PORTAL_ROLES),
 });
 
 export async function getAdminUsers() {
@@ -18,7 +32,7 @@ export async function getAdminUsers() {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, email, full_name, role, is_disabled, created_at')
-      .in('role', ['customer', 'admin', 'super_admin'])
+      .in('role', [...PORTAL_ROLES])
       .order('created_at', { ascending: false });
 
     if (error) return { success: false as const, error: error.message };
@@ -49,6 +63,15 @@ export async function updateUserRole(input: unknown): Promise<ActionResult> {
       .eq('id', parsed.data.userId);
 
     if (error) return { success: false, error: error.message };
+
+    await logActivity({
+      userId: user!.id,
+      action: 'role_change',
+      entity: 'profile',
+      entityId: parsed.data.userId,
+      newValue: { role: parsed.data.role },
+    });
+
     revalidatePath('/admin/users');
     return { success: true };
   } catch (error) {
@@ -61,12 +84,20 @@ export async function updateUserRole(input: unknown): Promise<ActionResult> {
 
 export async function createAdminUser(input: unknown): Promise<ActionResult> {
   try {
-    await requireSuperAdminUser();
+    const { user } = await requireSuperAdminUser();
     const parsed = z
       .object({
         email: z.string().trim().email(),
-        password: z.string().min(8),
-        role: z.enum(['admin', 'super_admin']),
+        password: enterprisePasswordSchema,
+        role: z.enum([
+          'admin',
+          'super_admin',
+          'sales_manager',
+          'salesman',
+          'warehouse_manager',
+          'warehouse_staff',
+          'delivery_driver',
+        ]),
         full_name: z.string().trim().min(2).max(128),
       })
       .safeParse(input);
@@ -96,6 +127,14 @@ export async function createAdminUser(input: unknown): Promise<ActionResult> {
       role: parsed.data.role,
     });
 
+    await logActivity({
+      userId: user!.id,
+      action: 'user_created',
+      entity: 'profile',
+      entityId: created.user.id,
+      newValue: { email: parsed.data.email, role: parsed.data.role },
+    });
+
     revalidatePath('/admin/users');
     return { success: true };
   } catch (error) {
@@ -118,12 +157,41 @@ export async function deleteAdminUser(userId: string): Promise<ActionResult> {
     const { error } = await admin.auth.admin.deleteUser(userId);
     if (error) return { success: false, error: error.message };
 
+    await logActivity({
+      userId: user!.id,
+      action: 'user_deleted',
+      entity: 'profile',
+      entityId: userId,
+    });
+
     revalidatePath('/admin/users');
     return { success: true };
   } catch (error) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to delete user',
+    };
+  }
+}
+
+export async function revokeAllUserSessionsAction(userId: string): Promise<ActionResult> {
+  try {
+    const { user } = await requireSuperAdminUser();
+    const result = await signOutAllDevices(userId);
+    if (!result.success) return { success: false, error: result.error };
+
+    await logActivity({
+      userId: user!.id,
+      action: 'sessions_revoked',
+      entity: 'profile',
+      entityId: userId,
+    });
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to revoke sessions',
     };
   }
 }

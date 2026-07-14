@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import { categoryFormSchema } from '@/lib/validators/catalogue';
 import { normalizeCategoryTree } from '@/lib/catalogue/category-tree';
+import { productIdSchema } from '@/lib/security/bulk-ids';
+import { categorySoftDeletePayload } from '@/lib/security/soft-delete';
 import type { Category, CategoryDivision } from '@/types/product';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
@@ -152,13 +154,19 @@ export async function updateCategory(id: string, input: unknown): Promise<Action
 }
 
 export async function deleteCategory(id: string): Promise<ActionResult> {
+  const idParsed = productIdSchema.safeParse(id);
+  if (!idParsed.success) {
+    return { success: false, error: 'Invalid category id' };
+  }
+
   try {
     const { supabase } = await requirePermission('categories:manage');
 
     const { count: childCount } = await supabase
       .from('categories')
       .select('*', { count: 'exact', head: true })
-      .eq('parent_id', id);
+      .eq('parent_id', idParsed.data)
+      .is('deleted_at', null);
 
     if ((childCount ?? 0) > 0) {
       return { success: false, error: 'Remove subcategories first.' };
@@ -167,7 +175,8 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     const { count: productCount } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true })
-      .eq('category_id', id);
+      .eq('category_id', idParsed.data)
+      .is('deleted_at', null);
 
     if ((productCount ?? 0) > 0) {
       return {
@@ -176,7 +185,10 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
       };
     }
 
-    const { error } = await supabase.from('categories').delete().eq('id', id);
+    const { error } = await supabase
+      .from('categories')
+      .update(categorySoftDeletePayload())
+      .eq('id', idParsed.data);
     if (error) return { success: false, error: error.message };
 
     revalidatePath('/admin/categories');

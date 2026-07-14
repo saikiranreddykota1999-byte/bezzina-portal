@@ -15,6 +15,20 @@ import {
   adminInputClass,
   adminSelectClass,
 } from '@/components/admin/admin-styles';
+import type { UserRole } from '@/types/user';
+
+const ASSIGNABLE_ROLES: UserRole[] = [
+  'customer',
+  'admin',
+  'super_admin',
+  'sales_manager',
+  'salesman',
+  'warehouse_manager',
+  'warehouse_staff',
+  'delivery_driver',
+];
+
+const CREATE_ROLES: UserRole[] = ASSIGNABLE_ROLES.filter((r) => r !== 'customer');
 
 type UserRow = {
   id: string;
@@ -35,7 +49,7 @@ export function UsersManager({ users }: Props) {
     email: '',
     password: '',
     full_name: '',
-    role: 'admin' as 'admin' | 'super_admin',
+    role: 'admin' as UserRole,
   });
 
   const columns: Column<UserRow>[] = [
@@ -50,15 +64,17 @@ export function UsersManager({ users }: Props) {
           disabled={pending}
           onChange={(e) => {
             startTransition(async () => {
-              await updateUserRole({ userId: r.id, role: e.target.value as 'customer' | 'admin' | 'super_admin' });
+              await updateUserRole({ userId: r.id, role: e.target.value as UserRole });
               router.refresh();
             });
           }}
           className={adminSelectClass}
         >
-          <option value="admin">Admin</option>
-          <option value="super_admin">Super Admin</option>
-          <option value="customer">Customer</option>
+          {ASSIGNABLE_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {role.replace(/_/g, ' ')}
+            </option>
+          ))}
         </select>
       ),
     },
@@ -101,17 +117,20 @@ export function UsersManager({ users }: Props) {
   return (
     <div className="space-y-8">
       <form onSubmit={handleCreate} className={`max-w-xl space-y-4 ${adminCardClass} p-6`}>
-        <h2 className={adminHeadingClass}>Create Admin User</h2>
+        <h2 className={adminHeadingClass}>Create Portal User</h2>
         <input className={adminInputClass} placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
         <input className={adminInputClass} type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
         <input className={adminInputClass} type="password" placeholder="Password (min 8 chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} />
-        <select className={adminSelectClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as 'admin' | 'super_admin' })}>
-          <option value="admin">Admin</option>
-          <option value="super_admin">Super Admin</option>
+        <select className={adminSelectClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}>
+          {CREATE_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {role.replace(/_/g, ' ')}
+            </option>
+          ))}
         </select>
         {error && <p className="text-sm text-[var(--admin-danger)]">{error}</p>}
         <button type="submit" disabled={pending} className={adminButtonPrimaryClass}>
-          Create Admin
+          Create User
         </button>
       </form>
 

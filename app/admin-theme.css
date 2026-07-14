@@ -50,8 +50,73 @@
   background: linear-gradient(135deg, #071a34 0%, #0b3d91 100%);
 }
 
+.brand-logo-svg {
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+  image-rendering: -webkit-optimize-contrast;
+}
+
 .admin-login-hero {
   background: linear-gradient(160deg, #071a34 0%, #0b3d91 72%, #0f4fa8 100%);
+}
+
+.login-hero-bubble {
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-hero-bubble__glow {
+  position: absolute;
+  inset: 8%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(216, 161, 6, 0.35) 0%, rgba(11, 61, 145, 0) 68%);
+  pointer-events: none;
+}
+
+.login-hero-bubble__ring {
+  position: absolute;
+  border-radius: 9999px;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.login-hero-bubble__ring--outer {
+  inset: 0;
+}
+
+.login-hero-bubble__ring--inner {
+  inset: 14%;
+  border-color: rgba(216, 161, 6, 0.35);
+}
+
+.login-hero-bubble__glass {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 32px;
+  padding: 2.5rem 2rem 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 30px 80px rgba(7, 26, 52, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(16px);
+}
+
+.login-hero-bubble__logo {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 32px rgba(7, 26, 52, 0.2);
+}
+
+.login-hero-bubble__details {
+  padding-top: 0.25rem;
 }
 
 .admin-login-form-panel {

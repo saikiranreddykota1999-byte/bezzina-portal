@@ -15,19 +15,27 @@ export type CustomerAuthConfigStatus = {
   otpTablesError: string | null;
 };
 
+const PUBLIC_AUTH_ERROR =
+  'Authentication is temporarily unavailable. Please try again later.';
+
+function publicAuthError(detail: string | null): string | null {
+  if (!detail) return null;
+  return process.env.NODE_ENV === 'production' ? PUBLIC_AUTH_ERROR : detail;
+}
+
 export async function getCustomerAuthConfigStatus(): Promise<CustomerAuthConfigStatus> {
   const adminError = getAdminClientConfigError();
 
   if (adminError) {
     return {
       adminConfigured: false,
-      adminError,
+      adminError: publicAuthError(adminError),
       emailDeliveryConfigured: isEmailOtpConfigured(),
       smsDeliveryConfigured: isSmsConfigured(),
       demoMode: true,
       isDevelopment: process.env.NODE_ENV !== 'production',
       otpTablesReady: false,
-      otpTablesError: adminError,
+      otpTablesError: publicAuthError(adminError),
     };
   }
 
@@ -48,19 +56,19 @@ export async function getCustomerAuthConfigStatus(): Promise<CustomerAuthConfigS
       demoMode: !isEmailOtpConfigured() && !isSmsConfigured(),
       isDevelopment: process.env.NODE_ENV !== 'production',
       otpTablesReady: !otpTablesError,
-      otpTablesError,
+      otpTablesError: publicAuthError(otpTablesError),
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Auth backend check failed';
     return {
       adminConfigured: false,
-      adminError: message,
+      adminError: publicAuthError(message),
       emailDeliveryConfigured: isEmailOtpConfigured(),
       smsDeliveryConfigured: isSmsConfigured(),
       demoMode: true,
       isDevelopment: process.env.NODE_ENV !== 'production',
       otpTablesReady: false,
-      otpTablesError: message,
+      otpTablesError: publicAuthError(message),
     };
   }
 }

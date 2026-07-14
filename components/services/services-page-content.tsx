@@ -89,7 +89,7 @@ export function ServicesPageContent() {
               href="/quote"
               className="inline-flex min-h-12 min-w-[200px] items-center justify-center rounded-full bg-[#0B3D91] px-8 py-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(11,61,145,0.25)] transition hover:bg-[#09407a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2"
             >
-              Request a Quote
+              Ask for quote
             </Link>
             <Link
               href="/contact"

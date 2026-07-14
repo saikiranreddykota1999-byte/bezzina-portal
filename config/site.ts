@@ -17,6 +17,6 @@ export const siteConfig = {
     productStatus: [
       "Available",
       "In Stock",
-      "Request Quote",
+      "Ask for quote",
     ],
   };

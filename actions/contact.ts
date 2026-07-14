@@ -1,8 +1,10 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { contactEnquirySchema } from '@/lib/validators/contact';
 import { sendContactEnquiryEmail } from '@/services/contact-email.service';
 import { notifyStaff } from '@/services/notification.service';
+import { checkPublicRateLimit } from '@/lib/auth/login-security';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
@@ -16,6 +18,14 @@ export async function submitContactEnquiryAction(
     }
 
     const enquiry = parsed.data;
+
+    const h = await headers();
+    const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    const allowed = await checkPublicRateLimit('contact_form', `${ip}:${enquiry.email}`);
+    if (!allowed) {
+      return { success: false, error: 'Too many requests. Please try again later.' };
+    }
+
     const delivery = await sendContactEnquiryEmail(enquiry);
 
     await notifyStaff(

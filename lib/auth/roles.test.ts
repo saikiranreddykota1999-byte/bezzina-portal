@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isStaffRole, isSuperAdminRole, STAFF_ROLES } from '@/lib/auth/roles';
+import { isStaffRole, isSuperAdminRole, isPortalRole, STAFF_ROLES } from '@/lib/auth/roles';
 import { hasPermission } from '@/lib/auth/permissions';
 
 describe('isStaffRole', () => {
@@ -26,6 +26,15 @@ describe('isSuperAdminRole', () => {
   });
 });
 
+describe('isPortalRole', () => {
+  it('allows OMS operational roles into admin portal', () => {
+    expect(isPortalRole('warehouse_staff')).toBe(true);
+    expect(isPortalRole('salesman')).toBe(true);
+    expect(isPortalRole('delivery_driver')).toBe(true);
+    expect(isPortalRole('customer')).toBe(false);
+  });
+});
+
 describe('hasPermission', () => {
   it('grants product management to admin', () => {
     expect(hasPermission('admin', 'products:manage')).toBe(true);
@@ -37,5 +46,10 @@ describe('hasPermission', () => {
 
   it('grants user management to super_admin', () => {
     expect(hasPermission('super_admin', 'users:manage')).toBe(true);
+  });
+
+  it('grants sales operate to salesman only', () => {
+    expect(hasPermission('salesman', 'sales:operate')).toBe(true);
+    expect(hasPermission('salesman', 'products:manage')).toBe(false);
   });
 });

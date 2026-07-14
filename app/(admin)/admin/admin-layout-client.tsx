@@ -6,6 +6,9 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { LoadingSplash } from '@/components/brand/LoadingSplash';
+import { SessionIdleGuard } from '@/components/auth/session-idle-guard';
+import { isAdminPasswordChangePath } from '@/lib/auth/staff-setup';
+import { isSuperAdminMfaPath } from '@/lib/auth/super-admin-mfa';
 import '@/app/admin-theme.css';
 
 const inter = Inter({
@@ -40,12 +43,17 @@ export function AdminLayoutClient({ children, userRole, userName, unreadNotifica
     setShowSplash(false);
   }
 
-  if (pathname === '/admin/login') {
+  if (
+    pathname === '/admin/login' ||
+    isAdminPasswordChangePath(pathname) ||
+    isSuperAdminMfaPath(pathname)
+  ) {
     return <div className={`${inter.variable} font-[family-name:var(--font-admin)]`}>{children}</div>;
   }
 
   return (
     <div className={`${inter.variable} font-[family-name:var(--font-admin)]`}>
+      <SessionIdleGuard enabled />
       <AnimatePresence>
         {showSplash ? <LoadingSplash onComplete={handleSplashComplete} /> : null}
       </AnimatePresence>

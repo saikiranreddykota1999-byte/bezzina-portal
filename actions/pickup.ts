@@ -127,10 +127,15 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
     const { data: dbProducts, error: priceError } = await supabase
       .from('products')
       .select('id, price')
-      .in('id', productIds);
+      .in('id', productIds)
+      .is('deleted_at', null);
 
     if (priceError) {
       return { success: false, error: priceError.message };
+    }
+
+    if ((dbProducts ?? []).length !== productIds.length) {
+      return { success: false, error: 'One or more products are no longer available' };
     }
 
     const priceMap = new Map(
@@ -218,11 +223,34 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
       return { success: false, error: 'Unsupported payment method' };
     }
 
+    if (paymentReference) {
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('id, order_number, pickup_code')
+        .eq('payment_reference', paymentReference)
+        .maybeSingle();
+
+      if (existingOrder) {
+        return {
+          success: true,
+          orderId: existingOrder.id,
+          orderNumber: existingOrder.order_number ?? undefined,
+          pickupCode: existingOrder.pickup_code ?? undefined,
+        };
+      }
+    }
+
     const orderInsert: Record<string, unknown> = {
       user_id: user!.id,
       order_number: orderNumber,
       status:
         payload.fulfillmentMethod === 'store_pickup' ? 'confirmed' : 'confirmed',
+      order_source: 'online',
+      oms_status:
+        payload.fulfillmentMethod === 'store_pickup'
+          ? 'approved'
+          : 'waiting_for_approval',
+      timeline: [],
       fulfillment_method: payload.fulfillmentMethod,
       subtotal: totals.subtotal,
       shipping_cost: totals.shipping,
@@ -330,6 +358,31 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
     revalidatePath('/account/orders');
     revalidatePath('/admin/pickup-orders');
+    revalidatePath('/admin/orders');
+
+    const { notifyOmsRoles } = await import('@/services/oms-notification.service');
+    const { recordStatusHistory } = await import('@/services/oms-order.service');
+    const { createAdminClient } = await import('@/lib/supabase/admin');
+    const admin = createAdminClient();
+    const initialOmsStatus =
+      payload.fulfillmentMethod === 'store_pickup' ? 'approved' : 'waiting_for_approval';
+
+    await Promise.all([
+      recordStatusHistory(admin, {
+        orderId: order.id,
+        fromStatus: null,
+        toStatus: initialOmsStatus,
+        actorId: user!.id,
+        note: 'Online order placed',
+      }),
+      notifyOmsRoles(['sales_manager', 'admin', 'super_admin', 'warehouse_manager'], {
+        type: 'order_update',
+        title: `New online order ${order.order_number ?? orderNumber}`,
+        body: `${payload.fulfillmentMethod === 'store_pickup' ? 'Store pickup' : 'Delivery'} order received`,
+        link: `/admin/orders/${order.id}`,
+        metadata: { order_id: order.id },
+      }),
+    ]);
 
     return {
       success: true,

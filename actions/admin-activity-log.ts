@@ -7,7 +7,7 @@ type ActionResult<T = void> = { success: true; data?: T } | { success: false; er
 
 export async function getActivityLogs(limit = 50): Promise<ActionResult<ActivityLog[]>> {
   try {
-    const { supabase } = await requirePermission('dashboard:view');
+    const { supabase } = await requirePermission('audit:view');
     const { data, error } = await supabase
       .from('activity_logs')
       .select('*, profile:profiles(email, full_name)')

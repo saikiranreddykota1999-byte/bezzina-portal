@@ -82,7 +82,7 @@ export function Header() {
             type="button"
             onClick={() => setQuoteDrawerOpen(true)}
             className="relative rounded-md p-2 text-slate-700 transition hover:bg-slate-50"
-            aria-label="Quote cart"
+            aria-label="Ask for quote"
           >
             <ClipboardList className="h-5 w-5" />
             {quoteCount > 0 && (
@@ -131,7 +131,7 @@ export function Header() {
               href={quoteLink.href}
               className={`hidden whitespace-nowrap sm:inline-flex ${brandClasses.btnPrimary} px-4 py-2 text-xs sm:px-5 sm:py-2.5 sm:text-sm`}
             >
-              <span className="hidden md:inline">Request a Quote</span>
+              <span className="hidden md:inline">Ask for quote</span>
               <span className="md:hidden">Quote</span>
             </Link>
           ) : null}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteProduct } from '@/actions/admin-products';
+import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 
 type Props = {
   id: string;
@@ -22,11 +23,6 @@ export function DeleteProductButton({
   const [error, setError] = useState('');
 
   function handleDelete() {
-    const confirmed = confirm(
-      `Permanently delete "${name}"?\n\nThis cannot be undone. Images, documents, and variants will also be removed.`,
-    );
-    if (!confirmed) return;
-
     setError('');
     startTransition(async () => {
       const result = await deleteProduct(id);
@@ -44,9 +40,17 @@ export function DeleteProductButton({
 
   return (
     <span className="inline-flex flex-col items-start">
-      <button type="button" disabled={pending} onClick={handleDelete} className={className}>
-        {pending ? 'Deleting…' : 'Delete'}
-      </button>
+      <ConfirmDestructiveDialog
+        title="Delete product?"
+        description={`"${name}" will be soft-deleted and hidden from the storefront.`}
+        onConfirm={handleDelete}
+      >
+        {(open) => (
+          <button type="button" disabled={pending} onClick={open} className={className}>
+            {pending ? 'Deleting…' : 'Delete'}
+          </button>
+        )}
+      </ConfirmDestructiveDialog>
       {error ? <span className="mt-1 text-xs text-[var(--admin-danger)]">{error}</span> : null}
     </span>
   );

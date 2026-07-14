@@ -28,7 +28,7 @@ export default function NotFound() {
           href="/quote"
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2"
         >
-          Request a Quote
+          Ask for quote
         </Link>
       </div>
       <p className="mt-8 text-sm text-slate-500">

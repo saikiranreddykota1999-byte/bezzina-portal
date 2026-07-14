@@ -3,11 +3,10 @@
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ClipboardList, FileText, MessageCircle, ZoomIn, X } from 'lucide-react';
+import { FileText, ZoomIn, X } from 'lucide-react';
 import { Product, type ProductVariant, type TechnicalSpecRow } from '@/types/product';
 import { buildProductBreadcrumbs } from '@/lib/breadcrumbs';
-import { company } from '@/config/company';
-import { useQuoteCart } from '@/context/quote-cart-context';
+import { ProductPurchaseActions } from '@/components/products/product-purchase-actions';
 import { formatAvailabilityLabel } from '@/lib/pricing';
 import { ProductVariantSelector } from '@/components/products/product-variant-selector';
 
@@ -42,8 +41,6 @@ function inventoryLabel(status?: string | null, inStock?: boolean) {
 }
 
 export default function ProductDetail({ product }: { product: Product }) {
-  const { addItem: addToQuote } = useQuoteCart();
-  const [quoted, setQuoted] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
   const variants = product.variants ?? [];
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(variants[0] ?? null);
@@ -67,10 +64,6 @@ export default function ProductDetail({ product }: { product: Product }) {
   const [activeImage, setActiveImage] = useState(images[0]?.url ?? null);
   const specs = buildSpecs(product, selectedVariant);
   const breadcrumbs = buildProductBreadcrumbs(product);
-  const whatsapp = company.contact.whatsapp?.replace(/\D/g, '') ?? '';
-  const whatsappMessage = encodeURIComponent(
-    `Quote request: ${product.name}${selectedVariant ? ` (${selectedVariant.name})` : ''} — SKU ${selectedVariant?.sku ?? product.sku}`,
-  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
@@ -157,44 +150,13 @@ export default function ProductDetail({ product }: { product: Product }) {
             }}
           />
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/quote"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0B3D91] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#09407a]"
-            >
-              Request Quote
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                addToQuote({
-                  productId: product.id,
-                  slug: product.slug,
-                  name: `${product.name}${selectedVariant ? ` — ${selectedVariant.name}` : ''}`,
-                  sku: selectedVariant?.sku ?? product.sku,
-                  price: 0,
-                  unit: selectedVariant?.unit ?? product.unit,
-                  image_url: selectedVariant?.image_url ?? product.image_url,
-                });
-                setQuoted(true);
-                setTimeout(() => setQuoted(false), 2000);
-              }}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
-            >
-              <ClipboardList className="h-4 w-4" />
-              {quoted ? 'Added to quote list' : 'Add to quote list'}
-            </button>
-            {whatsapp ? (
-              <a
-                href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-6 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
-              >
-                <MessageCircle className="h-4 w-4" />
-                WhatsApp Quote
-              </a>
-            ) : null}
+          <div className="mt-8">
+            <ProductPurchaseActions
+              product={product}
+              selectedVariant={selectedVariant}
+              layout="detail"
+              disabled={!isAvailable}
+            />
           </div>
 
           {(product.documents?.length ?? 0) > 0 && (

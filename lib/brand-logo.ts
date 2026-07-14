@@ -19,25 +19,24 @@ type LogoSize = {
 
 export const logoSizes: Record<LogoVariant, LogoSize> = {
   'header-desktop': {
-    width: 72,
+    width: 280,
     height: 72,
-    imageClass:
-      'h-12 w-auto object-contain sm:h-14 lg:h-[60px] xl:h-[68px] 2xl:h-[72px]',
+    imageClass: 'h-10 w-auto max-w-[220px] sm:h-11 lg:h-12 xl:max-w-[240px]',
   },
   'header-mobile': {
-    width: 56,
+    width: 200,
     height: 56,
-    imageClass: 'h-12 w-auto object-contain sm:h-14',
+    imageClass: 'h-9 w-auto max-w-[180px] sm:h-10',
   },
   'admin-sidebar': {
-    width: 60,
+    width: 220,
     height: 60,
-    imageClass: 'h-[60px] w-auto object-contain',
+    imageClass: 'h-10 w-auto max-w-[200px] object-contain',
   },
   'admin-topbar': {
-    width: 40,
+    width: 180,
     height: 40,
-    imageClass: 'h-9 w-auto object-contain sm:h-10',
+    imageClass: 'h-8 w-auto max-w-[160px] object-contain sm:h-9',
   },
   'admin-login-hero': {
     width: 220,
@@ -45,9 +44,9 @@ export const logoSizes: Record<LogoVariant, LogoSize> = {
     imageClass: 'h-auto w-[220px] max-w-full object-contain',
   },
   'admin-login-card': {
-    width: 72,
+    width: 280,
     height: 72,
-    imageClass: 'h-16 w-auto object-contain sm:h-[72px]',
+    imageClass: 'h-14 w-auto max-w-[260px] object-contain sm:h-16',
   },
   footer: {
     width: 80,

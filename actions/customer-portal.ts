@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getAuthenticatedUser } from '@/lib/auth/server-session';
+import { productIdSchema } from '@/lib/security/bulk-ids';
+import { enforceRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 const addressSchema = z.object({
   label: z.string().trim().min(1).max(64).default('Primary'),
@@ -132,25 +134,40 @@ export async function markCustomerNotificationRead(id: string): Promise<ActionRe
 }
 
 export async function recordProductView(productId: string): Promise<void> {
+  const parsed = productIdSchema.safeParse(productId);
+  if (!parsed.success) return;
+
   try {
     const session = await getAuthenticatedUser();
     const supabase = session.supabase;
+    const ip = (await getClientIp()) ?? 'unknown';
+    const identifier = `${ip}:${session.user?.id ?? 'anon'}:${parsed.data}`;
+    const allowed = await enforceRateLimit({
+      action: 'product_view',
+      identifier,
+      maxAttempts: 30,
+      windowMinutes: 10,
+    });
+    if (!allowed) return;
 
     await supabase.from('product_views').insert({
       user_id: session.user?.id ?? null,
-      product_id: productId,
+      product_id: parsed.data,
     });
 
     const { data: product } = await supabase
       .from('products')
       .select('view_count')
-      .eq('id', productId)
+      .eq('id', parsed.data)
+      .is('deleted_at', null)
       .maybeSingle();
+
+    if (!product) return;
 
     await supabase
       .from('products')
-      .update({ view_count: (product?.view_count ?? 0) + 1 })
-      .eq('id', productId);
+      .update({ view_count: (product.view_count ?? 0) + 1 })
+      .eq('id', parsed.data);
   } catch (error) {
     console.error('record_product_view_failed', error);
   }

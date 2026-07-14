@@ -6,72 +6,36 @@ import { productFormSchema, productVariantSchema, productDocumentSchema } from '
 import type { Product, ProductDocument, ProductVariant } from '@/types/product';
 import { getAdminCategoryTree, type CategoryTree } from '@/actions/admin-categories';
 import { logActivity } from '@/services/activity-log.service';
+import { validateUploadFile, sanitizeUploadFileName } from '@/lib/security/upload-validation';
+import { parseBulkIds, productIdSchema } from '@/lib/security/bulk-ids';
+import { productSoftDeletePayload } from '@/lib/security/soft-delete';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
-function storagePathFromPublicUrl(url: string, bucket: string): string | null {
-  const marker = `/storage/v1/object/public/${bucket}/`;
-  const index = url.indexOf(marker);
-  if (index === -1) return null;
-  return decodeURIComponent(url.slice(index + marker.length));
-}
-
-async function removeProductStorageAssets(
-  supabase: ReturnType<typeof import('@/lib/supabase/admin').createAdminClient>,
-  productId: string,
-) {
-  const { data: images } = await supabase
-    .from('product_images')
-    .select('url')
-    .eq('product_id', productId);
-
-  const imagePaths = (images ?? [])
-    .map((image) => storagePathFromPublicUrl(image.url, 'product-images'))
-    .filter((path): path is string => Boolean(path));
-
-  if (imagePaths.length > 0) {
-    await supabase.storage.from('product-images').remove(imagePaths);
-  }
-
-  const { data: documents } = await supabase
-    .from('product_documents')
-    .select('url')
-    .eq('product_id', productId);
-
-  const documentPaths = (documents ?? [])
-    .map((document) => storagePathFromPublicUrl(document.url, 'product-documents'))
-    .filter((path): path is string => Boolean(path));
-
-  if (documentPaths.length > 0) {
-    await supabase.storage.from('product-documents').remove(documentPaths);
-  }
-}
-
-async function detachProductReferences(
-  supabase: ReturnType<typeof import('@/lib/supabase/admin').createAdminClient>,
-  productId: string,
-) {
-  await supabase.from('order_items').update({ product_id: null }).eq('product_id', productId);
-}
-
 export async function deleteProduct(id: string): Promise<ActionResult> {
+  const idParsed = productIdSchema.safeParse(id);
+  if (!idParsed.success) {
+    return { success: false, error: 'Invalid product id' };
+  }
+
   try {
     const { supabase, user } = await requirePermission('products:manage');
 
     const { data: product, error: fetchError } = await supabase
       .from('products')
       .select('id, name, sku, slug')
-      .eq('id', id)
+      .eq('id', idParsed.data)
+      .is('deleted_at', null)
       .single();
 
     if (fetchError || !product) {
       return { success: false, error: 'Product not found' };
     }
 
-    await detachProductReferences(supabase, id);
-    await removeProductStorageAssets(supabase, id);
-
-    const { error } = await supabase.from('products').delete().eq('id', id);
+    const { error } = await supabase
+      .from('products')
+      .update(productSoftDeletePayload())
+      .eq('id', idParsed.data);
     if (error) return { success: false, error: error.message };
 
     await logActivity({
@@ -94,27 +58,28 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 }
 
 export async function bulkDeleteProducts(ids: string[]): Promise<ActionResult> {
-  if (ids.length === 0) {
-    return { success: false, error: 'No products selected' };
+  const idsParsed = parseBulkIds(ids);
+  if (!idsParsed.success) {
+    return { success: false, error: idsParsed.error.issues[0]?.message ?? 'Invalid selection' };
   }
 
   try {
     const { supabase, user } = await requirePermission('products:manage');
+    const validIds = idsParsed.data;
 
     const { data: products, error: fetchError } = await supabase
       .from('products')
       .select('id, name, sku, slug')
-      .in('id', ids);
+      .in('id', validIds)
+      .is('deleted_at', null);
 
     if (fetchError) return { success: false, error: fetchError.message };
     if (!products?.length) return { success: false, error: 'No products found' };
 
-    for (const product of products) {
-      await detachProductReferences(supabase, product.id);
-      await removeProductStorageAssets(supabase, product.id);
-    }
-
-    const { error } = await supabase.from('products').delete().in('id', ids);
+    const { error } = await supabase
+      .from('products')
+      .update(productSoftDeletePayload())
+      .in('id', products.map((product) => product.id));
     if (error) return { success: false, error: error.message };
 
     await logActivity({
@@ -347,8 +312,9 @@ export async function uploadProductImage(
       return { success: false, error: 'No file provided' };
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return { success: false, error: 'File must be under 5 MB' };
+    const fileCheck = validateUploadFile(file, 'image');
+    if (!fileCheck.valid) {
+      return { success: false, error: fileCheck.error };
     }
 
     const { data: product } = await supabase
@@ -359,12 +325,12 @@ export async function uploadProductImage(
 
     if (!product) return { success: false, error: 'Product not found' };
 
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const safeName = sanitizeUploadFileName(file.name);
     const path = `${product.slug}/${Date.now()}-${safeName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('product-images')
-      .upload(path, file, { contentType: file.type, upsert: false });
+      .upload(path, file, { contentType: fileCheck.contentType, upsert: false });
 
     if (uploadError) return { success: false, error: uploadError.message };
 
@@ -412,12 +378,17 @@ export async function getAdminCategoryOptions(): Promise<ActionResult<CategoryTr
 }
 
 export async function restoreProduct(id: string): Promise<ActionResult> {
+  const idParsed = productIdSchema.safeParse(id);
+  if (!idParsed.success) {
+    return { success: false, error: 'Invalid product id' };
+  }
+
   try {
     const { supabase } = await requirePermission('products:manage');
     const { error } = await supabase
       .from('products')
-      .update({ is_active: true })
-      .eq('id', id);
+      .update({ is_active: true, deleted_at: null })
+      .eq('id', idParsed.data);
     if (error) return { success: false, error: error.message };
     revalidatePath('/admin/products');
     return { success: true };
@@ -470,9 +441,17 @@ export async function duplicateProduct(id: string): Promise<ActionResult<{ id: s
 }
 
 export async function bulkArchiveProducts(ids: string[]): Promise<ActionResult> {
+  const idsParsed = parseBulkIds(ids);
+  if (!idsParsed.success) {
+    return { success: false, error: idsParsed.error.issues[0]?.message ?? 'Invalid selection' };
+  }
+
   try {
     const { supabase } = await requirePermission('products:manage');
-    const { error } = await supabase.from('products').update({ is_active: false }).in('id', ids);
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: false })
+      .in('id', idsParsed.data);
     if (error) return { success: false, error: error.message };
     revalidatePath('/admin/products');
     return { success: true };
@@ -485,12 +464,17 @@ export async function bulkArchiveProducts(ids: string[]): Promise<ActionResult> 
 }
 
 export async function bulkPublishProducts(ids: string[]): Promise<ActionResult> {
+  const idsParsed = parseBulkIds(ids);
+  if (!idsParsed.success) {
+    return { success: false, error: idsParsed.error.issues[0]?.message ?? 'Invalid selection' };
+  }
+
   try {
     const { supabase } = await requirePermission('products:manage');
     const { error } = await supabase
       .from('products')
-      .update({ publish_status: 'published', is_active: true })
-      .in('id', ids);
+      .update({ publish_status: 'published', is_active: true, deleted_at: null })
+      .in('id', idsParsed.data);
     if (error) return { success: false, error: error.message };
     revalidatePath('/admin/products');
     revalidatePath('/products');
@@ -571,16 +555,18 @@ export async function uploadProductDocument(
     });
     if (!meta.success) return { success: false, error: meta.error.issues[0]?.message ?? 'Invalid metadata' };
     if (!(file instanceof File) || file.size === 0) return { success: false, error: 'No file provided' };
-    if (file.size > 20 * 1024 * 1024) return { success: false, error: 'File must be under 20 MB' };
+
+    const fileCheck = validateUploadFile(file, 'document');
+    if (!fileCheck.valid) return { success: false, error: fileCheck.error };
 
     const { data: product } = await supabase.from('products').select('slug').eq('id', productId).single();
     if (!product) return { success: false, error: 'Product not found' };
 
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const safeName = sanitizeUploadFileName(file.name);
     const path = `${product.slug}/${Date.now()}-${safeName}`;
     const { error: uploadError } = await supabase.storage
       .from('product-documents')
-      .upload(path, file, { contentType: file.type, upsert: false });
+      .upload(path, file, { contentType: fileCheck.contentType, upsert: false });
     if (uploadError) return { success: false, error: uploadError.message };
 
     const { data: urlData } = supabase.storage.from('product-documents').getPublicUrl(path);

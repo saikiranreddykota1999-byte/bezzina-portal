@@ -1,8 +1,14 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { checkPublicRateLimit } from '@/lib/auth/login-security';
+import { validateUploadFile, sanitizeUploadFileName } from '@/lib/security/upload-validation';
+import { productIdSchema } from '@/lib/security/bulk-ids';
+import { vacancySoftDeletePayload } from '@/lib/security/soft-delete';
 import { jobApplicationSchema, vacancySchema } from '@/lib/validators/catalogue';
 import type { Vacancy } from '@/types/quote';
 
@@ -14,6 +20,7 @@ export async function getActiveVacancies(): Promise<Vacancy[]> {
     .from('vacancies')
     .select('*')
     .eq('is_active', true)
+    .is('deleted_at', null)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false });
 
@@ -36,6 +43,7 @@ export async function getVacancy(id: string): Promise<Vacancy | null> {
     .select('*')
     .eq('id', id)
     .eq('is_active', true)
+    .is('deleted_at', null)
     .maybeSingle();
 
   return (data as Vacancy) ?? null;
@@ -55,34 +63,34 @@ export async function submitJobApplication(
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
   }
 
+  const h = await headers();
+  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const allowed = await checkPublicRateLimit('career_application', `${ip}:${parsed.data.email}`);
+  if (!allowed) {
+    return { success: false, error: 'Too many applications. Please try again later.' };
+  }
+
   const file = cvFile.get('cv');
   if (!(file instanceof File) || file.size === 0) {
     return { success: false, error: 'CV/Resume file is required (PDF or DOC)' };
   }
 
-  const allowed = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ];
-  if (!allowed.includes(file.type)) {
-    return { success: false, error: 'CV must be PDF or DOC format' };
+  const fileCheck = validateUploadFile(file, 'cv');
+  if (!fileCheck.valid) {
+    return { success: false, error: fileCheck.error };
   }
 
-  if (file.size > 5 * 1024 * 1024) {
-    return { success: false, error: 'CV must be under 5 MB' };
-  }
-
-  const supabase = await createClient();
-  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const admin = createAdminClient();
+  const safeName = sanitizeUploadFileName(file.name);
   const path = `applications/${Date.now()}-${safeName}`;
 
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await admin.storage
     .from('career-documents')
-    .upload(path, file, { contentType: file.type });
+    .upload(path, file, { contentType: fileCheck.contentType });
 
-  if (uploadError) return { success: false, error: uploadError.message };
+  if (uploadError) return { success: false, error: 'Failed to upload CV. Please try again.' };
 
+  const supabase = await createClient();
   const vacancyId = parsed.data.vacancyId ?? parsed.data.jobPostingId ?? null;
 
   const { error } = await supabase.from('job_applications').insert({
@@ -162,9 +170,18 @@ export async function upsertJobPosting(input: unknown, id?: string): Promise<Act
 }
 
 export async function deleteVacancy(id: string): Promise<ActionResult> {
+  const idParsed = productIdSchema.safeParse(id);
+  if (!idParsed.success) {
+    return { success: false, error: 'Invalid vacancy id' };
+  }
+
   try {
     const { supabase } = await requirePermission('careers:manage');
-    const { error } = await supabase.from('vacancies').delete().eq('id', id);
+    const { error } = await supabase
+      .from('vacancies')
+      .update(vacancySoftDeletePayload())
+      .eq('id', idParsed.data)
+      .is('deleted_at', null);
     if (error) return { success: false, error: error.message };
     revalidatePath('/careers');
     revalidatePath('/admin/careers');

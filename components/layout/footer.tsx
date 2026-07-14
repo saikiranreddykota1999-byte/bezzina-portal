@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { company } from '@/config/company';
+import { BezzinaLogoSvg } from '@/components/brand/bezzina-logo-svg';
 import { navigation } from '@/config/navigation';
 import { FacebookIcon } from '@/components/icons/facebook';
 import { FooterNewsletter } from '@/components/layout/footer-newsletter';
@@ -33,13 +33,7 @@ export async function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:px-8 xl:grid-cols-4">
         <section aria-labelledby="footer-company">
           <Link href="/" className="inline-flex rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8A106] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
-            <Image
-              src={company.logoUrl}
-              alt=""
-              width={80}
-              height={80}
-              className="h-20 w-20 object-contain"
-            />
+            <BezzinaLogoSvg variant="compact" className="h-14 w-auto max-w-[220px]" title={company.name} />
           </Link>
           <h2 id="footer-company" className="mt-4 text-lg font-semibold text-white">
             {settings.name ?? company.name}

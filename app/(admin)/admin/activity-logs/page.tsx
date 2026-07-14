@@ -6,7 +6,7 @@ import { ActivityLogTable } from '@/components/admin/activity-log-table';
 export const metadata = { title: 'Activity Logs | Admin' };
 
 export default async function ActivityLogsPage() {
-  await guardAdminPage('dashboard:view');
+  await guardAdminPage('audit:view');
   const result = await getActivityLogs(100);
   const logs = result.success ? result.data ?? [] : [];
 

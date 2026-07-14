@@ -7,6 +7,6 @@ export const navigation = [
   { title: "Search", href: "/search" },
   { title: "Services", href: "/services" },
   { title: "Careers", href: "/careers" },
-  { title: "Request Quote", href: "/quote" },
+  { title: "Ask for quote", href: "/quote" },
   { title: "Contact", href: "/contact" },
 ];

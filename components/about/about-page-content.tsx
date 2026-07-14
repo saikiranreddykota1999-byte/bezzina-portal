@@ -159,7 +159,7 @@ export function AboutPageContent() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link href="/quote" className={brandClasses.btnPrimary}>
-              Request a Quote
+              Ask for quote
             </Link>
             <Link href="/contact" className={brandClasses.btnSecondary}>
               Contact Us

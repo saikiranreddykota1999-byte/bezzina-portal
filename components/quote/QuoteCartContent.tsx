@@ -47,7 +47,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
     return (
       <div className="space-y-6">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
-          <p className="text-slate-700">Your quote cart is empty.</p>
+          <p className="text-slate-700">No products added for quote yet.</p>
           <Link
             href="/products"
             className="mt-4 inline-block text-sm font-semibold text-orange-600 hover:underline"
@@ -78,7 +78,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-slate-600">{count} item{count !== 1 ? 's' : ''} in quote cart</p>
+      <p className="text-sm text-slate-600">{count} item{count !== 1 ? 's' : ''} ready for quote</p>
 
       <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
         {items.map((item) => (
@@ -142,7 +142,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
 
       <div className="flex flex-wrap gap-3">
         <RippleButton type="button" onClick={() => setShowForm(true)} className="w-full sm:w-auto" variant="primary">
-          Submit Quote Request
+          Ask for quote
         </RippleButton>
         <Link
           href="/products"

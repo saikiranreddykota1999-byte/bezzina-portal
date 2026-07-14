@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import type { DashboardStats } from '@/types/admin';
+import { getOmsDashboardKpis } from '@/services/oms-order.service';
 
 function startOfTodayIso() {
   const d = new Date();
@@ -25,6 +26,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     lowInventory,
     mostViewed,
     recentActivity,
+    omsKpis,
   ] = await Promise.all([
     supabase.from('products').select('*', { count: 'exact', head: true }),
     supabase.from('categories').select('*', { count: 'exact', head: true }),
@@ -39,6 +41,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     supabase.from('products').select('*', { count: 'exact', head: true }).lte('stock_quantity', 5).eq('is_active', true),
     supabase.from('products').select('id, name, view_count').order('view_count', { ascending: false }).limit(5),
     supabase.from('activity_logs').select('*, profile:profiles(email, full_name)').order('created_at', { ascending: false }).limit(8),
+    getOmsDashboardKpis(supabase),
   ]);
 
   return {
@@ -59,5 +62,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       view_count: (p.view_count as number) ?? 0,
     })),
     recentActivity: recentActivity.data ?? [],
+    oms: omsKpis,
   };
 }

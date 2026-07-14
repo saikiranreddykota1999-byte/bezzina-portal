@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Users, Package, FolderTree, FileText, Briefcase,
   UserCheck, Home, Globe, ImageIcon, Mail, Search, MapPin, Store, Shield,
   Settings, UserCog, LogOut, Menu, X, Anchor, Factory, Activity,
-  ChevronLeft, ChevronRight, Calendar,
+  ChevronLeft, ChevronRight, Calendar, ShoppingBag, Warehouse, Truck,
+  Boxes, BarChart3, UserRound,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { ADMIN_NAV } from '@/config/admin-nav';
@@ -23,7 +24,7 @@ import { BrandBackground } from '@/components/brand/BrandBackground';
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, Users, Package, FolderTree, FileText, Briefcase, UserCheck,
   Home, Globe, Image: ImageIcon, Mail, Search, MapPin, Store, Shield, Settings, UserCog,
-  Anchor, Factory, Activity,
+  Anchor, Factory, Activity, ShoppingBag, Warehouse, Truck, Boxes, BarChart3, UserRound,
 };
 
 type Props = {

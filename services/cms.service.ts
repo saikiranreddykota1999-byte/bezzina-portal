@@ -7,7 +7,7 @@ const DEFAULT_HERO: HeroContent = {
   subtitle: company.tagline,
   primaryButtonLabel: 'Browse Products',
   primaryButtonHref: '/products',
-  secondaryButtonLabel: 'Request a Quote',
+  secondaryButtonLabel: 'Ask for quote',
   secondaryButtonHref: '/quote',
   features: [
     {

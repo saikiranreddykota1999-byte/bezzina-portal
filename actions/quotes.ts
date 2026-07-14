@@ -1,8 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getAuthenticatedUser, requireStaffUser } from '@/lib/auth/server-session';
+import { getAuthenticatedUser, requirePermission } from '@/lib/auth/server-session';
 import { submitQuoteCustomerSchema } from '@/lib/validators/quote';
+import { productIdSchema } from '@/lib/security/bulk-ids';
 import { notifyStaff } from '@/services/notification.service';
 import { sendQuoteConfirmationEmail } from '@/services/quote-email.service';
 import { logActivity } from '@/services/activity-log.service';
@@ -119,16 +120,40 @@ export async function submitQuoteRequest(
 
     if (quoteError) return { success: false, error: quoteError.message };
 
-    const rows = items.map((item) => ({
-      quote_request_id: quote.id,
-      product_id: item.productId,
-      sku: item.sku,
-      name: item.name,
-      slug: item.slug,
-      quantity: item.quantity,
-      unit: item.unit,
-      unit_price: item.price,
-    }));
+    const productIds = items.map((item) => item.productId);
+    const invalidId = productIds.find((id) => !productIdSchema.safeParse(id).success);
+    if (invalidId) {
+      return { success: false, error: 'Invalid product in quote cart' };
+    }
+
+    const { data: dbProducts, error: productsError } = await supabase
+      .from('products')
+      .select('id, sku, name, slug, unit, price')
+      .in('id', productIds)
+      .is('deleted_at', null);
+
+    if (productsError) return { success: false, error: productsError.message };
+
+    const productMap = new Map((dbProducts ?? []).map((product) => [product.id, product]));
+
+    const rows = [];
+    for (const item of items) {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        return { success: false, error: `Product unavailable: ${item.sku}` };
+      }
+
+      rows.push({
+        quote_request_id: quote.id,
+        product_id: product.id,
+        sku: product.sku,
+        name: product.name,
+        slug: product.slug,
+        quantity: item.quantity,
+        unit: product.unit ?? item.unit,
+        unit_price: product.price ?? null,
+      });
+    }
 
     const { error: itemsError } = await supabase.from('quote_request_items').insert(rows);
 
@@ -195,7 +220,7 @@ export async function getUserQuoteHistory() {
 
 export async function getAdminQuoteRequests() {
   try {
-    const { supabase } = await requireStaffUser();
+    const { supabase } = await requirePermission('quotes:manage');
     const { data, error } = await supabase
       .from('quote_requests')
       .select('*, items:quote_request_items(*)')

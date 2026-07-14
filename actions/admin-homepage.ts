@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/server-session';
 import type { HomepageSectionKey } from '@/types/cms';
+import { sanitizeCmsLinks } from '@/lib/security/safe-href';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
@@ -42,7 +43,7 @@ export async function updateHomepageSectionAction(
 
     const { error } = await supabase.from('homepage_sections').upsert({
       section_key: sectionKey,
-      content: contentParsed.data,
+      content: sanitizeCmsLinks(contentParsed.data),
       is_enabled: isEnabled,
       updated_at: new Date().toISOString(),
       updated_by: user!.id,

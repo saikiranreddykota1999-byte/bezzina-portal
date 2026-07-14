@@ -26,7 +26,7 @@ describe('registerSchema', () => {
     const result = registerSchema.safeParse({
       fullName: 'Jane Doe',
       email: 'jane@example.com',
-      password: 'password123',
+      password: 'SecurePass1!',
     });
 
     expect(result.success).toBe(true);

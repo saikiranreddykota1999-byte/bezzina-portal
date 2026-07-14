@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requirePermission, requireSuperAdminUser } from '@/lib/auth/server-session';
 import type { AdminCustomer } from '@/types/admin';
+import { parseBulkIds } from '@/lib/security/bulk-ids';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
@@ -94,12 +95,17 @@ export async function updateAdminCustomer(input: unknown): Promise<ActionResult>
 }
 
 export async function bulkDisableCustomers(ids: string[]): Promise<ActionResult> {
+  const idsParsed = parseBulkIds(ids);
+  if (!idsParsed.success) {
+    return { success: false, error: idsParsed.error.issues[0]?.message ?? 'Invalid selection' };
+  }
+
   try {
     const { supabase } = await requirePermission('customers:manage');
     const { error } = await supabase
       .from('profiles')
       .update({ is_disabled: true })
-      .in('id', ids)
+      .in('id', idsParsed.data)
       .eq('role', 'customer');
 
     if (error) return { success: false, error: error.message };
@@ -119,6 +125,16 @@ export async function resetCustomerPasswordAction(userId: string): Promise<Actio
     const { createAdminClient } = await import('@/lib/supabase/admin');
     const admin = createAdminClient();
 
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (profile?.role !== 'customer') {
+      return { success: false, error: 'Password reset is only available for customer accounts.' };
+    }
+
     const { data: userData, error: userError } = await admin.auth.admin.getUserById(userId);
     if (userError || !userData.user?.email) {
       return { success: false, error: 'Customer not found' };
@@ -128,10 +144,10 @@ export async function resetCustomerPasswordAction(userId: string): Promise<Actio
     const { error } = await admin.auth.admin.generateLink({
       type: 'recovery',
       email: userData.user.email,
-      options: { redirectTo: `${origin}/account/password` },
+      options: { redirectTo: `${origin}/account/reset-password` },
     });
 
-    if (error) return { success: false, error: error.message };
+    if (error) return { success: false, error: 'Failed to send reset link.' };
     return { success: true, data: { email: userData.user.email } };
   } catch (error) {
     return {

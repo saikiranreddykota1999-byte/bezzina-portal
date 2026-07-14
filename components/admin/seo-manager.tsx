@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteSeoPageAction, upsertSeoPageAction } from '@/actions/admin-seo';
 import { AdminDataTable, type Column } from '@/components/admin/admin-data-table';
+import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 import type { SeoPage } from '@/types/admin';
 import {
   adminButtonPrimaryClass,
@@ -34,18 +35,20 @@ export function SeoManager({ pages }: Props) {
       key: 'id',
       header: 'Actions',
       render: (r) => (
-        <button
-          type="button"
-          className="text-sm text-[var(--admin-danger)]"
-          onClick={() => {
-            startTransition(async () => {
-              await deleteSeoPageAction(r.id);
-              router.refresh();
-            });
+        <ConfirmDestructiveDialog
+          title="Delete SEO page?"
+          description={`Remove SEO settings for ${r.path}.`}
+          onConfirm={async () => {
+            await deleteSeoPageAction(r.id);
+            router.refresh();
           }}
         >
-          Delete
-        </button>
+          {(open) => (
+            <button type="button" className="text-sm text-[var(--admin-danger)]" onClick={open}>
+              Delete
+            </button>
+          )}
+        </ConfirmDestructiveDialog>
       ),
     },
   ];

@@ -6,7 +6,7 @@ import { getQuoteDrafts } from '@/actions/quote-drafts';
 export async function generateMetadata() {
   return buildPageMetadata({
     path: '/quote',
-    fallbackTitle: 'Request a Quote | Joseph Bezzina & Co Ltd',
+    fallbackTitle: 'Ask for quote | Joseph Bezzina & Co Ltd',
     fallbackDescription: 'Review your quote cart and submit a multi-product quotation request.',
   });
 }
@@ -17,8 +17,8 @@ export default async function QuotePage() {
 
   return (
     <ContentPage
-      title="Request a Quote"
-      description="Add products to your quote cart, adjust quantities, and submit your request to our sales team or send via WhatsApp."
+      title="Ask for quote"
+      description="Review products you want to quote, adjust quantities, and send your request to our sales team."
     >
       <QuoteCartContent drafts={drafts} />
     </ContentPage>

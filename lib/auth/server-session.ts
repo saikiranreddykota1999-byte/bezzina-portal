@@ -2,10 +2,14 @@ import { redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { isStaffRole, isSuperAdminRole } from '@/lib/auth/roles';
+import { isSuperAdminRole, isPortalRole } from '@/lib/auth/roles';
 import { hasPermission } from '@/lib/auth/permissions';
 import type { AdminPermission } from '@/types/admin';
 import { withTimeout } from '@/lib/auth/timeout';
+import {
+  getSuperAdminMfaStatus,
+  isSuperAdminMfaRequired,
+} from '@/lib/auth/super-admin-mfa';
 
 const AUTH_TIMEOUT_MS = 8_000;
 
@@ -20,6 +24,7 @@ type Profile = {
   company_name: string | null;
   vat_number: string | null;
   is_disabled: boolean | null;
+  force_password_change: boolean | null;
 };
 
 export type AuthenticatedSession = {
@@ -61,7 +66,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedSession> {
       supabase
         .from('profiles')
         .select(
-          'id, email, role, full_name, phone, contact_email, billing_address, company_name, vat_number, is_disabled',
+          'id, email, role, full_name, phone, contact_email, billing_address, company_name, vat_number, is_disabled, force_password_change',
         )
         .eq('id', user.id)
         .maybeSingle(),
@@ -93,6 +98,10 @@ export async function requireAuthenticatedUser(redirectPath = '/account') {
     redirect(`/account/login?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
+  if (session.profile?.is_disabled) {
+    redirect('/account/login?error=disabled');
+  }
+
   return session;
 }
 
@@ -117,7 +126,7 @@ export async function requireStaffUser(): Promise<StaffSession> {
     throw new Error('Your account has been disabled');
   }
 
-  if (!isStaffRole(session.profile?.role)) {
+  if (!isPortalRole(session.profile?.role)) {
     throw new Error('Admin access required');
   }
 
@@ -129,6 +138,14 @@ export async function requireSuperAdminUser(): Promise<StaffSession> {
 
   if (!isSuperAdminRole(session.profile?.role)) {
     throw new Error('Super Admin access required');
+  }
+
+  if (isSuperAdminMfaRequired()) {
+    const userSupabase = await createClient();
+    const mfaStatus = await getSuperAdminMfaStatus(userSupabase);
+    if (!mfaStatus.verified) {
+      throw new Error('MFA verification required');
+    }
   }
 
   return session;

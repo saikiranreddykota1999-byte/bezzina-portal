@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { bulkDeleteMediaAction, deleteMediaAssetAction, uploadMediaAssetAction } from '@/actions/admin-media';
 import { AdminDataTable, type Column } from '@/components/admin/admin-data-table';
+import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 import type { MediaAsset } from '@/types/admin';
 import {
   adminCardClass,
@@ -17,6 +18,8 @@ type Props = { assets: MediaAsset[] };
 export function MediaLibraryManager({ assets }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const columns: Column<MediaAsset>[] = [
     { key: 'file_name', header: 'File', sortable: true, render: (r) => r.file_name },
@@ -39,18 +42,20 @@ export function MediaLibraryManager({ assets }: Props) {
       key: 'id',
       header: 'Actions',
       render: (r) => (
-        <button
-          type="button"
-          className="text-sm text-[var(--admin-danger)]"
-          onClick={() => {
-            startTransition(async () => {
-              await deleteMediaAssetAction(r.id);
-              router.refresh();
-            });
+        <ConfirmDestructiveDialog
+          title="Delete media asset?"
+          description={`"${r.file_name}" will be removed from the media library.`}
+          onConfirm={async () => {
+            await deleteMediaAssetAction(r.id);
+            router.refresh();
           }}
         >
-          Delete
-        </button>
+          {(open) => (
+            <button type="button" className="text-sm text-[var(--admin-danger)]" onClick={open}>
+              Delete
+            </button>
+          )}
+        </ConfirmDestructiveDialog>
       ),
     },
   ];
@@ -82,12 +87,25 @@ export function MediaLibraryManager({ assets }: Props) {
           {
             label: 'Bulk Delete',
             variant: 'danger',
-            onAction: async (ids) => {
-              await bulkDeleteMediaAction(ids);
-              router.refresh();
+            onAction: (ids) => {
+              setBulkDeleteIds(ids);
+              setBulkDeleteOpen(true);
             },
           },
         ]}
+      />
+
+      <ConfirmDestructiveDialog
+        title="Delete selected media?"
+        description={`${bulkDeleteIds.length} asset(s) will be removed from the media library.`}
+        requireTypedConfirm
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        onConfirm={async () => {
+          await bulkDeleteMediaAction(bulkDeleteIds);
+          setBulkDeleteIds([]);
+          router.refresh();
+        }}
       />
     </div>
   );

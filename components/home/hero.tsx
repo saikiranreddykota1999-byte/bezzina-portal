@@ -103,7 +103,7 @@ export function Hero({ content }: Props) {
               {content?.primaryButtonLabel ?? 'Browse Products'}
             </RippleButton>
             <RippleButton href={content?.secondaryButtonHref ?? '/quote'}>
-              {content?.secondaryButtonLabel ?? 'Request a Quote'}
+              {content?.secondaryButtonLabel ?? 'Ask for quote'}
             </RippleButton>
           </motion.div>
         </motion.div>

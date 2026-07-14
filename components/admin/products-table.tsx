@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import {
   bulkArchiveProducts,
   bulkDeleteProducts,
@@ -10,6 +11,7 @@ import {
   restoreProduct,
 } from '@/actions/admin-products';
 import { AdminDataTable, exportToCsv, type Column } from '@/components/admin/admin-data-table';
+import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 import {
   adminBadgeNeutralClass,
   adminBadgeSuccessClass,
@@ -23,6 +25,8 @@ type Props = { products: Product[] };
 
 export function ProductsTable({ products }: Props) {
   const router = useRouter();
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const columns: Column<Product>[] = [
     { key: 'sku', header: 'SKU', sortable: true, render: (p) => <span className="font-mono text-xs">{p.sku}</span> },
@@ -72,6 +76,7 @@ export function ProductsTable({ products }: Props) {
   ];
 
   return (
+    <>
     <AdminDataTable
       data={products}
       columns={columns}
@@ -94,16 +99,11 @@ export function ProductsTable({ products }: Props) {
           },
         },
         {
-          label: 'Delete Permanently',
+          label: 'Delete',
           variant: 'danger',
-          onAction: async (ids) => {
-            if (!confirm(`Permanently delete ${ids.length} product(s)? This cannot be undone.`)) return;
-            const result = await bulkDeleteProducts(ids);
-            if (!result.success) {
-              alert(result.error);
-              return;
-            }
-            router.refresh();
+          onAction: (ids) => {
+            setBulkDeleteIds(ids);
+            setBulkDeleteOpen(true);
           },
         },
         {
@@ -123,5 +123,22 @@ export function ProductsTable({ products }: Props) {
         },
       ]}
     />
+
+    <ConfirmDestructiveDialog
+      title="Delete selected products?"
+      description={`${bulkDeleteIds.length} product(s) will be soft-deleted and hidden from the storefront.`}
+      requireTypedConfirm
+      open={bulkDeleteOpen}
+      onOpenChange={setBulkDeleteOpen}
+      onConfirm={async () => {
+        const result = await bulkDeleteProducts(bulkDeleteIds);
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        setBulkDeleteIds([]);
+        router.refresh();
+      }}
+    />
+    </>
   );
 }

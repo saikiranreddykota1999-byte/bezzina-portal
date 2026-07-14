@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { customerPasswordLogin } from '@/actions/auth';
 import { sendEmailOtpAction, verifyEmailOtpAction } from '@/actions/email-otp';
 import { sendPhoneOtpAction, verifyPhoneOtpAction } from '@/actions/phone-otp';
 import type { CustomerAuthConfigStatus } from '@/actions/customer-auth-status';
@@ -41,8 +41,6 @@ export default function LoginForm({
   const [error, setError] = useState(authCallbackError ?? '');
   const [loading, setLoading] = useState(false);
 
-  const supabase = createClient();
-
   function resetOtpState() {
     setOtpSent(false);
     setOtp('');
@@ -75,9 +73,9 @@ export default function LoginForm({
       return;
     }
 
-    const { error: authError } = await supabase.auth.signInWithPassword(parsed.data);
-    if (authError) {
-      setError(authError.message);
+    const result = await customerPasswordLogin(parsed.data.email, parsed.data.password);
+    if (!result.success) {
+      setError(result.error);
       setLoading(false);
       return;
     }

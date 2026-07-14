@@ -2,10 +2,12 @@ import type { UserRole } from '@/types/user';
 
 export type AdminPermission =
   | 'dashboard:view'
+  | 'audit:view'
   | 'products:manage'
   | 'categories:manage'
   | 'quotes:manage'
   | 'customers:manage'
+  | 'customers:view'
   | 'careers:manage'
   | 'homepage:manage'
   | 'media:manage'
@@ -13,7 +15,19 @@ export type AdminPermission =
   | 'seo:manage'
   | 'settings:manage'
   | 'users:manage'
-  | 'pickup:manage';
+  | 'pickup:manage'
+  | 'orders:view'
+  | 'orders:manage'
+  | 'orders:approve'
+  | 'warehouse:manage'
+  | 'warehouse:operate'
+  | 'inventory:manage'
+  | 'inventory:view'
+  | 'sales:manage'
+  | 'sales:operate'
+  | 'delivery:manage'
+  | 'delivery:operate'
+  | 'reports:view';
 
 export type AdminNavItem = {
   title: string;
@@ -129,4 +143,15 @@ export type DashboardStats = {
   lowInventory: number;
   mostViewedProducts: { id: string; name: string; view_count: number }[];
   recentActivity: ActivityLog[];
+  oms?: {
+    pendingApproval: number;
+    warehouseQueue: number;
+    preparing: number;
+    readyForDelivery: number;
+    readyForCollection: number;
+    outForDelivery: number;
+    lowStock: number;
+    completedToday: number;
+    walkInDrafts: number;
+  };
 };

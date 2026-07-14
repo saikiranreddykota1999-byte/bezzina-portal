@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import type { NewsletterSubscriber } from '@/types/admin';
+import { parseBulkIds, productIdSchema } from '@/lib/security/bulk-ids';
 
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
@@ -25,9 +26,14 @@ export async function getNewsletterSubscribersAction(): Promise<ActionResult<New
 }
 
 export async function deleteNewsletterSubscriberAction(id: string): Promise<ActionResult> {
+  const idParsed = productIdSchema.safeParse(id);
+  if (!idParsed.success) {
+    return { success: false, error: 'Invalid subscriber id' };
+  }
+
   try {
     const { supabase } = await requirePermission('newsletter:manage');
-    const { error } = await supabase.from('newsletter_subscribers').delete().eq('id', id);
+    const { error } = await supabase.from('newsletter_subscribers').delete().eq('id', idParsed.data);
     if (error) return { success: false, error: error.message };
     revalidatePath('/admin/newsletter');
     return { success: true };
@@ -40,9 +46,14 @@ export async function deleteNewsletterSubscriberAction(id: string): Promise<Acti
 }
 
 export async function bulkDeleteSubscribersAction(ids: string[]): Promise<ActionResult> {
+  const idsParsed = parseBulkIds(ids);
+  if (!idsParsed.success) {
+    return { success: false, error: idsParsed.error.issues[0]?.message ?? 'Invalid selection' };
+  }
+
   try {
     const { supabase } = await requirePermission('newsletter:manage');
-    const { error } = await supabase.from('newsletter_subscribers').delete().in('id', ids);
+    const { error } = await supabase.from('newsletter_subscribers').delete().in('id', idsParsed.data);
     if (error) return { success: false, error: error.message };
     revalidatePath('/admin/newsletter');
     return { success: true };

@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { company } from '@/config/company';
+import { BezzinaLogoSvg } from '@/components/brand/bezzina-logo-svg';
 import { logoSizes, type LogoVariant } from '@/lib/brand-logo';
 
 type Props = {
@@ -34,6 +34,24 @@ const floatKeyframes: Variants = {
   },
 };
 
+function svgVariantFor(variant: LogoVariant): 'mark' | 'wordmark' | 'compact' {
+  if (variant === 'admin-login-hero') return 'wordmark';
+  if (
+    variant === 'admin-login-card' ||
+    variant === 'header-desktop' ||
+    variant === 'footer' ||
+    variant === 'contact'
+  ) {
+    return 'compact';
+  }
+  return 'mark';
+}
+
+function svgClassFor(variant: LogoVariant): string {
+  const size = logoSizes[variant];
+  return `${size.imageClass} brand-logo-svg`;
+}
+
 export function AnimatedLogo({
   variant,
   href,
@@ -46,11 +64,11 @@ export function AnimatedLogo({
   ariaLabel,
 }: Props) {
   const reduceMotion = useReducedMotion();
-  const size = logoSizes[variant];
   const isHero = variant === 'admin-login-hero';
   const isSplash = variant === 'splash';
   const canAnimate = animate && !reduceMotion;
   const canHover = hoverable && !reduceMotion;
+  void priority;
 
   const imageNode = (
     <motion.div
@@ -97,21 +115,17 @@ export function AnimatedLogo({
         variants={isHero || isSplash ? floatKeyframes : undefined}
         animate={isHero || isSplash ? 'animate' : undefined}
       >
-        <Image
-          src={company.logoUrl}
-          alt=""
-          width={size.width}
-          height={size.height}
-          className={size.imageClass}
-          priority={priority}
-          sizes={`${size.width}px`}
+        <BezzinaLogoSvg
+          variant={svgVariantFor(variant)}
+          className={svgClassFor(variant)}
+          title={company.name}
         />
       </motion.div>
     </motion.div>
   );
 
   const content = (
-    <div className={`group inline-flex items-center gap-3 sm:gap-4 ${showCompanyName ? '' : ''}`}>
+    <div className="group inline-flex items-center gap-3 sm:gap-4">
       {imageNode}
       {showCompanyName ? (
         <div className={`min-w-0 ${companyNameClassName}`}>

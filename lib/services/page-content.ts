@@ -40,7 +40,7 @@ export const SERVICE_ITEMS: ServiceDefinition[] = [
     description:
       'Receive accurate and competitive quotations quickly for trade, commercial, marine, and industrial requirements.',
     highlight: 'Same-day quote assistance for most enquiries.',
-    ctaLabel: 'Request a Quote',
+    ctaLabel: 'Ask for quote',
     ctaHref: '/quote',
     icons: [ClipboardList, Calculator, ClipboardList],
     illustration: 'quotations',

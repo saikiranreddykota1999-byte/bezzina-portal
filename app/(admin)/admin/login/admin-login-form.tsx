@@ -6,8 +6,12 @@ import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import { adminLogin } from '@/actions/auth';
 import { loginSchema } from '@/lib/validators/auth';
-import { AdminCheckbox } from '@/components/admin/ui/admin-checkbox';
 import { AnimatedLogo } from '@/components/brand/AnimatedLogo';
+import { ADMIN_CHANGE_PASSWORD_PATH } from '@/lib/auth/staff-setup';
+import {
+  ADMIN_MFA_SETUP_PATH,
+  ADMIN_MFA_VERIFY_PATH,
+} from '@/lib/auth/super-admin-mfa';
 
 type Props = {
   redirectPath: string;
@@ -23,7 +27,6 @@ export default function AdminLoginForm({ redirectPath }: Props) {
   const reduceMotion = useReducedMotion();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,6 +54,24 @@ export default function AdminLoginForm({ redirectPath }: Props) {
     if (!result.success) {
       setError(result.error);
       setLoading(false);
+      return;
+    }
+
+    if (result.requiresPasswordChange) {
+      router.push(ADMIN_CHANGE_PASSWORD_PATH);
+      router.refresh();
+      return;
+    }
+
+    if (result.requiresMfaSetup) {
+      router.push(ADMIN_MFA_SETUP_PATH);
+      router.refresh();
+      return;
+    }
+
+    if (result.requiresMfaVerify) {
+      router.push(ADMIN_MFA_VERIFY_PATH);
+      router.refresh();
       return;
     }
 
@@ -123,19 +144,13 @@ export default function AdminLoginForm({ redirectPath }: Props) {
         </motion.div>
 
         <motion.div
-          className="flex items-center justify-between gap-4"
+          className="flex justify-end"
           variants={fieldMotion}
           initial={reduceMotion ? false : 'initial'}
           animate="animate"
           transition={{ delay: 0.26 }}
         >
-          <AdminCheckbox
-            id="remember-me"
-            checked={rememberMe}
-            onChange={setRememberMe}
-            label="Remember me"
-          />
-          <Link href="/account/password" className="admin-link text-sm">
+          <Link href="/account/forgot-password" className="admin-link text-sm">
             Forgot password?
           </Link>
         </motion.div>

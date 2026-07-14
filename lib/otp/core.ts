@@ -11,11 +11,14 @@ export function generateOtpCode(): string {
 }
 
 function getOtpPepper(): string {
-  return (
-    process.env.OTP_SECRET?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-    'bezzina-otp-dev-pepper'
-  );
+  const secret = process.env.OTP_SECRET?.trim();
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('OTP_SECRET must be set in production');
+  }
+
+  return 'bezzina-otp-dev-pepper';
 }
 
 export function hashOtpCode(identifier: string, code: string): string {

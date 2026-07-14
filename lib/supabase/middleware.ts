@@ -1,7 +1,17 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { isStaffRole } from '@/lib/auth/roles';
+import { isPortalRole, isSuperAdminRole } from '@/lib/auth/roles';
 import { withTimeout } from '@/lib/auth/timeout';
+import {
+  ADMIN_CHANGE_PASSWORD_PATH,
+  isAdminPasswordChangePath,
+} from '@/lib/auth/staff-setup';
+import {
+  getSuperAdminMfaStatus,
+  isSuperAdminMfaPath,
+  isSuperAdminMfaRequired,
+  resolveSuperAdminMfaRedirect,
+} from '@/lib/auth/super-admin-mfa';
 
 const ADMIN_LOGIN = '/admin/login';
 const AUTH_TIMEOUT_MS = 8_000;
@@ -11,6 +21,8 @@ const LOCKOUT_MINUTES = 15;
 const PUBLIC_ACCOUNT_PATHS = [
   '/account/login',
   '/account/register',
+  '/account/forgot-password',
+  '/account/reset-password',
   '/account/cart',
   '/account/wishlist',
   '/account/tracking',
@@ -58,7 +70,7 @@ export async function updateSession(request: NextRequest) {
   } catch (error) {
     console.error('middleware session check failed:', error);
 
-    if (path.startsWith('/admin') && path !== ADMIN_LOGIN) {
+    if (path.startsWith('/admin') && path !== ADMIN_LOGIN && !isAdminPasswordChangePath(path) && !isSuperAdminMfaPath(path)) {
       const url = request.nextUrl.clone();
       url.pathname = ADMIN_LOGIN;
       url.searchParams.set('redirect', path);
@@ -77,7 +89,7 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  if (path.startsWith('/admin') && path !== ADMIN_LOGIN) {
+  if (path.startsWith('/admin') && path !== ADMIN_LOGIN && !isAdminPasswordChangePath(path) && !isSuperAdminMfaPath(path)) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = ADMIN_LOGIN;
@@ -87,7 +99,7 @@ export async function updateSession(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, is_disabled')
+      .select('role, is_disabled, force_password_change')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -98,10 +110,61 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (!isStaffRole(profile?.role)) {
+    if (!isPortalRole(profile?.role)) {
       const url = request.nextUrl.clone();
       url.pathname = '/account';
       url.searchParams.set('error', 'unauthorized');
+      return NextResponse.redirect(url);
+    }
+
+    if (profile?.force_password_change) {
+      const url = request.nextUrl.clone();
+      url.pathname = ADMIN_CHANGE_PASSWORD_PATH;
+      return NextResponse.redirect(url);
+    }
+
+    if (isSuperAdminRole(profile?.role) && isSuperAdminMfaRequired()) {
+      const mfaStatus = await getSuperAdminMfaStatus(supabase);
+      const mfaRedirect = resolveSuperAdminMfaRedirect(mfaStatus, path);
+      if (mfaRedirect) {
+        const url = request.nextUrl.clone();
+        url.pathname = mfaRedirect;
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
+  if (path.startsWith('/admin') && (isAdminPasswordChangePath(path) || isSuperAdminMfaPath(path))) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = ADMIN_LOGIN;
+      url.searchParams.set('redirect', path);
+      return NextResponse.redirect(url);
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, is_disabled, force_password_change')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.is_disabled) {
+      const url = request.nextUrl.clone();
+      url.pathname = ADMIN_LOGIN;
+      url.searchParams.set('error', 'disabled');
+      return NextResponse.redirect(url);
+    }
+
+    if (isSuperAdminMfaPath(path) && !isSuperAdminRole(profile?.role)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin';
+      url.searchParams.set('error', 'unauthorized');
+      return NextResponse.redirect(url);
+    }
+
+    if (profile?.force_password_change && isSuperAdminMfaPath(path)) {
+      const url = request.nextUrl.clone();
+      url.pathname = ADMIN_CHANGE_PASSWORD_PATH;
       return NextResponse.redirect(url);
     }
   }
@@ -111,6 +174,25 @@ export async function updateSession(request: NextRequest) {
     url.pathname = '/account/login';
     url.searchParams.set('redirect', path);
     return NextResponse.redirect(url);
+  }
+
+  if (
+    path.startsWith('/account') &&
+    !isPublicAccountPath(path) &&
+    user
+  ) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_disabled')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (profile?.is_disabled) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/account/login';
+      url.searchParams.set('error', 'disabled');
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

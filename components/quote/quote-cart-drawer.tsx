@@ -20,7 +20,7 @@ export function QuoteCartDrawer({ open, onClose }: Props) {
       <button type="button" aria-label="Close quote cart" className="flex-1 bg-slate-900/40" onClick={onClose} />
       <aside className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-900">Quote Cart ({count})</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Ask for quote ({count})</h2>
           <button type="button" onClick={onClose} className="rounded p-1 text-slate-500 hover:bg-slate-100">
             <X className="h-5 w-5" />
           </button>
@@ -28,7 +28,7 @@ export function QuoteCartDrawer({ open, onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {items.length === 0 ? (
-            <p className="text-sm text-slate-600">Your quote cart is empty.</p>
+            <p className="text-sm text-slate-600">No products added for quote yet.</p>
           ) : (
             <ul className="space-y-3">
               {items.map((item) => (
@@ -68,7 +68,7 @@ export function QuoteCartDrawer({ open, onClose }: Props) {
 
         <div className="space-y-3 border-t border-slate-200 px-5 py-4">
           <RippleButton href="/quote" variant="primary" className="w-full">
-            Submit Quote
+            Ask for quote
           </RippleButton>
           <Link href="/quote" onClick={onClose} className="block text-center text-sm font-medium text-slate-600 hover:text-slate-900">
             Save draft / full quote page

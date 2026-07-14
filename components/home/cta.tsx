@@ -23,7 +23,7 @@ export function CTA({ content }: Props) {
             href={content?.primaryHref ?? '/quote'}
             className="inline-flex items-center justify-center rounded-full bg-[#0B3D91] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#09407a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
-            {content?.primaryLabel ?? 'Request a Quote'}
+            {content?.primaryLabel ?? 'Ask for quote'}
           </Link>
           <Link
             href={content?.secondaryHref ?? '/contact'}
