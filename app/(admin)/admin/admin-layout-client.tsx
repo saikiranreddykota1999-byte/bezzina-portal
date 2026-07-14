@@ -2,7 +2,10 @@
 
 import { Inter } from 'next/font/google';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { LoadingSplash } from '@/components/brand/LoadingSplash';
 import '@/app/admin-theme.css';
 
 const inter = Inter({
@@ -10,6 +13,8 @@ const inter = Inter({
   variable: '--font-admin',
   display: 'swap',
 });
+
+const SPLASH_SESSION_KEY = 'bezzina-admin-splash-seen';
 
 type Props = {
   children: React.ReactNode;
@@ -20,6 +25,20 @@ type Props = {
 
 export function AdminLayoutClient({ children, userRole, userName, unreadNotifications = 0 }: Props) {
   const pathname = usePathname();
+  const [showSplash, setShowSplash] = useState(false);
+
+  useEffect(() => {
+    if (pathname === '/admin/login') return;
+    if (window.sessionStorage.getItem(SPLASH_SESSION_KEY)) return;
+
+    const frame = requestAnimationFrame(() => setShowSplash(true));
+    return () => cancelAnimationFrame(frame);
+  }, [pathname]);
+
+  function handleSplashComplete() {
+    window.sessionStorage.setItem(SPLASH_SESSION_KEY, '1');
+    setShowSplash(false);
+  }
 
   if (pathname === '/admin/login') {
     return <div className={`${inter.variable} font-[family-name:var(--font-admin)]`}>{children}</div>;
@@ -27,6 +46,9 @@ export function AdminLayoutClient({ children, userRole, userName, unreadNotifica
 
   return (
     <div className={`${inter.variable} font-[family-name:var(--font-admin)]`}>
+      <AnimatePresence>
+        {showSplash ? <LoadingSplash onComplete={handleSplashComplete} /> : null}
+      </AnimatePresence>
       <AdminShell
         userRole={userRole}
         userName={userName}

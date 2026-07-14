@@ -31,6 +31,11 @@ describe('structuredData', () => {
     } as Product;
 
     const schema = getProductSchema(product);
+    const offers = schema.offers as {
+      priceCurrency: string;
+      availability: string;
+    };
+    const brand = schema.brand as { name: string };
 
     expect(schema['@type']).toBe('Product');
     expect(schema.name).toBe('Hex Bolt');
@@ -38,9 +43,9 @@ describe('structuredData', () => {
     expect(schema.category).toBe('Fasteners');
     expect(schema.description).toBe('High-tensile hex bolt for industrial use.');
     expect(schema.image).toBe('https://jbezzina.store/images/hex-bolt.jpg');
-    expect(schema.offers.priceCurrency).toBe('EUR');
-    expect(schema.offers.availability).toBe('https://schema.org/InStock');
-    expect(schema.brand.name).toBe('Joseph Bezzina & Co. Ltd');
+    expect(offers.priceCurrency).toBe('EUR');
+    expect(offers.availability).toBe('https://schema.org/InStock');
+    expect(brand.name).toBe('Joseph Bezzina & Co. Ltd');
   });
 
   it('builds breadcrumb schema with absolute urls', () => {

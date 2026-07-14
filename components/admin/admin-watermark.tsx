@@ -1,3 +1,1 @@
-export function AdminWatermark() {
-  return <div className="admin-watermark" aria-hidden="true" />;
-}
+export { BrandBackground as AdminWatermark } from '@/components/brand/BrandBackground';

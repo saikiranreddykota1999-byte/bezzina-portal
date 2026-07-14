@@ -1,7 +1,8 @@
 'use client';
 
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import { INVENTORY_STATUS_OPTIONS, type ProductVariant } from '@/types/product';
+import { ProductVariantBulkTools } from '@/components/admin/product-variant-bulk-tools';
 import {
   adminButtonSecondaryClass,
   adminCardClass,
@@ -17,6 +18,7 @@ export type VariantDraft = Omit<ProductVariant, 'id' | 'product_id'> & { id?: st
 type Props = {
   variants: VariantDraft[];
   onChange: (variants: VariantDraft[]) => void;
+  productSku?: string;
 };
 
 const emptyVariant = (): VariantDraft => ({
@@ -35,7 +37,7 @@ const emptyVariant = (): VariantDraft => ({
   sort_order: 0,
 });
 
-export function ProductVariantsSection({ variants, onChange }: Props) {
+export function ProductVariantsSection({ variants, onChange, productSku = '' }: Props) {
   function addVariant() {
     onChange([...variants, emptyVariant()]);
   }
@@ -60,14 +62,35 @@ export function ProductVariantsSection({ variants, onChange }: Props) {
           <Plus className="h-3.5 w-3.5" /> Add Variant
         </button>
       </div>
+      <ProductVariantBulkTools productSku={productSku} variants={variants} onChange={onChange} />
       <div className="space-y-4">
         {variants.map((variant, index) => (
           <div key={index} className="rounded-lg border border-[var(--admin-border-light)] p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-medium text-[var(--admin-navy)]">Variant {index + 1}</p>
-              <button type="button" onClick={() => removeVariant(index)} className="text-[var(--admin-danger)]">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange([
+                      ...variants,
+                      {
+                        ...variant,
+                        name: `${variant.name} (Copy)`,
+                        sku: `${variant.sku}-COPY`,
+                        sort_order: variants.length,
+                      },
+                    ])
+                  }
+                  className="text-[var(--admin-primary)]"
+                  aria-label={`Duplicate variant ${index + 1}`}
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+                <button type="button" onClick={() => removeVariant(index)} className="text-[var(--admin-danger)]">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <input

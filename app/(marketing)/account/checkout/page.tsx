@@ -9,7 +9,7 @@ import { FulfillmentSelector } from '@/components/checkout/fulfillment-selector'
 import { DeliveryAddressForm } from '@/components/checkout/delivery-address-form';
 import { PickupScheduler } from '@/components/checkout/pickup-scheduler';
 import { calculateOrderTotals } from '@/lib/checkout';
-import { resolveProductPrice, formatPrice } from '@/lib/pricing';
+import { resolveQuoteLinePrice, formatPrice } from '@/lib/pricing';
 import { RippleButton } from '@/components/ui/ripple-button';
 
 export default function CheckoutPage() {
@@ -28,7 +28,7 @@ export default function CheckoutPage() {
   } = useCheckout();
 
   const subtotal = items.reduce(
-    (sum, item) => sum + resolveProductPrice(item.price) * item.quantity,
+    (sum, item) => sum + resolveQuoteLinePrice(item.price) * item.quantity,
     0,
   );
   const { shipping, total } = calculateOrderTotals(subtotal, fulfillmentMethod, items.length);
@@ -92,7 +92,7 @@ export default function CheckoutPage() {
                     {item.quantity}× {item.name}
                   </span>
                   <span className="font-medium">
-                    {formatPrice(resolveProductPrice(item.price) * item.quantity)}
+                    {formatPrice(resolveQuoteLinePrice(item.price) * item.quantity)}
                   </span>
                 </li>
               ))}

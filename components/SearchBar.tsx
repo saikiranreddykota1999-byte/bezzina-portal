@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2, Search } from 'lucide-react';
 import { quickSearchProductsAction } from '@/actions/search';
-import { formatPrice, resolveProductPrice } from '@/lib/pricing';
+import { formatCataloguePrice, formatAvailabilityLabel } from '@/lib/pricing';
 import type { ProductSearchHit } from '@/lib/product-search';
 
 type SearchBarVariant = 'hero' | 'default' | 'header';
@@ -226,7 +226,7 @@ export function SearchBar({
           {!loading && !error && results.length > 0 && (
             <ul>
               {results.map((product) => {
-                const price = resolveProductPrice(product.price);
+                const priceLabel = formatCataloguePrice(product.price) ?? formatAvailabilityLabel(product.availability, product.in_stock);
                 return (
                   <li key={product.id} role="option" aria-selected={false}>
                     <Link
@@ -254,7 +254,7 @@ export function SearchBar({
                         <p className={`truncate text-xs ${styles.muted}`}>{product.sku}</p>
                       </div>
                       <p className="shrink-0 text-sm font-semibold text-orange-500">
-                        {formatPrice(price)}
+                        {priceLabel}
                       </p>
                     </Link>
                   </li>

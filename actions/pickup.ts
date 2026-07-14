@@ -11,7 +11,7 @@ import {
   updatePickupStatusSchema,
 } from '@/lib/validators/pickup';
 import { calculateOrderTotals } from '@/lib/checkout';
-import { DEFAULT_PRODUCT_PRICE, resolveProductPrice } from '@/lib/pricing';
+import { DEFAULT_PRODUCT_PRICE, resolveQuoteLinePrice } from '@/lib/pricing';
 import { isStripeEnabled } from '@/lib/stripe/config';
 import { isDemoPaymentAllowed } from '@/lib/payment';
 import {
@@ -134,7 +134,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
     }
 
     const priceMap = new Map(
-      (dbProducts ?? []).map((product) => [product.id, resolveProductPrice(product.price)]),
+      (dbProducts ?? []).map((product) => [product.id, resolveQuoteLinePrice(product.price)]),
     );
 
     const validatedItems = payload.items.map((item) => ({

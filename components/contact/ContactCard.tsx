@@ -1,7 +1,6 @@
 'use client';
 
 import type { ComponentType } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   ClipboardList,
@@ -10,6 +9,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatedLogo } from '@/components/brand/AnimatedLogo';
 import { FacebookIcon } from '@/components/icons/facebook';
 import { BusinessHours } from '@/components/contact/BusinessHours';
 import { brandClasses } from '@/lib/brand';
@@ -17,7 +17,6 @@ import { defaultTransition } from '@/lib/motion';
 
 type Props = {
   companyName: string;
-  logoUrl: string;
   addressLines: string[];
   phone1: string;
   phone2: string;
@@ -73,7 +72,6 @@ function ActionButton({
 
 export function ContactCard({
   companyName,
-  logoUrl,
   addressLines,
   phone1,
   phone2,
@@ -99,14 +97,7 @@ export function ContactCard({
       aria-labelledby="contact-card-title"
     >
       <div className="flex items-center gap-4">
-        <Image
-          src={logoUrl}
-          alt=""
-          width={56}
-          height={56}
-          className="h-14 w-14 rounded-xl object-contain"
-          priority
-        />
+        <AnimatedLogo variant="contact" hoverable priority />
         <div>
           <h2 id="contact-card-title" className="text-xl font-bold text-[#071B35]">
             {companyName}

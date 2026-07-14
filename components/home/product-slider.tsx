@@ -9,7 +9,7 @@ import {
   type PanInfo,
 } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatPrice, resolveProductPrice } from '@/lib/pricing';
+import { formatAvailabilityLabel } from '@/lib/pricing';
 import { defaultTransition } from '@/lib/motion';
 import type { Product } from '@/types/product';
 
@@ -48,7 +48,7 @@ function chunkProducts(products: Product[], size: number): Product[][] {
 }
 
 function SlideCard({ product, isActive }: { product: Product; isActive: boolean }) {
-  const unitPrice = resolveProductPrice(product.price);
+  const availabilityLabel = formatAvailabilityLabel(product.availability, product.in_stock);
   const reduceMotion = useReducedMotion();
 
   return (
@@ -83,8 +83,7 @@ function SlideCard({ product, isActive }: { product: Product; isActive: boolean 
             {product.name}
           </h3>
           <p className="mt-auto pt-3 text-sm font-semibold text-orange-600">
-            {formatPrice(unitPrice)}
-            <span className="text-xs font-normal text-slate-500"> / {product.unit}</span>
+            {availabilityLabel}
           </p>
         </div>
       </Link>

@@ -57,7 +57,7 @@ export function ProductForm({ categoryTree, product }: Props) {
   const [slug, setSlug] = useState(product?.slug ?? '');
   const [description, setDescription] = useState(product?.description ?? '');
   const [categoryId, setCategoryId] = useState(product?.category_id ?? '');
-  const [price, setPrice] = useState(product?.price?.toString() ?? '1.00');
+  const [price, setPrice] = useState(product?.price?.toString() ?? '');
   const [unit, setUnit] = useState(product?.unit ?? 'each');
   const [inStock, setInStock] = useState(product?.in_stock ?? true);
   const [stockQty, setStockQty] = useState(product?.stock_quantity?.toString() ?? '0');
@@ -119,7 +119,7 @@ export function ProductForm({ categoryTree, product }: Props) {
       description,
       long_description: longDescription,
       category_id: categoryId,
-      price: price ? Number(price) : 1.0,
+      price: price ? Number(price) : null,
       unit,
       in_stock: inStock,
       stock_quantity: Number(stockQty) || 0,
@@ -252,7 +252,7 @@ export function ProductForm({ categoryTree, product }: Props) {
       </AdminCollapsible>
 
       <AdminCollapsible title="Variants" defaultOpen={false}>
-        <ProductVariantsSection variants={variants} onChange={setVariants} />
+        <ProductVariantsSection variants={variants} onChange={setVariants} productSku={sku} />
       </AdminCollapsible>
 
       <AdminCollapsible title="Feature Flags" defaultOpen={false}>

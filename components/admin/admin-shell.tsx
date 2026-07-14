@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -16,8 +15,10 @@ import { filterNavByRole } from '@/lib/auth/permissions';
 import { company } from '@/config/company';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AdminNotificationBell } from '@/components/admin/admin-notification-bell';
-import { AdminWatermark } from '@/components/admin/admin-watermark';
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb';
+import { AdminBrand } from '@/components/brand/AdminBrand';
+import { AnimatedLogo } from '@/components/brand/AnimatedLogo';
+import { BrandBackground } from '@/components/brand/BrandBackground';
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, Users, Package, FolderTree, FileText, Briefcase, UserCheck,
@@ -63,7 +64,7 @@ function AdminShellInner({ children, userRole, userName, unreadNotifications = 0
 
   return (
     <div className="relative flex min-h-screen" data-admin-portal>
-      <AdminWatermark />
+      <BrandBackground />
 
       {mobileOpen && (
         <button
@@ -79,20 +80,8 @@ function AdminShellInner({ children, userRole, userName, unreadNotifications = 0
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         } ${collapsed ? 'admin-sidebar--collapsed w-20' : 'w-[var(--admin-sidebar-width)]'}`}
       >
-        <div className="flex items-center gap-3 border-b border-white/10 px-4 py-5">
-          <Image
-            src={company.logoUrl}
-            alt={company.name}
-            width={40}
-            height={40}
-            className="h-10 w-10 shrink-0 rounded-lg bg-white p-1"
-          />
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-white">{company.shortName}</p>
-              <p className="truncate text-xs text-white/60">Admin Portal</p>
-            </div>
-          )}
+        <div className={`border-b border-white/10 px-4 py-5 ${collapsed ? 'px-2' : ''}`}>
+          <AdminBrand collapsed={collapsed} />
         </div>
 
         {!collapsed && (
@@ -102,7 +91,7 @@ function AdminShellInner({ children, userRole, userName, unreadNotifications = 0
           </div>
         )}
 
-        <nav className="flex-1 overflow-y-auto p-3">
+        <nav className="flex-1 overflow-y-auto p-3" aria-label="Admin navigation">
           {filteredNav.map((item) => {
             const Icon = ICONS[item.icon] ?? LayoutDashboard;
             const active =
@@ -148,7 +137,7 @@ function AdminShellInner({ children, userRole, userName, unreadNotifications = 0
       </aside>
 
       <div className="admin-content flex min-h-screen flex-1 flex-col">
-        <header className="admin-header flex items-center justify-between gap-4 px-4 lg:px-6">
+        <header className="admin-header admin-header--glass flex items-center justify-between gap-4 px-4 lg:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button
               type="button"
@@ -159,7 +148,15 @@ function AdminShellInner({ children, userRole, userName, unreadNotifications = 0
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
-            <div className="relative hidden max-w-md flex-1 md:block">
+            <div className="hidden items-center gap-3 sm:flex">
+              <AnimatedLogo variant="admin-topbar" hoverable />
+              <div className="hidden min-w-0 lg:block">
+                <p className="truncate text-sm font-bold text-[var(--admin-navy)]">{company.shortName}</p>
+                <p className="truncate text-xs text-[var(--admin-text-muted)]">Admin Management Portal</p>
+              </div>
+            </div>
+
+            <div className="relative hidden max-w-md flex-1 md:block lg:ml-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-text-muted)]" />
               <input
                 type="search"
@@ -191,7 +188,7 @@ function AdminShellInner({ children, userRole, userName, unreadNotifications = 0
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="flex-1 px-4 py-6 lg:px-8 lg:py-8"
+          className="relative z-[1] flex-1 px-4 py-6 lg:px-8 lg:py-8"
         >
           <AdminBreadcrumb />
           {children}

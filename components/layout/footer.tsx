@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { company } from '@/config/company';
 import { navigation } from '@/config/navigation';
 import { FacebookIcon } from '@/components/icons/facebook';
@@ -31,7 +32,16 @@ export async function Footer() {
     <footer className="site-chrome border-t border-slate-200 bg-slate-950 text-slate-200">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:px-8 xl:grid-cols-4">
         <section aria-labelledby="footer-company">
-          <h2 id="footer-company" className="text-lg font-semibold text-white">
+          <Link href="/" className="inline-flex rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8A106] focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
+            <Image
+              src={company.logoUrl}
+              alt=""
+              width={80}
+              height={80}
+              className="h-20 w-20 object-contain"
+            />
+          </Link>
+          <h2 id="footer-company" className="mt-4 text-lg font-semibold text-white">
             {settings.name ?? company.name}
           </h2>
           <p className="mt-3 max-w-sm text-sm leading-6 text-slate-300">

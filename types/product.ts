@@ -190,6 +190,13 @@ export type ProductFilters = {
   inStockOnly?: boolean;
   material?: string;
   standard?: string;
+  availability?: string;
+  marineGrade?: boolean;
+  industrialGrade?: boolean;
+  featured?: boolean;
+  fastSelling?: boolean;
+  newArrival?: boolean;
+  recentlyAdded?: boolean;
   sort?: SortOption;
   page?: number;
   pageSize?: number;

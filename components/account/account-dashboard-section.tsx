@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { AccountSessionError } from '@/components/auth/account-session-error';

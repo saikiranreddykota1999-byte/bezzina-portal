@@ -1,5 +1,5 @@
 import { company } from '@/config/company';
-import { formatPrice, resolveProductPrice } from '@/lib/pricing';
+import { formatCataloguePrice } from '@/lib/pricing';
 import type { QuoteCartItem } from '@/types/quote';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim() ?? '';
@@ -26,7 +26,7 @@ export async function sendQuoteConfirmationEmail(
 
   const itemLines = input.items.map(
     (item) =>
-      `• ${item.name} (${item.sku}) — Qty ${item.quantity} ${item.unit} — ${formatPrice(resolveProductPrice(item.price))}`,
+      `• ${item.name} (${item.sku}) — Qty ${item.quantity} ${item.unit} — ${formatCataloguePrice(item.price) ?? 'Quote on request'}`,
   );
 
   const subject = `Quote request received — ${input.reference}`;

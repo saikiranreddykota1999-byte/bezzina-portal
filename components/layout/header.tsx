@@ -1,23 +1,23 @@
 'use client';
 
-import Link from "next/link";
-import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ShoppingCart, User, ClipboardList, Phone } from "lucide-react";
-import { navigation } from "@/config/navigation";
-import { company } from "@/config/company";
-import { brandClasses } from "@/lib/brand";
-import { isActivePath } from "@/lib/navigation";
-import { useCart } from "@/context/cart-context";
-import { useWishlist } from "@/context/wishlist-context";
-import { useQuoteCart } from "@/context/quote-cart-context";
-import { QuoteCartDrawer } from "@/components/quote/quote-cart-drawer";
-import { SearchBar } from "@/components/SearchBar";
-import { MobileNav } from "./mobile-nav";
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Heart, ShoppingCart, User, ClipboardList, Phone } from 'lucide-react';
+import { navigation } from '@/config/navigation';
+import { company } from '@/config/company';
+import { brandClasses } from '@/lib/brand';
+import { isActivePath } from '@/lib/navigation';
+import { useCart } from '@/context/cart-context';
+import { useWishlist } from '@/context/wishlist-context';
+import { useQuoteCart } from '@/context/quote-cart-context';
+import { QuoteCartDrawer } from '@/components/quote/quote-cart-drawer';
+import { SearchBar } from '@/components/SearchBar';
+import { AnimatedLogo } from '@/components/brand/AnimatedLogo';
+import { MobileNav } from './mobile-nav';
 
-const NAV_EXCLUDED = new Set(["/quote", "/search"]);
+const NAV_EXCLUDED = new Set(['/quote', '/search']);
 
 export function Header() {
   const pathname = usePathname();
@@ -31,8 +31,8 @@ export function Header() {
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 8);
     onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const closeMobileNav = () => setIsMobileOpen(false);
@@ -43,35 +43,26 @@ export function Header() {
   );
 
   const quoteLink = useMemo(
-    () => navigation.find((item) => item.href === "/quote"),
+    () => navigation.find((item) => item.href === '/quote'),
     [],
   );
 
   return (
     <header
       className={[
-        "site-chrome sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur transition-shadow",
-        isScrolled ? "shadow-sm" : "shadow-none",
-      ].join(" ")}
+        'site-chrome sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur transition-shadow',
+        isScrolled ? 'shadow-md shadow-[#0B3D91]/5' : 'shadow-none',
+      ].join(' ')}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
-        <Link
+      <div className="mx-auto flex h-[4.25rem] max-w-7xl items-center gap-4 px-4 sm:gap-5 sm:px-6 lg:h-[5rem] lg:px-8">
+        <AnimatedLogo
+          variant="header-desktop"
           href="/"
-          className="flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] sm:gap-3"
-          aria-label={`${company.name} home`}
-        >
-          <Image
-            src={company.logoUrl}
-            alt=""
-            width={40}
-            height={40}
-            className="h-10 w-10 shrink-0 rounded-lg object-contain"
-            priority
-          />
-          <span className="hidden max-w-[11rem] truncate text-sm font-semibold leading-tight text-slate-900 md:block lg:max-w-[14rem]">
-            {company.name}
-          </span>
-        </Link>
+          showCompanyName
+          hoverable
+          priority
+          companyNameClassName="hidden md:block max-w-[11rem] lg:max-w-[15rem]"
+        />
 
         <div className="hidden min-w-0 flex-1 md:block lg:max-w-xs xl:max-w-sm">
           <SearchBar variant="header" placeholder="Search products…" className="w-full" />
@@ -79,7 +70,7 @@ export function Header() {
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
           <a
-            href={`tel:${company.contact.phone1.replace(/\s/g, "")}`}
+            href={`tel:${company.contact.phone1.replace(/\s/g, '')}`}
             className="hidden items-center gap-1.5 rounded-md p-2 text-slate-700 transition hover:bg-slate-50 2xl:inline-flex"
             aria-label={`Call ${company.contact.phone1}`}
           >
@@ -150,10 +141,10 @@ export function Header() {
             className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-800 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] xl:hidden"
             aria-expanded={isMobileOpen}
             aria-controls="mobile-navigation"
-            aria-label={isMobileOpen ? "Close menu" : "Open menu"}
+            aria-label={isMobileOpen ? 'Close menu' : 'Open menu'}
             onClick={() => setIsMobileOpen((prev) => !prev)}
           >
-            <span className="sr-only">{isMobileOpen ? "Close menu" : "Open menu"}</span>
+            <span className="sr-only">{isMobileOpen ? 'Close menu' : 'Open menu'}</span>
             <div className="flex flex-col gap-1.5">
               <span className="block h-0.5 w-5 bg-current" />
               <span className="block h-0.5 w-5 bg-current" />
@@ -174,11 +165,11 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                aria-current={active ? "page" : undefined}
+                aria-current={active ? 'page' : undefined}
                 className={[
-                  "whitespace-nowrap rounded-md px-1 py-1 text-sm font-medium transition-colors",
-                  active ? "text-[#0B3D91]" : "text-slate-700 hover:text-slate-900",
-                ].join(" ")}
+                  'whitespace-nowrap rounded-md px-1 py-1 text-sm font-medium transition-colors',
+                  active ? 'text-[#0B3D91]' : 'text-slate-700 hover:text-slate-900',
+                ].join(' ')}
               >
                 {item.title}
               </Link>
@@ -191,7 +182,7 @@ export function Header() {
         {isMobileOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
             className="xl:hidden"

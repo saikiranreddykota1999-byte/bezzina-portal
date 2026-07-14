@@ -102,6 +102,13 @@ export function filterProducts(
     inStockOnly,
     material,
     standard,
+    availability = 'all',
+    marineGrade,
+    industrialGrade,
+    featured,
+    fastSelling,
+    newArrival,
+    recentlyAdded,
     sort = 'name-asc',
     page = 1,
     pageSize = 24,
@@ -115,6 +122,13 @@ export function filterProducts(
     if (inStockOnly && !p.in_stock) return false;
     if (material && material !== 'all' && p.material !== material) return false;
     if (standard && standard !== 'all' && p.standard !== standard) return false;
+    if (availability !== 'all' && p.availability !== availability) return false;
+    if (marineGrade && !p.marine_grade) return false;
+    if (industrialGrade && !p.industrial_grade) return false;
+    if (featured && !p.featured) return false;
+    if (fastSelling && !p.fast_selling) return false;
+    if (newArrival && !p.new_arrival) return false;
+    if (recentlyAdded && !p.recently_added) return false;
 
     if (q) {
       const haystack = [
@@ -127,6 +141,7 @@ export function filterProducts(
         p.search_keywords,
         p.brand?.name,
         ...(p.tags ?? []),
+        ...(p.variants ?? []).flatMap((variant) => [variant.name, variant.sku, variant.specification]),
         ...(Array.isArray(p.technical_specs)
           ? p.technical_specs.map((s) => `${s.property} ${s.value}`)
           : p.technical_specs

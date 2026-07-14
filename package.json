@@ -18,7 +18,8 @@
     "e2e:ui": "playwright test --ui",
     "seed": "tsx scripts/seed-catalog.ts",
     "seed:catalogue": "tsx scripts/seed-marine-industrial.ts",
-    "seed:catalogue:sql": "tsx scripts/generate-catalogue-sql.ts"
+    "seed:catalogue:sql": "tsx scripts/generate-catalogue-sql.ts",
+    "import:tools": "tsx scripts/import-industrial-tools.ts"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.7.0",

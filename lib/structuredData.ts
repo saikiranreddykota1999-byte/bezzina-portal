@@ -112,7 +112,7 @@ export function getProductSchema(product: Product) {
   const price = resolveProductPrice(product.price);
   const productUrl = `${getSiteUrl()}/products/${product.slug}`;
 
-  return {
+  const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
@@ -125,7 +125,10 @@ export function getProductSchema(product: Product) {
       '@type': 'Brand',
       name: product.brand?.name ?? company.name,
     },
-    offers: {
+  };
+
+  if (price != null) {
+    schema.offers = {
       '@type': 'Offer',
       url: productUrl,
       priceCurrency: 'EUR',
@@ -135,8 +138,10 @@ export function getProductSchema(product: Product) {
         '@type': 'Organization',
         name: company.name,
       },
-    },
-  };
+    };
+  }
+
+  return schema;
 }
 
 export function getBreadcrumbSchema(items: BreadcrumbItem[], baseUrl = getSiteUrl()) {

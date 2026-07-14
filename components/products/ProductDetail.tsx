@@ -1,19 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart, ClipboardList, FileText, ZoomIn, X } from 'lucide-react';
-import { Product, INVENTORY_STATUS_OPTIONS, type TechnicalSpecRow } from '@/types/product';
+import { ClipboardList, FileText, MessageCircle, ZoomIn, X } from 'lucide-react';
+import { Product, type ProductVariant, type TechnicalSpecRow } from '@/types/product';
 import { buildProductBreadcrumbs } from '@/lib/breadcrumbs';
-import { useCart } from '@/context/cart-context';
+import { company } from '@/config/company';
 import { useQuoteCart } from '@/context/quote-cart-context';
-import { formatPrice, resolveProductPrice } from '@/lib/pricing';
+import { formatAvailabilityLabel } from '@/lib/pricing';
+import { ProductVariantSelector } from '@/components/products/product-variant-selector';
 
 type SpecRow = { label: string; value: string };
 
-function buildSpecs(product: Product): SpecRow[] {
-  const specs: SpecRow[] = [{ label: 'SKU', value: product.sku }];
+function buildSpecs(product: Product, selectedVariant?: ProductVariant | null): SpecRow[] {
+  const specs: SpecRow[] = [{ label: 'SKU', value: selectedVariant?.sku ?? product.sku }];
   if (product.category?.name) specs.push({ label: 'Category', value: product.category.name });
 
   if (Array.isArray(product.technical_specs)) {
@@ -24,6 +25,7 @@ function buildSpecs(product: Product): SpecRow[] {
     Object.entries(product.technical_specs).forEach(([k, v]) => specs.push({ label: k, value: String(v) }));
   }
 
+  if (selectedVariant?.specification) specs.push({ label: 'Selected Size', value: selectedVariant.specification });
   if (product.material) specs.push({ label: 'Material', value: product.material });
   if (product.standard) specs.push({ label: 'Standard', value: product.standard });
   if (product.thread_type) specs.push({ label: 'Thread', value: product.thread_type });
@@ -35,28 +37,40 @@ function buildSpecs(product: Product): SpecRow[] {
   return specs;
 }
 
-function inventoryLabel(status?: string | null) {
-  return INVENTORY_STATUS_OPTIONS.find((o) => o.value === status)?.label ?? 'Available';
+function inventoryLabel(status?: string | null, inStock?: boolean) {
+  return formatAvailabilityLabel(status, inStock);
 }
 
 export default function ProductDetail({ product }: { product: Product }) {
-  const { addItem } = useCart();
   const { addItem: addToQuote } = useQuoteCart();
-  const [added, setAdded] = useState(false);
   const [quoted, setQuoted] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
-  const unitPrice = resolveProductPrice(product.price);
-  const images =
-    product.images && product.images.length > 0
-      ? product.images
-      : product.image_url
-        ? [{ id: 'primary', url: product.image_url, thumbnail_url: null, product_id: product.id, sort_order: 0, is_primary: true }]
-        : [];
+  const variants = product.variants ?? [];
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(variants[0] ?? null);
+
+  const activeAvailability = selectedVariant?.availability ?? product.availability;
+  const activeInStock = selectedVariant?.in_stock ?? product.in_stock;
+  const availabilityLabel = inventoryLabel(activeAvailability, activeInStock);
+  const isAvailable = activeAvailability === 'available' || (activeInStock && activeAvailability !== 'out_of_stock');
+
+  const images = useMemo(() => {
+    if (selectedVariant?.image_url) {
+      return [{ id: 'variant', url: selectedVariant.image_url, thumbnail_url: null, product_id: product.id, sort_order: 0, is_primary: true }];
+    }
+    if (product.images && product.images.length > 0) return product.images;
+    if (product.image_url) {
+      return [{ id: 'primary', url: product.image_url, thumbnail_url: null, product_id: product.id, sort_order: 0, is_primary: true }];
+    }
+    return [];
+  }, [product, selectedVariant]);
 
   const [activeImage, setActiveImage] = useState(images[0]?.url ?? null);
-  const specs = buildSpecs(product);
+  const specs = buildSpecs(product, selectedVariant);
   const breadcrumbs = buildProductBreadcrumbs(product);
-  const availabilityLabel = inventoryLabel(product.availability);
+  const whatsapp = company.contact.whatsapp?.replace(/\D/g, '') ?? '';
+  const whatsappMessage = encodeURIComponent(
+    `Quote request: ${product.name}${selectedVariant ? ` (${selectedVariant.name})` : ''} — SKU ${selectedVariant?.sku ?? product.sku}`,
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
@@ -115,50 +129,72 @@ export default function ProductDetail({ product }: { product: Product }) {
         </div>
 
         <div>
-          <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">{product.sku}</p>
+          <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">
+            {selectedVariant?.sku ?? product.sku}
+          </p>
           <h1 className="text-3xl font-bold text-slate-900">{product.name}</h1>
           {product.description && <p className="mt-4 leading-relaxed text-slate-700">{product.description}</p>}
+          {product.long_description && (
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">{product.long_description}</p>
+          )}
 
           <div className="mt-6 flex items-center gap-3">
-            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${product.in_stock ? 'bg-green-100 text-green-800' : 'bg-slate-900 text-white'}`}>
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                isAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+              }`}
+            >
               {availabilityLabel}
             </span>
-            {product.stock_quantity != null && product.in_stock && (
-              <span className="text-sm text-slate-600">{product.stock_quantity} available</span>
-            )}
           </div>
 
-          <p className="mt-6 text-3xl font-bold text-slate-900">
-            {formatPrice(unitPrice)}
-            <span className="text-base font-normal text-slate-600"> / {product.unit}</span>
-          </p>
+          <ProductVariantSelector
+            variants={variants}
+            selectedId={selectedVariant?.id ?? null}
+            onSelect={(variant) => {
+              setSelectedVariant(variant);
+              if (variant.image_url) setActiveImage(variant.image_url);
+            }}
+          />
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              disabled={!product.in_stock}
-              onClick={() => {
-                addItem({ productId: product.id, slug: product.slug, name: product.name, sku: product.sku, price: unitPrice, unit: product.unit, image_url: product.image_url });
-                setAdded(true);
-                setTimeout(() => setAdded(false), 2000);
-              }}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+            <Link
+              href="/quote"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0B3D91] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#09407a]"
             >
-              <ShoppingCart className="h-4 w-4" />
-              {added ? 'Added to cart' : 'Add to cart'}
-            </button>
+              Request Quote
+            </Link>
             <button
               type="button"
               onClick={() => {
-                addToQuote({ productId: product.id, slug: product.slug, name: product.name, sku: product.sku, price: unitPrice, unit: product.unit, image_url: product.image_url });
+                addToQuote({
+                  productId: product.id,
+                  slug: product.slug,
+                  name: `${product.name}${selectedVariant ? ` — ${selectedVariant.name}` : ''}`,
+                  sku: selectedVariant?.sku ?? product.sku,
+                  price: 0,
+                  unit: selectedVariant?.unit ?? product.unit,
+                  image_url: selectedVariant?.image_url ?? product.image_url,
+                });
                 setQuoted(true);
                 setTimeout(() => setQuoted(false), 2000);
               }}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
             >
               <ClipboardList className="h-4 w-4" />
-              {quoted ? 'Added to quote' : 'Add to quote'}
+              {quoted ? 'Added to quote list' : 'Add to quote list'}
             </button>
+            {whatsapp ? (
+              <a
+                href={`https://wa.me/${whatsapp}?text=${whatsappMessage}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-6 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+              >
+                <MessageCircle className="h-4 w-4" />
+                WhatsApp Quote
+              </a>
+            ) : null}
           </div>
 
           {(product.documents?.length ?? 0) > 0 && (

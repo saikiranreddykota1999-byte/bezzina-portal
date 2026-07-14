@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { requireAuthenticatedUser } from '@/lib/auth/server-session';
 import { calculateOrderTotals } from '@/lib/checkout';
-import { DEFAULT_PRODUCT_PRICE, resolveProductPrice } from '@/lib/pricing';
+import { DEFAULT_PRODUCT_PRICE, resolveQuoteLinePrice } from '@/lib/pricing';
 import {
   isStripeEnabled,
   STRIPE_CURRENCY,
@@ -64,7 +64,7 @@ export async function createPaymentIntentAction(
     }
 
     const priceMap = new Map(
-      (dbProducts ?? []).map((product) => [product.id, resolveProductPrice(product.price)]),
+      (dbProducts ?? []).map((product) => [product.id, resolveQuoteLinePrice(product.price)]),
     );
 
     const validatedItems = items.map((item) => ({

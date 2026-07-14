@@ -20,7 +20,7 @@ import {
   type CheckoutPaymentMode,
 } from '@/components/checkout/payment-method-selector';
 import { calculateOrderTotals, formatPickupDateTime } from '@/lib/checkout';
-import { formatPrice, resolveProductPrice } from '@/lib/pricing';
+import { formatPrice, resolveQuoteLinePrice } from '@/lib/pricing';
 import { isStripeClientEnabled } from '@/lib/stripe/client';
 import { RippleButton } from '@/components/ui/ripple-button';
 import type { PlaceOrderInput } from '@/lib/validators/pickup';
@@ -50,7 +50,7 @@ export function PaymentCheckout() {
   const useOnlinePayment = !isPickup || effectivePaymentMode === 'online';
   const isCashOnPickup = isPickup && effectivePaymentMode === 'cash_on_pickup';
   const subtotal = items.reduce(
-    (sum, i) => sum + resolveProductPrice(i.price) * i.quantity,
+    (sum, i) => sum + resolveQuoteLinePrice(i.price) * i.quantity,
     0,
   );
   const { shipping, total } = calculateOrderTotals(subtotal, fulfillmentMethod, items.length);
@@ -63,7 +63,7 @@ export function PaymentCheckout() {
         slug: item.slug,
         name: item.name,
         sku: item.sku,
-        price: resolveProductPrice(item.price),
+        price: resolveQuoteLinePrice(item.price),
         unit: item.unit,
         quantity: item.quantity,
       })),
@@ -99,8 +99,11 @@ export function PaymentCheckout() {
   );
 
   useEffect(() => {
-    setPaymentMode(fulfillmentMethod === 'store_pickup' ? 'cash_on_pickup' : 'online');
-    setError('');
+    const timer = setTimeout(() => {
+      setPaymentMode(fulfillmentMethod === 'store_pickup' ? 'cash_on_pickup' : 'online');
+      setError('');
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fulfillmentMethod]);
 
   useEffect(() => {
@@ -470,7 +473,7 @@ export function PaymentCheckout() {
                     {item.quantity}× {item.name}
                   </span>
                   <span className="shrink-0">
-                    {formatPrice(resolveProductPrice(item.price) * item.quantity)}
+                    {formatPrice(resolveQuoteLinePrice(item.price) * item.quantity)}
                   </span>
                 </li>
               ))}

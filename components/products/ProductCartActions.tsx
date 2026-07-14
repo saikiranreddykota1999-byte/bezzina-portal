@@ -1,10 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { ClipboardList, ShoppingCart } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useCart } from '@/context/cart-context';
-import { resolveProductPrice } from '@/lib/pricing';
+import { isQuoteOnlyProduct, resolveQuoteLinePrice } from '@/lib/pricing';
 
 type Props = {
   product: Pick<
@@ -17,12 +18,25 @@ type Props = {
 export function ProductCartActions({ product, layout = 'card' }: Props) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
-  const unitPrice = resolveProductPrice(product.price);
+  const quoteOnly = isQuoteOnlyProduct(product.price);
+  const unitPrice = resolveQuoteLinePrice(product.price);
 
   const btnBase =
     layout === 'detail'
       ? 'inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition sm:w-auto'
       : 'inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-semibold transition';
+
+  if (quoteOnly) {
+    return (
+      <Link
+        href="/quote"
+        className={`${btnBase} bg-[#0B3D91] text-white hover:bg-[#09407a]`}
+      >
+        <ClipboardList className="h-4 w-4" />
+        Request Quote
+      </Link>
+    );
+  }
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();

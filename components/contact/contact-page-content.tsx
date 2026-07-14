@@ -12,7 +12,6 @@ import { defaultTransition } from '@/lib/motion';
 
 type Props = {
   companyName: string;
-  logoUrl: string;
   addressLines: string[];
   phone1: string;
   phone2: string;
@@ -28,7 +27,6 @@ type Props = {
 
 export function ContactPageContent({
   companyName,
-  logoUrl,
   addressLines,
   phone1,
   phone2,
@@ -77,7 +75,6 @@ export function ContactPageContent({
           <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
             <ContactCard
               companyName={companyName}
-              logoUrl={logoUrl}
               addressLines={addressLines}
               phone1={phone1}
               phone2={phone2}

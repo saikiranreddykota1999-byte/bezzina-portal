@@ -4,13 +4,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/cart-context';
 import { RippleButton } from '@/components/ui/ripple-button';
-import { formatPrice, resolveProductPrice } from '@/lib/pricing';
+import { formatPrice, resolveQuoteLinePrice } from '@/lib/pricing';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart } = useCart();
 
   const subtotal = items.reduce(
-    (sum, item) => sum + resolveProductPrice(item.price) * item.quantity,
+    (sum, item) => sum + resolveQuoteLinePrice(item.price) * item.quantity,
     0,
   );
 
@@ -60,7 +60,7 @@ export default function CartPage() {
               </div>
             </div>
             <p className="font-semibold text-slate-900">
-              {formatPrice(resolveProductPrice(item.price) * item.quantity)}
+              {formatPrice(resolveQuoteLinePrice(item.price) * item.quantity)}
             </p>
           </li>
         ))}

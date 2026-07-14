@@ -74,14 +74,14 @@ export function TaxInvoiceDocument({ order }: Props) {
         <div className="invoice-header bg-[#0b1f3a] px-6 py-5 text-white print:bg-[#0b1f3a]">
           <div className="inv-brand flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="inv-logo-box flex h-14 w-14 items-center justify-center rounded-md bg-white p-2">
+              <div className="inv-logo-box flex h-16 w-16 items-center justify-center rounded-md bg-white p-2 sm:h-[4.5rem] sm:w-[4.5rem]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={company.logoUrl}
                   alt={`${company.name} logo`}
                   width={120}
                   height={48}
-                  className="h-10 w-auto object-contain"
+                  className="h-12 w-auto object-contain sm:h-14"
                 />
               </div>
               <div>

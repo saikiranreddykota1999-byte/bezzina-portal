@@ -219,8 +219,53 @@ export default function ProductCatalogue({
               onChange={(e) => navigate({ inStockOnly: e.target.checked, page: 1 })}
               className="rounded border-slate-300"
             />
-            In stock only
+            Available only
           </label>
+
+          <FilterGroup label="Availability">
+            <select
+              value={filters.availability}
+              onChange={(e) => navigate({ availability: e.target.value, page: 1 })}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+            >
+              <option value="all">All statuses</option>
+              <option value="available">Available</option>
+              <option value="special_order">Special Order</option>
+              <option value="made_to_order">Made To Order</option>
+              <option value="out_of_stock">Request Availability</option>
+            </select>
+          </FilterGroup>
+
+          <FilterToggle
+            label="Marine Grade"
+            checked={filters.marineGrade}
+            onChange={(checked) => navigate({ marineGrade: checked, page: 1 })}
+          />
+          <FilterToggle
+            label="Industrial Grade"
+            checked={filters.industrialGrade}
+            onChange={(checked) => navigate({ industrialGrade: checked, page: 1 })}
+          />
+          <FilterToggle
+            label="Featured"
+            checked={filters.featured}
+            onChange={(checked) => navigate({ featured: checked, page: 1 })}
+          />
+          <FilterToggle
+            label="Fast Selling"
+            checked={filters.fastSelling}
+            onChange={(checked) => navigate({ fastSelling: checked, page: 1 })}
+          />
+          <FilterToggle
+            label="New Arrival"
+            checked={filters.newArrival}
+            onChange={(checked) => navigate({ newArrival: checked, page: 1 })}
+          />
+          <FilterToggle
+            label="Recently Added"
+            checked={filters.recentlyAdded}
+            onChange={(checked) => navigate({ recentlyAdded: checked, page: 1 })}
+          />
         </aside>
 
         <div>
@@ -277,5 +322,27 @@ function FilterGroup({ label, children }: { label: string; children: React.React
       </p>
       {children}
     </div>
+  );
+}
+
+function FilterToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-slate-700">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="rounded border-slate-300"
+      />
+      {label}
+    </label>
   );
 }

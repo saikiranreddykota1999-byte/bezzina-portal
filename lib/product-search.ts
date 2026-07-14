@@ -9,6 +9,8 @@ export type ProductSearchHit = {
   image_url: string | null;
   price: number | null;
   unit: string;
+  availability?: Product['availability'];
+  in_stock: boolean;
 };
 
 export function toProductSearchHit(product: Product): ProductSearchHit {
@@ -20,6 +22,8 @@ export function toProductSearchHit(product: Product): ProductSearchHit {
     image_url: product.image_url,
     price: product.price,
     unit: product.unit,
+    availability: product.availability,
+    in_stock: product.in_stock,
   };
 }
 

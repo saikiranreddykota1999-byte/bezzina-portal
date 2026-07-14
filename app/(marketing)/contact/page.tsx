@@ -82,7 +82,6 @@ export default async function ContactPage() {
       <JsonLd data={localBusinessSchema} />
       <ContactPageContent
         companyName={companySettings.name ?? company.name}
-        logoUrl={companySettings.logoUrl ?? company.logoUrl}
         addressLines={addressLines}
         phone1={company.contact.phone1}
         phone2={company.contact.phone2}

@@ -8,14 +8,15 @@ import { Product } from '@/types/product';
 import { LiftCard } from '@/components/motion/lift-card';
 import { useQuoteCart } from '@/context/quote-cart-context';
 import { useWishlist } from '@/context/wishlist-context';
-import { formatPrice, resolveProductPrice } from '@/lib/pricing';
+import { formatAvailabilityLabel } from '@/lib/pricing';
 import { ProductCartActions } from './ProductCartActions';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useQuoteCart();
   const { toggle, has } = useWishlist();
   const wished = has(product.id);
-  const unitPrice = resolveProductPrice(product.price);
+  const availabilityLabel = formatAvailabilityLabel(product.availability, product.in_stock);
+  const variantCount = product.variants?.length ?? 0;
 
   return (
     <LiftCard>
@@ -31,7 +32,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 slug: product.slug,
                 name: product.name,
                 sku: product.sku,
-                price: unitPrice,
+                price: 0,
                 image_url: product.image_url,
               });
             }}
@@ -49,7 +50,7 @@ export default function ProductCard({ product }: { product: Product }) {
                 slug: product.slug,
                 name: product.name,
                 sku: product.sku,
-                price: unitPrice,
+                price: 0,
                 unit: product.unit,
                 image_url: product.image_url,
               });
@@ -82,14 +83,12 @@ export default function ProductCard({ product }: { product: Product }) {
               </div>
             )}
 
-            {!product.in_stock && (
-              <span className="absolute left-2 top-2 rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white">
-                Out of stock
-              </span>
-            )}
-            {product.discount_percent != null && product.discount_percent > 0 && (
-              <span className="absolute bottom-2 left-2 rounded bg-orange-500 px-2 py-1 text-xs font-medium text-white">
-                -{product.discount_percent}%
+            <span className="absolute left-2 top-2 rounded bg-[#0B3D91] px-2 py-1 text-xs font-medium text-white">
+              {availabilityLabel}
+            </span>
+            {product.featured && (
+              <span className="absolute bottom-2 left-2 rounded bg-[#D8A106] px-2 py-1 text-xs font-medium text-slate-900">
+                Featured
               </span>
             )}
           </div>
@@ -103,13 +102,12 @@ export default function ProductCard({ product }: { product: Product }) {
             </h3>
 
             <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-slate-600">
-              {product.thread_type && <span>{product.thread_type}</span>}
               {product.material && <span>{product.material}</span>}
+              {variantCount > 0 && <span>{variantCount} sizes</span>}
             </div>
 
-            <p className="mt-3 font-semibold text-slate-900">
-              {formatPrice(unitPrice)}{' '}
-              <span className="text-xs font-normal text-slate-600">/ {product.unit}</span>
+            <p className="mt-3 text-sm font-semibold text-[#0B3D91]">
+              {availabilityLabel}
             </p>
           </div>
         </Link>
