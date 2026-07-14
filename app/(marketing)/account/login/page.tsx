@@ -25,7 +25,13 @@ export default async function LoginPage({ searchParams }: PageProps) {
   return (
     <LoginForm
       redirectPath={sanitizeRedirectPath(params.redirect)}
-      initialMode={params.mode === 'phone' ? 'phone-otp' : 'email-otp'}
+      initialMode={
+        params.mode === 'phone'
+          ? 'phone-otp'
+          : params.mode === 'password'
+            ? 'password'
+            : 'email-otp'
+      }
       authCallbackError={authCallbackError}
       authConfig={authConfig}
     />

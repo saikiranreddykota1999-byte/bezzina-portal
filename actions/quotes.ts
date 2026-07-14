@@ -98,27 +98,7 @@ export async function submitQuoteRequest(
   try {
     const session = await getAuthenticatedUser();
     const supabase = session.supabase;
-    const reference = generateQuoteReference();
     const customer = parsed.data;
-
-    const { data: quote, error: quoteError } = await supabase
-      .from('quote_requests')
-      .insert({
-        user_id: session.user?.id ?? null,
-        reference,
-        status: 'pending',
-        notes: notes?.trim() || null,
-        customer_notes: notes?.trim() || null,
-        channel: 'web',
-        customer_email: customer.email,
-        customer_name: customer.name,
-        customer_phone: customer.phone,
-        timeline: [{ status: 'pending', created_at: new Date().toISOString() }],
-      })
-      .select('id')
-      .single();
-
-    if (quoteError) return { success: false, error: quoteError.message };
 
     const productIds = items.map((item) => item.productId);
     const invalidId = productIds.find((id) => !productIdSchema.safeParse(id).success);
@@ -144,7 +124,6 @@ export async function submitQuoteRequest(
       }
 
       rows.push({
-        quote_request_id: quote.id,
         product_id: product.id,
         sku: product.sku,
         name: product.name,
@@ -155,9 +134,38 @@ export async function submitQuoteRequest(
       });
     }
 
-    const { error: itemsError } = await supabase.from('quote_request_items').insert(rows);
+    const reference = generateQuoteReference();
 
-    if (itemsError) return { success: false, error: itemsError.message };
+    const { data: quote, error: quoteError } = await supabase
+      .from('quote_requests')
+      .insert({
+        user_id: session.user?.id ?? null,
+        reference,
+        status: 'pending',
+        notes: notes?.trim() || null,
+        customer_notes: notes?.trim() || null,
+        channel: 'web',
+        customer_email: customer.email,
+        customer_name: customer.name,
+        customer_phone: customer.phone,
+        timeline: [{ status: 'pending', created_at: new Date().toISOString() }],
+      })
+      .select('id')
+      .single();
+
+    if (quoteError) return { success: false, error: quoteError.message };
+
+    const { error: itemsError } = await supabase.from('quote_request_items').insert(
+      rows.map((row) => ({
+        ...row,
+        quote_request_id: quote.id,
+      })),
+    );
+
+    if (itemsError) {
+      await supabase.from('quote_requests').delete().eq('id', quote.id);
+      return { success: false, error: itemsError.message };
+    }
 
     await notifyStaff(
       'quote_new',

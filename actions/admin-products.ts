@@ -106,6 +106,7 @@ export async function getAdminProducts(): Promise<ActionResult<Product[]>> {
     const { data, error } = await supabase
       .from('products')
       .select('*, category:categories(*)')
+      .is('deleted_at', null)
       .order('name', { ascending: true });
 
     if (error) return { success: false, error: error.message };

@@ -16,10 +16,11 @@ test.describe('Marketing pages', () => {
   });
 
   test('login page renders accessible form fields', async ({ page }) => {
-    await page.goto('/account/login');
+    await page.goto('/account/login?mode=password');
 
-    await expect(page.getByLabel('Email')).toBeVisible();
-    await expect(page.getByLabel('Password')).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+    const main = page.getByRole('main');
+    await expect(main.locator('#login-email')).toBeVisible();
+    await expect(main.locator('#login-password')).toBeVisible();
+    await expect(main.getByRole('button', { name: /sign in/i })).toBeVisible();
   });
 });

@@ -18,6 +18,7 @@ import {
   adminSubtextClass,
   adminTextareaClass,
 } from '@/components/admin/admin-styles';
+import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 
 type Props = {
   parents: Category[];
@@ -117,13 +118,32 @@ export function CategoryManager({ parents, subcategories }: Props) {
     });
   }
 
-  function handleDelete(id: string, name: string) {
-    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  function handleDelete(id: string) {
     setError('');
     startTransition(async () => {
       const result = await deleteCategory(id);
       if (!result.success) setError(result.error);
     });
+  }
+
+  function renderDeleteButton(id: string, name: string) {
+    return (
+      <ConfirmDestructiveDialog
+        title="Delete category?"
+        description={`"${name}" will be soft-deleted and hidden from the catalogue.`}
+        onConfirm={() => handleDelete(id)}
+      >
+        {(open) => (
+          <button
+            type="button"
+            onClick={open}
+            className="text-[var(--admin-danger)] hover:underline"
+          >
+            Delete
+          </button>
+        )}
+      </ConfirmDestructiveDialog>
+    );
   }
 
   return (
@@ -296,13 +316,7 @@ export function CategoryManager({ parents, subcategories }: Props) {
                   <button type="button" onClick={() => openEdit(parent)} className={adminLinkClass}>
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(parent.id, parent.name)}
-                    className="text-[var(--admin-danger)] hover:underline"
-                  >
-                    Delete
-                  </button>
+                  {renderDeleteButton(parent.id, parent.name)}
                 </div>
               </div>
             ) : (
@@ -319,13 +333,7 @@ export function CategoryManager({ parents, subcategories }: Props) {
                   <button type="button" onClick={() => openEdit(sub)} className={adminLinkClass}>
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(sub.id, sub.name)}
-                    className="text-[var(--admin-danger)] hover:underline"
-                  >
-                    Delete
-                  </button>
+                  {renderDeleteButton(sub.id, sub.name)}
                 </div>
               </div>
             ))}

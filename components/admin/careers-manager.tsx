@@ -20,6 +20,7 @@ import {
   adminSubtextClass,
   adminTextareaClass,
 } from '@/components/admin/admin-styles';
+import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 
 const emptyVacancy: Partial<Vacancy> = {
   title: '',
@@ -58,7 +59,6 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
   }
 
   function handleDelete(id: string) {
-    if (!confirm('Delete this vacancy?')) return;
     startTransition(async () => {
       const result = await deleteVacancy(id);
       if (!result.success) {
@@ -205,13 +205,21 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
               >
                 Edit
               </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(vacancy.id)}
-                className="text-sm text-[var(--admin-danger)] hover:underline"
+              <ConfirmDestructiveDialog
+                title="Delete vacancy?"
+                description={`"${vacancy.title}" will be removed from the careers page.`}
+                onConfirm={() => handleDelete(vacancy.id)}
               >
-                Delete
-              </button>
+                {(open) => (
+                  <button
+                    type="button"
+                    onClick={open}
+                    className="text-sm text-[var(--admin-danger)] hover:underline"
+                  >
+                    Delete
+                  </button>
+                )}
+              </ConfirmDestructiveDialog>
             </div>
           </li>
         ))}

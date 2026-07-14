@@ -113,6 +113,7 @@ export async function getAdminVacancies(): Promise<ActionResult<Vacancy[]>> {
     const { data, error } = await supabase
       .from('vacancies')
       .select('*')
+      .is('deleted_at', null)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false });
 

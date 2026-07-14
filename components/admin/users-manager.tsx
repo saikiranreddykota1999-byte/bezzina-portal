@@ -15,6 +15,7 @@ import {
   adminInputClass,
   adminSelectClass,
 } from '@/components/admin/admin-styles';
+import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 import type { UserRole } from '@/types/user';
 
 const ASSIGNABLE_ROLES: UserRole[] = [
@@ -82,20 +83,29 @@ export function UsersManager({ users }: Props) {
       key: 'id',
       header: 'Actions',
       render: (r) => (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => {
-            if (!confirm('Delete this user permanently?')) return;
+        <ConfirmDestructiveDialog
+          title="Delete user permanently?"
+          description={`This will permanently remove ${r.email} and cannot be undone.`}
+          requireTypedConfirm
+          typedConfirmText="DELETE"
+          onConfirm={async () => {
             startTransition(async () => {
               await deleteAdminUser(r.id);
               router.refresh();
             });
           }}
-          className="text-sm text-[var(--admin-danger)] hover:underline"
         >
-          Delete
-        </button>
+          {(open) => (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={open}
+              className="text-sm text-[var(--admin-danger)] hover:underline"
+            >
+              Delete
+            </button>
+          )}
+        </ConfirmDestructiveDialog>
       ),
     },
   ];

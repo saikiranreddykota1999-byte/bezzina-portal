@@ -22,6 +22,7 @@ export async function getAdminCategoryTree(): Promise<ActionResult<CategoryTree>
     const { data, error } = await supabase
       .from('categories')
       .select('*')
+      .is('deleted_at', null)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true });
 
