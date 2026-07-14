@@ -120,7 +120,7 @@ export function Header() {
 
           <Link
             href="/account"
-            className="hidden rounded-md p-2 text-slate-700 transition hover:bg-slate-50 sm:inline-flex"
+            className="inline-flex rounded-md p-2 text-slate-700 transition hover:bg-slate-50"
             aria-label="Account"
           >
             <User className="h-5 w-5" />

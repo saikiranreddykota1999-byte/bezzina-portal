@@ -61,7 +61,14 @@ export function RippleButton({
 
   if (href) {
     return (
-      <Link href={href} className={classes} onClick={handleRipple}>
+      <Link
+        href={href}
+        className={classes}
+        onClick={(event) => {
+          handleRipple(event);
+          onClick?.();
+        }}
+      >
         {content}
       </Link>
     );
