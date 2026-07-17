@@ -38,7 +38,7 @@ export function LocationMap({
       >
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A5C00]">
               Visit Us
             </p>
             <h2

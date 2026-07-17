@@ -19,7 +19,7 @@ export function AccountSessionError({ message }: Props) {
         <RippleButton href="/account">Try again</RippleButton>
         <Link
           href="/account/login?redirect=/account"
-          className="text-sm font-medium text-orange-600 hover:underline"
+          className="text-sm font-medium text-orange-800 hover:underline"
         >
           Go to login
         </Link>

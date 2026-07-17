@@ -99,6 +99,7 @@ export async function requireAuthenticatedUser(redirectPath = '/account') {
   }
 
   if (session.profile?.is_disabled) {
+    await session.supabase.auth.signOut();
     redirect('/account/login?error=disabled');
   }
 
@@ -116,7 +117,31 @@ export async function requireAdminAuthenticatedUser(redirectPath = '/admin') {
     redirect(`/admin/login?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
+  if (session.profile?.is_disabled) {
+    await session.supabase.auth.signOut();
+    redirect('/admin/login?error=disabled');
+  }
+
+  if (!isPortalRole(session.profile?.role)) {
+    await session.supabase.auth.signOut();
+    redirect('/admin/login?error=unauthorized');
+  }
+
   return session;
+}
+
+async function assertSuperAdminMfaVerified(
+  role: string | null | undefined,
+): Promise<void> {
+  if (!isSuperAdminRole(role) || !isSuperAdminMfaRequired()) {
+    return;
+  }
+
+  const userSupabase = await createClient();
+  const mfaStatus = await getSuperAdminMfaStatus(userSupabase);
+  if (!mfaStatus.verified) {
+    throw new Error('MFA verification required');
+  }
 }
 
 export async function requireStaffUser(): Promise<StaffSession> {
@@ -130,6 +155,8 @@ export async function requireStaffUser(): Promise<StaffSession> {
     throw new Error('Admin access required');
   }
 
+  await assertSuperAdminMfaVerified(session.profile?.role);
+
   return withStaffDb(session);
 }
 
@@ -138,14 +165,6 @@ export async function requireSuperAdminUser(): Promise<StaffSession> {
 
   if (!isSuperAdminRole(session.profile?.role)) {
     throw new Error('Super Admin access required');
-  }
-
-  if (isSuperAdminMfaRequired()) {
-    const userSupabase = await createClient();
-    const mfaStatus = await getSuperAdminMfaStatus(userSupabase);
-    if (!mfaStatus.verified) {
-      throw new Error('MFA verification required');
-    }
   }
 
   return session;

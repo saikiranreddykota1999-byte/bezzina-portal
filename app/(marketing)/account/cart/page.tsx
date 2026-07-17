@@ -45,7 +45,7 @@ export default function CartPage() {
               <Link href={`/products/${item.slug}`} className="font-medium text-slate-900 hover:underline">
                 {item.name}
               </Link>
-              <p className="text-xs text-slate-400">{item.sku}</p>
+              <p className="text-xs text-slate-600">{item.sku}</p>
               <div className="mt-2 flex items-center gap-3">
                 <input
                   type="number"

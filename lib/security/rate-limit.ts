@@ -1,5 +1,7 @@
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
+import { isPublicRateLimitAllowed } from '@/lib/auth/rate-limit-policy';
+import { logServerError } from '@/lib/security/sanitize-error';
 
 export async function getClientIp(): Promise<string | null> {
   const h = await headers();
@@ -13,11 +15,16 @@ export async function enforceRateLimit(params: {
   windowMinutes: number;
 }): Promise<boolean> {
   const supabase = await createClient();
-  const { data } = await supabase.rpc('check_rate_limit', {
+  const { data, error } = await supabase.rpc('check_rate_limit', {
     p_action: params.action,
     p_identifier: params.identifier,
     p_max_attempts: params.maxAttempts,
     p_window_minutes: params.windowMinutes,
   });
-  return Boolean(data);
+
+  if (error) {
+    logServerError('enforceRateLimit', error);
+  }
+
+  return isPublicRateLimitAllowed(error, data);
 }

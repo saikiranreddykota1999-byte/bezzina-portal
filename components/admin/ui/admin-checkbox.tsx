@@ -6,12 +6,13 @@ type Props = {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
+  ariaLabel?: string;
   id?: string;
   disabled?: boolean;
   className?: string;
 };
 
-export function AdminCheckbox({ checked, onChange, label, id, disabled, className = '' }: Props) {
+export function AdminCheckbox({ checked, onChange, label, ariaLabel, id, disabled, className = '' }: Props) {
   const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
 
   return (
@@ -23,6 +24,7 @@ export function AdminCheckbox({ checked, onChange, label, id, disabled, classNam
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
+        aria-label={!label ? ariaLabel : undefined}
       />
       <span className="admin-checkbox__box" aria-hidden="true">
         <Check strokeWidth={3} />

@@ -7,7 +7,7 @@ export function Testimonials() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A5C00]">
               Trusted locally
             </p>
             <h2

@@ -51,8 +51,12 @@ export function SalesmanPortal() {
   async function handleScan(barcode: string) {
     setError('');
     const result = await lookupBarcodeAction({ barcode });
-    if (!result.success || !result.data) {
-      setError(result.error ?? 'Product not found');
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    if (!result.data) {
+      setError('Product not found');
       return;
     }
     setLookup(result.data);
@@ -115,12 +119,15 @@ export function SalesmanPortal() {
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
             placeholder="Customer name"
+            aria-label="Customer name"
+            aria-invalid={error ? true : undefined}
             className={adminInputClass}
           />
           <input
             value={customerPhone}
             onChange={(e) => setCustomerPhone(e.target.value)}
             placeholder="Phone (optional)"
+            aria-label="Phone (optional)"
             className={adminInputClass}
           />
         </div>
@@ -178,8 +185,12 @@ export function SalesmanPortal() {
         </div>
       </section>
 
-      {message && <p className="text-sm text-green-700">{message}</p>}
-      {error && <p className="text-sm text-[var(--admin-danger)]">{error}</p>}
+      {message && <p className="text-sm text-green-700" role="status">{message}</p>}
+      {error && (
+        <p className="text-sm text-[var(--admin-danger)]" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

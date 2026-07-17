@@ -1,5 +1,5 @@
 import { guardAdminPage } from '@/lib/admin/guard-page';
-import { getAdminCategoryOptions } from '@/actions/admin-products';
+import { getAdminCategoryOptions } from '@/actions/admin-products/crud';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { ProductForm } from '@/components/admin/product-form';
 

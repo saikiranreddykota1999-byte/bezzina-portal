@@ -2,27 +2,35 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Heart, ShoppingCart } from 'lucide-react';
+import { GitCompare, Heart, ShoppingCart } from 'lucide-react';
 import { Product } from '@/types/product';
-import { LiftCard } from '@/components/motion/lift-card';
 import { useCart } from '@/context/cart-context';
 import { useWishlist } from '@/context/wishlist-context';
 import { formatAvailabilityLabel } from '@/lib/pricing';
 import { buildCartLineItem } from '@/lib/products/build-cart-line-item';
+import { useProductCompare } from '@/hooks/use-product-compare';
+import { focusRingClass } from '@/hooks/use-dialog-a11y';
 import { ProductPurchaseActions } from './product-purchase-actions';
 
-export default function ProductCard({ product }: { product: Product }) {
+type ProductCardProps = {
+  product: Product;
+  /** Set for above-the-fold cards to prioritize LCP image decode. */
+  priority?: boolean;
+};
+
+export default function ProductCard({ product, priority = false }: ProductCardProps) {
   const { addItem } = useCart();
   const { toggle, has } = useWishlist();
+  const { add, remove, has: inCompareList, isFull } = useProductCompare();
   const wished = has(product.id);
+  const inCompare = inCompareList(product.id);
   const availabilityLabel = formatAvailabilityLabel(product.availability, product.in_stock);
   const variantCount = product.variants?.length ?? 0;
 
   return (
-    <LiftCard>
+    <div className="transition-transform duration-200 will-change-transform hover:-translate-y-0.5">
       <div className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors hover:border-slate-300">
-        <div className="absolute right-2 top-2 z-10 flex flex-col gap-1.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
+        <div className="absolute right-2 top-2 z-10 flex flex-col gap-1.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
           <button
             type="button"
             aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
@@ -37,9 +45,9 @@ export default function ProductCard({ product }: { product: Product }) {
                 image_url: product.image_url,
               });
             }}
-            className={`rounded-full p-2 shadow-sm ${wished ? 'bg-orange-500 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+            className={`rounded-full p-2 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2 ${wished ? 'bg-orange-700 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
           >
-            <Heart className="h-4 w-4" fill={wished ? 'currentColor' : 'none'} />
+            <Heart className="h-4 w-4" fill={wished ? 'currentColor' : 'none'} aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -48,28 +56,27 @@ export default function ProductCard({ product }: { product: Product }) {
               e.preventDefault();
               addItem(buildCartLineItem(product));
             }}
-            className="rounded-full bg-white p-2 text-slate-700 shadow-sm hover:bg-orange-50 hover:text-orange-600"
+            className="rounded-full bg-white p-2 text-slate-700 shadow-sm hover:bg-orange-50 hover:text-orange-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2"
           >
-            <ShoppingCart className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
         <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
           <div className="relative aspect-square bg-slate-50">
             {product.image_url ? (
-              <motion.div
-                className="relative h-full w-full"
-                whileHover={{ scale: 1.04 }}
-                transition={{ duration: 0.3 }}
-              >
+              <div className="relative h-full w-full transition-transform duration-300 group-hover:scale-[1.04]">
                 <Image
                   src={product.image_url}
                   alt={product.name}
                   fill
+                  priority={priority}
+                  loading={priority ? 'eager' : 'lazy'}
+                  decoding="async"
                   className="object-contain p-4"
                   sizes="(max-width: 768px) 50vw, 25vw"
                 />
-              </motion.div>
+              </div>
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-slate-500">
                 No image
@@ -102,6 +109,29 @@ export default function ProductCard({ product }: { product: Product }) {
             <p className="mt-3 text-sm font-semibold text-[#0B3D91]">
               {availabilityLabel}
             </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                if (inCompare) {
+                  remove(product.id);
+                } else if (!isFull) {
+                  add({
+                    id: product.id,
+                    slug: product.slug,
+                    name: product.name,
+                    sku: product.sku,
+                    image_url: product.image_url,
+                  });
+                }
+              }}
+              disabled={!inCompare && isFull}
+              aria-pressed={inCompare}
+              className={`mt-2 inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-[#0B3D91] disabled:cursor-not-allowed disabled:opacity-50 ${focusRingClass}`}
+            >
+              <GitCompare className="h-3 w-3" aria-hidden="true" />
+              {inCompare ? 'In compare' : 'Compare'}
+            </button>
           </div>
         </Link>
 
@@ -109,6 +139,6 @@ export default function ProductCard({ product }: { product: Product }) {
           <ProductPurchaseActions product={product} layout="card" />
         </div>
       </div>
-    </LiftCard>
+    </div>
   );
 }

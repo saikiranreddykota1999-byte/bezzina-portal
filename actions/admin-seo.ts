@@ -1,10 +1,11 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/server-session';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 const seoPageSchema = z.object({
   id: z.string().uuid().optional(),

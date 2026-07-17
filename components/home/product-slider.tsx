@@ -82,7 +82,7 @@ function SlideCard({ product, isActive }: { product: Product; isActive: boolean 
           <h3 className="mt-1 line-clamp-2 text-sm font-semibold text-slate-900 sm:text-base">
             {product.name}
           </h3>
-          <p className="mt-auto pt-3 text-sm font-semibold text-orange-600">
+          <p className="mt-auto pt-3 text-sm font-semibold text-orange-800">
             {availabilityLabel}
           </p>
         </div>
@@ -182,7 +182,7 @@ export function ProductSlider({ products }: ProductSliderProps) {
             type="button"
             aria-label="Previous slide"
             onClick={() => goTo(index - 1)}
-            className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-md transition hover:border-orange-300 hover:text-orange-600 sm:inline-flex"
+            className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-md transition hover:border-orange-300 hover:text-orange-800 sm:inline-flex"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -190,25 +190,31 @@ export function ProductSlider({ products }: ProductSliderProps) {
             type="button"
             aria-label="Next slide"
             onClick={() => goTo(index + 1)}
-            className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-md transition hover:border-orange-300 hover:text-orange-600 sm:inline-flex"
+            className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-md transition hover:border-orange-300 hover:text-orange-800 sm:inline-flex"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
 
-          <div className="mt-6 flex items-center justify-center gap-2">
+          <div className="mt-6 flex items-center justify-center gap-1" role="tablist" aria-label="Product slides">
             {slides.map((_, dotIndex) => (
               <button
                 key={`dot-${dotIndex}`}
                 type="button"
+                role="tab"
                 aria-label={`Go to slide ${dotIndex + 1}`}
-                aria-current={dotIndex === index ? 'true' : undefined}
+                aria-selected={dotIndex === index}
                 onClick={() => goTo(dotIndex)}
-                className={`h-2.5 rounded-full transition-all ${
-                  dotIndex === index
-                    ? 'w-8 bg-orange-500'
-                    : 'w-2.5 bg-slate-300 hover:bg-slate-400'
-                }`}
-              />
+                className="inline-flex h-6 min-w-6 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91]"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`block h-2.5 rounded-full transition-all ${
+                    dotIndex === index
+                      ? 'w-8 bg-orange-700'
+                      : 'w-2.5 bg-slate-400 hover:bg-slate-500'
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </>

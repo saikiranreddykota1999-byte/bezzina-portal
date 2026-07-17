@@ -33,7 +33,7 @@ export default async function RecentlyViewedPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-slate-900">{product.name}</p>
-                  <p className="text-xs text-slate-500">{product.sku}</p>
+                  <p className="text-xs text-slate-600">{product.sku}</p>
                   <p className="mt-1 text-xs text-slate-400">
                     {new Date(product.viewed_at).toLocaleString('en-GB')}
                   </p>

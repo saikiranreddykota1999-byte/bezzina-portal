@@ -50,7 +50,7 @@ export function VisitStore({
         </motion.div>
         <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#071B35]/70 via-[#071B35]/10 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-5">
-          <div className="flex items-center gap-2 text-[#D8A106]">
+          <div className="flex items-center gap-2 text-[#7A5C00]">
             <Store className="h-4 w-4" aria-hidden="true" />
             <p className="text-xs font-semibold uppercase tracking-[0.15em]">Our Showroom</p>
           </div>

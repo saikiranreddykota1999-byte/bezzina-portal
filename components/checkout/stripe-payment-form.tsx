@@ -97,7 +97,7 @@ function StripeCheckoutForm({ total, disabled, onPay }: StripeCheckoutFormProps)
       <button
         type="submit"
         disabled={!stripe || !elements || !elementReady || processing || disabled}
-        className="relative w-full overflow-hidden rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+        className="relative w-full overflow-hidden rounded-full bg-orange-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {processing ? 'Processing...' : !elementReady ? 'Loading payment form...' : `Pay ${formatPrice(total)}`}
       </button>

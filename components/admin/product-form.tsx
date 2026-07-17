@@ -5,11 +5,15 @@ import { useRouter } from 'next/navigation';
 import {
   createProduct,
   updateProduct,
+} from '@/actions/admin-products/crud';
+import {
   uploadProductImage,
   saveProductVariants,
-} from '@/actions/admin-products';
+} from '@/actions/admin-products/media';
 import { ProductImagesSection } from '@/components/admin/product-images-section';
 import { ProductDocumentsSection } from '@/components/admin/product-documents-section';
+import { Product360Section } from '@/components/admin/product-360-section';
+import { ProductRelationsSection } from '@/components/admin/product-relations-section';
 import { ProductSpecsBuilder } from '@/components/admin/product-specs-builder';
 import { ProductVariantsSection, type VariantDraft } from '@/components/admin/product-variants-section';
 import { ProductFeatureToggles } from '@/components/admin/product-feature-toggles';
@@ -26,27 +30,16 @@ import {
   adminSubtextClass,
 } from '@/components/admin/admin-styles';
 import { buildProductCategoryGroups } from '@/lib/catalogue/category-tree';
+import { slugify } from '@/lib/utils/slugify';
+import {
+  parseProductTechnicalSpecs,
+  toProductVariantDraft,
+} from '@/lib/admin/product-form-utils';
 
 type Props = {
   categoryTree: CategoryTree;
   product?: Product;
 };
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
-function parseSpecs(product?: Product): TechnicalSpecRow[] {
-  if (!product?.technical_specs) return [];
-  if (Array.isArray(product.technical_specs)) return product.technical_specs;
-  return Object.entries(product.technical_specs).map(([property, value]) => ({ property, value }));
-}
-
-function toVariantDraft(variant: NonNullable<Product['variants']>[number]): VariantDraft {
-  const { id, product_id, ...rest } = variant;
-  void product_id;
-  return id ? { ...rest, id } : rest;
-}
 
 export function ProductForm({ categoryTree, product }: Props) {
   const router = useRouter();
@@ -76,9 +69,9 @@ export function ProductForm({ categoryTree, product }: Props) {
   const [videoUrl, setVideoUrl] = useState(product?.video_url ?? '');
   const [youtubeUrl, setYoutubeUrl] = useState(product?.youtube_url ?? '');
   const [weightKg, setWeightKg] = useState(product?.weight_kg?.toString() ?? '');
-  const [specs, setSpecs] = useState<TechnicalSpecRow[]>(parseSpecs(product));
+  const [specs, setSpecs] = useState<TechnicalSpecRow[]>(parseProductTechnicalSpecs(product));
   const [variants, setVariants] = useState<VariantDraft[]>(
-    (product?.variants ?? []).map(toVariantDraft),
+    (product?.variants ?? []).map(toProductVariantDraft),
   );
   const [featureFlags, setFeatureFlags] = useState(
     Object.fromEntries(
@@ -366,6 +359,8 @@ export function ProductForm({ categoryTree, product }: Props) {
             <>
               <ProductImagesSection productId={product.id} images={product.images ?? []} />
               <ProductDocumentsSection productId={product.id} documents={product.documents ?? []} />
+              <Product360Section productId={product.id} frames={product.spin_frames ?? []} />
+              <ProductRelationsSection productId={product.id} />
             </>
           )}
         </div>

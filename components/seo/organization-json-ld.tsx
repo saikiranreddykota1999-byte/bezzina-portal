@@ -1,6 +1,9 @@
 import { JsonLd } from '@/components/seo/json-ld';
 import { company } from '@/config/company';
-import { buildOrganizationSchemaFromSettings } from '@/lib/structuredData';
+import {
+  buildOrganizationSchemaFromSettings,
+  getWebSiteSchema,
+} from '@/lib/structuredData';
 import { getSiteSetting } from '@/services/cms.service';
 import type { CompanySettings, SocialSettings } from '@/types/cms';
 
@@ -10,7 +13,8 @@ export async function OrganizationJsonLd() {
     getSiteSetting<SocialSettings>('social', company.social),
   ]);
 
-  const schema = buildOrganizationSchemaFromSettings(companySettings, socialSettings);
+  const organization = buildOrganizationSchemaFromSettings(companySettings, socialSettings);
+  const website = getWebSiteSchema();
 
-  return <JsonLd data={schema} />;
+  return <JsonLd data={[organization, website]} />;
 }

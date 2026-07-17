@@ -1,5 +1,7 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/server-session';
@@ -7,7 +9,6 @@ import { logActivity } from '@/services/activity-log.service';
 import { createNotification } from '@/services/notification.service';
 import type { QuoteStatus, QuoteTimelineEntry } from '@/types/admin';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 const quoteStatusSchema = z.enum([
   'pending',

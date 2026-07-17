@@ -104,8 +104,8 @@ export function BarcodeScanner({ onScan, placeholder = 'Scan barcode or enter SK
             }
           }}
           placeholder={placeholder}
+          aria-label={placeholder}
           className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900"
-          aria-label="Barcode or SKU input"
         />
       </div>
       <button

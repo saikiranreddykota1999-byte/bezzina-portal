@@ -131,8 +131,9 @@ function AdminShellInner({ children, userRole, userName, unreadNotifications = 0
             <LogOut className="h-4 w-4 shrink-0" />
             {!collapsed && <span>Sign out</span>}
           </SignOutButton>
-          <Link href="/" className={`admin-nav-link ${collapsed ? 'justify-center px-2' : ''}`}>
+          <Link href="/" className={`admin-nav-link ${collapsed ? 'justify-center px-2' : ''}`} aria-label="Exit to site">
             {!collapsed && <span>Exit to site</span>}
+            {collapsed ? <span className="sr-only">Exit to site</span> : null}
           </Link>
         </div>
       </aside>
@@ -185,11 +186,13 @@ function AdminShellInner({ children, userRole, userName, unreadNotifications = 0
         </header>
 
         <motion.main
+          id="main-content"
           key={pathname}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="relative z-[1] flex-1 px-4 py-6 lg:px-8 lg:py-8"
+          className="relative z-[1] flex-1 px-4 py-6 outline-none lg:px-8 lg:py-8"
+          tabIndex={-1}
         >
           <AdminBreadcrumb />
           {children}

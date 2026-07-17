@@ -126,6 +126,7 @@ export function AdminDataTable<T extends { id: string }>({
               setPage(1);
             }}
             placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
             className={`${adminInputClass} !py-2.5 !pl-10`}
           />
         </div>
@@ -151,17 +152,17 @@ export function AdminDataTable<T extends { id: string }>({
           <thead>
             <tr>
               {bulkActions.length > 0 && (
-                <th className="!w-12">
+                <th scope="col" className="!w-12">
                   <AdminCheckbox
                     id="select-all-rows"
                     checked={allSelected}
                     onChange={toggleAll}
-                    label=""
+                    ariaLabel="Select all rows"
                   />
                 </th>
               )}
               {columns.map((col) => (
-                <th key={col.key} className={col.className ?? ''}>
+                <th key={col.key} scope="col" className={col.className ?? ''}>
                   {col.sortable ? (
                     <button
                       type="button"
@@ -199,7 +200,7 @@ export function AdminDataTable<T extends { id: string }>({
                         id={`select-row-${row.id}`}
                         checked={selected.has(row.id)}
                         onChange={(checked) => toggleRow(row.id, checked)}
-                        label=""
+                        ariaLabel="Select row"
                       />
                     </td>
                   )}

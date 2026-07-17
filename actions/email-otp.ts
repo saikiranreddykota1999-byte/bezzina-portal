@@ -1,7 +1,14 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import {
+  findAuthUserIdByEmail,
+  getAuthUserEmailById,
+} from '@/lib/auth/find-auth-user';
+import { assertCustomerOtpEligible } from '@/lib/auth/otp-eligibility';
 import { normalizeEmail } from '@/lib/otp/email';
 import { buildOtpForStorage, hashOtpCode, otpConfig } from '@/lib/otp/core';
 import {
@@ -9,32 +16,31 @@ import {
   verifyEmailOtpSchema,
 } from '@/lib/validators/email-otp';
 import { isEmailOtpConfigured, sendOtpEmail } from '@/services/otp-email.service';
+import { getProfileRole } from '@/lib/auth/get-profile-role';
 
-type ActionResult<T = void> =
-  | { success: true; data?: T }
-  | { success: false; error: string };
+type AdminClient = ReturnType<typeof createAdminClient>;
 
-async function findUserByEmail(admin: ReturnType<typeof createAdminClient>, email: string) {
-  const { data: listData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  return listData.users.find((user) => user.email?.toLowerCase() === email) ?? null;
-}
+async function ensureEmailUser(
+  admin: AdminClient,
+  email: string,
+): Promise<{ userId: string; email: string }> {
+  const existingId = await findAuthUserIdByEmail(admin, email);
 
-async function ensureEmailUser(admin: ReturnType<typeof createAdminClient>, email: string) {
-  const existingUser = await findUserByEmail(admin, email);
+  if (existingId) {
+    const role = await getProfileRole(admin, existingId);
+    const eligibility = assertCustomerOtpEligible(role);
+    if (!eligibility.ok) {
+      throw new Error(eligibility.error);
+    }
 
-  if (existingUser) {
-    const { data: existingProfile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', existingUser.id)
-      .maybeSingle();
+    const authEmail = (await getAuthUserEmailById(admin, existingId)) ?? email;
     await admin.from('profiles').upsert({
-      id: existingUser.id,
+      id: existingId,
       email,
       contact_email: email,
-      ...(existingProfile?.role ? { role: existingProfile.role } : { role: 'customer' as const }),
+      role: role ?? 'customer',
     });
-    return { userId: existingUser.id, email };
+    return { userId: existingId, email: authEmail };
   }
 
   const { data: created, error } = await admin.auth.admin.createUser({
@@ -44,22 +50,25 @@ async function ensureEmailUser(admin: ReturnType<typeof createAdminClient>, emai
   });
 
   if (error) {
-    const fallback = await findUserByEmail(admin, email);
-    if (!fallback) {
+    const fallbackId = await findAuthUserIdByEmail(admin, email);
+    if (!fallbackId) {
       throw new Error(error.message);
     }
-    const { data: fallbackProfile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', fallback.id)
-      .maybeSingle();
+
+    const role = await getProfileRole(admin, fallbackId);
+    const eligibility = assertCustomerOtpEligible(role);
+    if (!eligibility.ok) {
+      throw new Error(eligibility.error);
+    }
+
+    const authEmail = (await getAuthUserEmailById(admin, fallbackId)) ?? email;
     await admin.from('profiles').upsert({
-      id: fallback.id,
+      id: fallbackId,
       email,
       contact_email: email,
-      ...(fallbackProfile?.role ? { role: fallbackProfile.role } : { role: 'customer' as const }),
+      role: role ?? 'customer',
     });
-    return { userId: fallback.id, email };
+    return { userId: fallbackId, email: authEmail };
   }
 
   if (!created.user) {
@@ -93,7 +102,24 @@ export async function sendEmailOtpAction(
       return { success: false, error: 'Enter a valid email address' };
     }
 
+    const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
+    const { getClientIp } = await import('@/lib/security/rate-limit');
+    const ip = (await getClientIp()) ?? 'unknown';
+    const allowed = await checkPublicRateLimit('email_otp_send', `${ip}:${email}`, 5, 15);
+    if (!allowed) {
+      return { success: false, error: 'Too many OTP requests. Please try again later.' };
+    }
+
     const admin = createAdminClient();
+    const existingId = await findAuthUserIdByEmail(admin, email);
+    if (existingId) {
+      const role = await getProfileRole(admin, existingId);
+      const eligibility = assertCustomerOtpEligible(role);
+      if (!eligibility.ok) {
+        return { success: false, error: eligibility.error };
+      }
+    }
+
     const { code, codeHash, expiresAt, sendWindowStart } = buildOtpForStorage(email);
 
     const { count } = await admin
@@ -219,10 +245,7 @@ export async function verifyEmailOtpAction(input: unknown): Promise<ActionResult
       .update({ verified_at: new Date().toISOString() })
       .eq('id', otpRow.id);
 
-    await admin
-      .from('profiles')
-      .update({ contact_email: email, email })
-      .eq('id', userId);
+    await admin.from('profiles').update({ contact_email: email, email }).eq('id', userId);
 
     return { success: true };
   } catch (error) {

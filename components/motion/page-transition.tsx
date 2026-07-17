@@ -1,18 +1,9 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { pageTransition, defaultTransition } from '@/lib/motion';
-
+/**
+ * Lightweight page enter animation without Framer Motion —
+ * keeps navigation hydration cost low while preserving a soft transition.
+ */
 export function PageTransition({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={pageTransition}
-      transition={defaultTransition}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className="page-enter">{children}</div>;
 }

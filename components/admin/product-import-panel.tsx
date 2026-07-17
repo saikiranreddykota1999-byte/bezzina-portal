@@ -29,6 +29,10 @@ export function ProductImportPanel() {
       }
 
       const summary = result.data;
+      if (!summary) {
+        setError('Import completed without a summary.');
+        return;
+      }
       setMessage(
         `Imported ${summary.productsCreated} products, updated ${summary.productsUpdated}, ` +
           `${summary.variantsCreated} variants created, ${summary.variantsUpdated} variants updated. ` +
@@ -56,6 +60,10 @@ export function ProductImportPanel() {
       }
 
       const summary = result.data;
+      if (!summary) {
+        setError('Catalogue seed completed without a summary.');
+        return;
+      }
       setMessage(
         `Catalogue seeded: ${summary.productsCreated} products created, ${summary.productsUpdated} updated, ` +
           `${summary.variantsCreated} variants.`,

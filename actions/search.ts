@@ -1,9 +1,10 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
 import { quickSearchProducts, type ProductSearchHit } from '@/lib/product-search';
-import { getCataloguePageData } from '@/services/product.service';
-
-type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
+import { searchProductsForQuery } from '@/services/product.service';
+import { checkPublicRateLimit } from '@/lib/auth/login-security';
+import { getClientIp } from '@/lib/security/rate-limit';
 
 export async function quickSearchProductsAction(
   query: string,
@@ -14,9 +15,15 @@ export async function quickSearchProductsAction(
       return { success: true, data: [] };
     }
 
-    const { products, error } = await getCataloguePageData();
+    const ip = (await getClientIp()) ?? 'unknown';
+    const allowed = await checkPublicRateLimit('product_search', ip, 60, 1);
+    if (!allowed) {
+      return { success: false, error: 'Too many search requests. Please try again shortly.' };
+    }
+
+    const { products, error } = await searchProductsForQuery(trimmed, 40);
     if (error) {
-      return { success: false, error: error };
+      return { success: false, error };
     }
 
     return { success: true, data: quickSearchProducts(products, trimmed, 6) };

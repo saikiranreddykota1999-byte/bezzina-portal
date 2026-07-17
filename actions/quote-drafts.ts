@@ -1,11 +1,12 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getAuthenticatedUser } from '@/lib/auth/server-session';
 import type { QuoteCartItem, QuoteDraft } from '@/types/quote';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 const quoteCartItemSchema = z.object({
   productId: z.string().uuid(),

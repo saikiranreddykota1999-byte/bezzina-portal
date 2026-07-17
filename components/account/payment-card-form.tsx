@@ -82,6 +82,8 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
           value={cardholderName}
           onChange={(e) => setCardholderName(e.target.value)}
           placeholder="Name on card"
+          aria-label="Name on card"
+          aria-invalid={error ? true : undefined}
           className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
         />
         <input
@@ -90,6 +92,8 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
           value={formatCardNumber(cardNumber)}
           onChange={(e) => setCardNumber(maskCardNumber(e.target.value))}
           placeholder="Card number"
+          aria-label="Card number"
+          aria-invalid={error ? true : undefined}
           className="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm"
         />
         <div className="grid grid-cols-3 gap-3">
@@ -100,6 +104,8 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
             value={expiryMonth}
             onChange={(e) => setExpiryMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
             placeholder="MM"
+            aria-label="MM"
+            aria-invalid={error ? true : undefined}
             className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
           <input
@@ -109,6 +115,8 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
             value={expiryYear}
             onChange={(e) => setExpiryYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
             placeholder="YYYY"
+            aria-label="YYYY"
+            aria-invalid={error ? true : undefined}
             className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
           <input
@@ -118,6 +126,8 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
             value={cvv}
             onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
             placeholder="CVV"
+            aria-label="CVV"
+            aria-invalid={error ? true : undefined}
             className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
             autoComplete="cc-csc"
           />
@@ -131,7 +141,11 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
           />
           Set as default payment method
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        )}
         {saved && <p className="text-sm text-green-600">Card saved successfully.</p>}
         <RippleButton type="submit" className="w-full sm:w-auto">
           Save Card
@@ -174,7 +188,7 @@ export function SavedCardsList() {
                 {card.cardholderName} · Exp {card.expiryMonth}/{card.expiryYear.slice(-2)}
               </p>
               {card.isDefault && (
-                <span className="mt-1 inline-block text-xs font-medium text-orange-600">Default</span>
+                <span className="mt-1 inline-block text-xs font-medium text-orange-800">Default</span>
               )}
             </div>
           </div>
@@ -191,8 +205,8 @@ export function SavedCardsList() {
             <button
               type="button"
               onClick={() => removeCard(card.id)}
-              className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-              aria-label="Remove card"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+              aria-label={`Remove ${BRAND_LABELS[card.brand]} card ending in ${card.last4}`}
             >
               <Trash2 className="h-4 w-4" />
             </button>

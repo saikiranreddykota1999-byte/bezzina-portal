@@ -18,7 +18,7 @@ export default function Error({ error, reset }: Props) {
       id="main-content"
       className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6"
     >
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
+      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A5C00]">
         Error
       </p>
       <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">

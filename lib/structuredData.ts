@@ -40,18 +40,61 @@ export function getPostalAddressSchema(address: PostalAddressInput) {
 
 export function getOrganizationSchema(input: OrganizationInput = {}) {
   const sameAs = (input.sameAs ?? []).filter(Boolean);
+  const siteUrl = input.url ?? getSiteUrl();
 
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${siteUrl}/#organization`,
     name: input.name ?? company.name,
-    url: input.url ?? getSiteUrl(),
-    logo: toAbsoluteUrl(input.logoUrl ?? company.logoUrl),
+    legalName: company.name,
+    url: siteUrl,
+    logo: {
+      '@type': 'ImageObject',
+      url: toAbsoluteUrl(input.logoUrl ?? company.logoUrl),
+    },
+    image: toAbsoluteUrl(input.logoUrl ?? company.logoUrl),
     foundingDate: String(input.foundingDate ?? company.founded),
     address: getPostalAddressSchema(input.address ?? company.address),
     telephone: input.telephone ?? company.contact.phone1,
     email: input.email ?? company.contact.email,
+    areaServed: {
+      '@type': 'Country',
+      name: 'Malta',
+    },
+    contactPoint: [
+      {
+        '@type': 'ContactPoint',
+        telephone: input.telephone ?? company.contact.phone1,
+        contactType: 'sales',
+        areaServed: 'MT',
+        availableLanguage: ['English', 'Maltese'],
+      },
+    ],
     ...(sameAs.length > 0 ? { sameAs } : {}),
+  };
+}
+
+export function getWebSiteSchema() {
+  const siteUrl = getSiteUrl();
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
+    name: company.name,
+    url: siteUrl,
+    description: company.seo.description,
+    publisher: { '@id': `${siteUrl}/#organization` },
+    inLanguage: 'en-MT',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${siteUrl}/search?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
   };
 }
 
@@ -61,13 +104,22 @@ export function getLocalBusinessSchema(input: {
   address?: PostalAddressInput;
   telephone?: string;
 }) {
+  const siteUrl = getSiteUrl();
+
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
+    '@id': `${siteUrl}/#localbusiness`,
     name: input.name ?? company.name,
     image: toAbsoluteUrl(input.imageUrl ?? company.logoUrl),
+    url: siteUrl,
     address: getPostalAddressSchema(input.address ?? company.address),
     telephone: input.telephone ?? company.contact.phone1,
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: company.maps.latitude,
+      longitude: company.maps.longitude,
+    },
     // CONFIRM HOURS WITH CLIENT
     openingHoursSpecification: [
       {
@@ -77,6 +129,7 @@ export function getLocalBusinessSchema(input: {
         closes: '16:00',
       },
     ],
+    priceRange: '€€',
   };
 }
 
@@ -96,10 +149,15 @@ function mapAvailabilitySchema(status?: InventoryStatus | string | null): string
   }
 }
 
-function resolveProductImage(product: Product): string | undefined {
-  const primary = product.images?.find((image) => image.is_primary) ?? product.images?.[0];
-  const imageUrl = primary?.url ?? product.image_url;
-  return imageUrl ? toAbsoluteUrl(imageUrl) : undefined;
+function resolveProductImages(product: Product): string[] {
+  const urls = new Set<string>();
+  if (product.image_url) {
+    urls.add(toAbsoluteUrl(product.image_url));
+  }
+  product.images?.forEach((image) => {
+    if (image.url) urls.add(toAbsoluteUrl(image.url));
+  });
+  return Array.from(urls);
 }
 
 export function getProductSchema(product: Product) {
@@ -108,23 +166,67 @@ export function getProductSchema(product: Product) {
     product.seo_description ??
     product.description ??
     `View details for ${product.name} (${product.sku}).`;
-  const image = resolveProductImage(product);
+  const images = resolveProductImages(product);
   const price = resolveProductPrice(product.price);
   const productUrl = `${getSiteUrl()}/products/${product.slug}`;
+
+  const additionalProperty: Array<Record<string, string>> = [];
+  if (product.material) {
+    additionalProperty.push({
+      '@type': 'PropertyValue',
+      name: 'Material',
+      value: product.material,
+    });
+  }
+  if (product.standard) {
+    additionalProperty.push({
+      '@type': 'PropertyValue',
+      name: 'Standard',
+      value: product.standard,
+    });
+  }
+  if (product.thread_type) {
+    additionalProperty.push({
+      '@type': 'PropertyValue',
+      name: 'Thread',
+      value: product.thread_type,
+    });
+  }
+  if (Array.isArray(product.technical_specs)) {
+    product.technical_specs.forEach((row) => {
+      if (row.property && row.value) {
+        additionalProperty.push({
+          '@type': 'PropertyValue',
+          name: row.property,
+          value: row.value,
+        });
+      }
+    });
+  } else if (product.technical_specs && typeof product.technical_specs === 'object') {
+    Object.entries(product.technical_specs).forEach(([key, value]) => {
+      additionalProperty.push({
+        '@type': 'PropertyValue',
+        name: key,
+        value: String(value),
+      });
+    });
+  }
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
+    '@id': `${productUrl}#product`,
     name: product.name,
     sku: product.sku,
     url: productUrl,
     ...(description ? { description } : {}),
-    ...(image ? { image } : {}),
+    ...(images.length > 0 ? { image: images } : {}),
     ...(category ? { category } : {}),
     brand: {
       '@type': 'Brand',
       name: product.brand?.name ?? company.name,
     },
+    ...(additionalProperty.length > 0 ? { additionalProperty } : {}),
   };
 
   if (price != null) {
@@ -134,9 +236,25 @@ export function getProductSchema(product: Product) {
       priceCurrency: 'EUR',
       price: price.toFixed(2),
       availability: mapAvailabilitySchema(product.availability),
+      itemCondition: 'https://schema.org/NewCondition',
       seller: {
         '@type': 'Organization',
         name: company.name,
+        '@id': `${getSiteUrl()}/#organization`,
+      },
+    };
+  } else {
+    // RFQ / quote-only SKUs — never publish a fake list price.
+    schema.offers = {
+      '@type': 'Offer',
+      url: productUrl,
+      availability: mapAvailabilitySchema(product.availability),
+      priceCurrency: 'EUR',
+      description: 'Request a quote for pricing',
+      seller: {
+        '@type': 'Organization',
+        name: company.name,
+        '@id': `${getSiteUrl()}/#organization`,
       },
     };
   }
@@ -165,6 +283,23 @@ export function getBreadcrumbSchema(items: BreadcrumbItem[], baseUrl = getSiteUr
 
       return listItem;
     }),
+  };
+}
+
+/** Collection / catalogue listing schema for /products, /marine, /industrial. */
+export function getCollectionPageSchema(input: {
+  name: string;
+  description: string;
+  path: string;
+}) {
+  const url = toAbsoluteUrl(input.path);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: input.name,
+    description: input.description,
+    url,
+    isPartOf: { '@id': `${getSiteUrl()}/#website` },
   };
 }
 

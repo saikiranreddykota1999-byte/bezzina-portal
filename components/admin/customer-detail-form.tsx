@@ -50,15 +50,22 @@ export function CustomerDetailForm({ customer, resetPasswordAction }: Props) {
     <form onSubmit={handleSave} className={`${adminCardClass} p-6`}>
       <h2 className={adminHeadingClass}>Edit Customer</h2>
       <div className="mt-4 space-y-4">
-        <input name="full_name" defaultValue={customer.full_name ?? ''} className={adminInputClass} placeholder="Full name" />
-        <input name="phone" defaultValue={customer.phone ?? ''} className={adminInputClass} placeholder="Phone" />
-        <input name="company_name" defaultValue={customer.company_name ?? ''} className={adminInputClass} placeholder="Company" />
+        <input name="full_name" defaultValue={customer.full_name ?? ''} className={adminInputClass} placeholder="Full name" aria-label="Full name" />
+        <input name="phone" defaultValue={customer.phone ?? ''} className={adminInputClass} placeholder="Phone" aria-label="Phone" />
+        <input name="company_name" defaultValue={customer.company_name ?? ''} className={adminInputClass} placeholder="Company" aria-label="Company" />
         <label className={`flex items-center gap-2 text-sm ${adminSubtextClass}`}>
           <input type="checkbox" name="is_disabled" defaultChecked={customer.is_disabled} />
           Disabled
         </label>
       </div>
-      {message && <p className={`mt-4 text-sm ${adminSubtextClass}`}>{message}</p>}
+      {message && (
+        <p
+          className={`mt-4 text-sm ${adminSubtextClass}`}
+          role={message === 'Customer updated.' ? 'status' : 'alert'}
+        >
+          {message}
+        </p>
+      )}
       <div className="mt-4 flex flex-wrap gap-3">
         <button type="submit" disabled={pending} className={adminButtonPrimaryClass}>
           Save

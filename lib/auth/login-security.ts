@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { SECURITY_CONFIG } from '@/config/security';
+import { isPublicRateLimitAllowed } from '@/lib/auth/rate-limit-policy';
 import { toAuthError, logServerError } from '@/lib/security/sanitize-error';
 
 export type LoginResult =
@@ -66,10 +67,9 @@ export async function checkPublicRateLimit(
 
   if (error) {
     logServerError('checkPublicRateLimit', error);
-    return true;
   }
 
-  return data === true;
+  return isPublicRateLimitAllowed(error, data);
 }
 
 export { toAuthError };

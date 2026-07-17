@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { PRODUCT_CATEGORIES } from '@/config/categories';
 import {
@@ -6,6 +7,9 @@ import {
   Brand,
   CategoryDivision,
   ProductImage,
+  Product360Frame,
+  ProductRelationType,
+  WarehouseAvailabilityRow,
 } from '@/types/product';
 import {
   filterProducts,
@@ -17,10 +21,25 @@ export { filterProducts, getUniqueMaterials, getUniqueStandards };
 
 type DbClient = Awaited<ReturnType<typeof createClient>>;
 
-const PRODUCT_PUBLIC_SELECT =
-  'id, sku, name, slug, description, category_id, brand_id, image_url, material, standard, thread_type, length_mm, diameter_mm, grade, price, unit, in_stock, stock_quantity, featured, fast_selling, upcoming, future_product, new_arrival, clearance, recommended, marine_grade, industrial_grade, best_seller, most_viewed, recently_added, discount_percent, is_active, video_url, youtube_url, weight_kg, view_count, technical_specs, tags, seo_title, seo_description, long_description, applications, availability, publish_status, related_product_ids, created_at, category:categories(*), images:product_images(*), documents:product_documents(*), variants:product_variants(*)';
-const PRODUCT_SELECT = PRODUCT_PUBLIC_SELECT;
-const PRODUCT_SELECT_FALLBACK = 'id, sku, name, slug, description, category_id, brand_id, image_url, material, standard, price, unit, in_stock, featured, is_active, publish_status, category:categories(*)';
+/** Full product graph — detail pages / admin-style needs. */
+const PRODUCT_DETAIL_SELECT =
+  'id, sku, name, slug, description, category_id, brand_id, image_url, material, standard, thread_type, length_mm, diameter_mm, grade, price, unit, in_stock, stock_quantity, featured, fast_selling, upcoming, future_product, new_arrival, clearance, recommended, marine_grade, industrial_grade, best_seller, most_viewed, recently_added, discount_percent, is_active, video_url, youtube_url, weight_kg, view_count, technical_specs, tags, seo_title, seo_description, long_description, applications, availability, publish_status, related_product_ids, search_keywords, created_at, category:categories(*), images:product_images(*), documents:product_documents(*), variants:product_variants(*), spin_frames:product_360_frames(*)';
+
+const PRODUCT_DETAIL_SELECT_FALLBACK =
+  'id, sku, name, slug, description, category_id, brand_id, image_url, material, standard, thread_type, length_mm, diameter_mm, grade, price, unit, in_stock, stock_quantity, featured, fast_selling, upcoming, future_product, new_arrival, clearance, recommended, marine_grade, industrial_grade, best_seller, most_viewed, recently_added, discount_percent, is_active, video_url, youtube_url, weight_kg, view_count, technical_specs, tags, seo_title, seo_description, long_description, applications, availability, publish_status, related_product_ids, search_keywords, created_at, category:categories(*), images:product_images(*), documents:product_documents(*), variants:product_variants(*)';
+
+/**
+ * Lean list select for catalogue browsing/filtering.
+ * Avoids documents + full image galleries on every row.
+ */
+const PRODUCT_LIST_SELECT =
+  'id, sku, name, slug, description, category_id, brand_id, image_url, material, standard, thread_type, price, unit, in_stock, stock_quantity, featured, fast_selling, upcoming, future_product, new_arrival, clearance, recommended, marine_grade, industrial_grade, best_seller, most_viewed, recently_added, discount_percent, is_active, availability, publish_status, search_keywords, tags, technical_specs, created_at, category:categories(id, name, slug, parent_id, division), brand:brands(id, name), variants:product_variants(id, name, sku, specification)';
+
+const PRODUCT_SEARCH_SELECT =
+  'id, sku, name, slug, description, image_url, price, unit, in_stock, availability, search_keywords, tags, material, standard, thread_type, is_active, category:categories(id, name), brand:brands(id, name), variants:product_variants(id, name, sku, specification)';
+
+const PRODUCT_SELECT = PRODUCT_DETAIL_SELECT;
+const PRODUCT_SELECT_FALLBACK = PRODUCT_DETAIL_SELECT_FALLBACK;
 
 function normalizeImageUrl(url: string | null): string | null {
   if (!url) return null;
@@ -36,11 +55,15 @@ function normalizeProduct(product: Product): Product {
     (a: ProductImage, b: ProductImage) => a.sort_order - b.sort_order,
   );
   const primaryImage = images.find((i) => i.is_primary) ?? images[0];
+  const spin_frames = [...(product.spin_frames ?? [])].sort(
+    (a: Product360Frame, b: Product360Frame) => a.sort_order - b.sort_order,
+  );
 
   return {
     ...product,
     image_url: normalizeImageUrl(primaryImage?.url ?? product.image_url),
     images,
+    spin_frames,
     fast_selling: product.fast_selling ?? false,
     upcoming: product.upcoming ?? false,
     future_product: product.future_product ?? false,
@@ -72,21 +95,15 @@ async function fetchProductsWithError(
   supabase: DbClient,
   select: string,
 ): Promise<{ products: Product[]; error: string | null }> {
-  const { data, error } = await supabase
-    .from('products')
-    .select(select)
-    .eq('is_active', true)
-    .is('deleted_at', null)
-    .order('name', { ascending: true });
-
-  if (error) {
-    return { products: [], error: error.message };
+  try {
+    const products = await fetchProducts(supabase, select);
+    return { products, error: null };
+  } catch (error) {
+    return {
+      products: [],
+      error: error instanceof Error ? error.message : 'Failed to load products',
+    };
   }
-
-  return {
-    products: ((data ?? []) as unknown as Product[]).map(normalizeProduct),
-    error: null,
-  };
 }
 
 export async function getCategoriesByDivision(
@@ -113,7 +130,7 @@ export async function getCategoriesByDivision(
   return data ?? [];
 }
 
-export async function getCategories(): Promise<Category[]> {
+export const getCategories = cache(async (): Promise<Category[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('categories')
@@ -126,7 +143,7 @@ export async function getCategories(): Promise<Category[]> {
     return [];
   }
   return data ?? [];
-}
+});
 
 export async function getBrands(): Promise<Brand[]> {
   const supabase = await createClient();
@@ -148,9 +165,10 @@ export type CataloguePageData = {
   error: string | null;
 };
 
-export async function getCataloguePageData(): Promise<CataloguePageData> {
+/** Request-deduped catalogue payload for listing/filter UIs. */
+export const getCataloguePageData = cache(async (): Promise<CataloguePageData> => {
   const supabase = await createClient();
-  const primary = await fetchProductsWithError(supabase, PRODUCT_SELECT);
+  const primary = await fetchProductsWithError(supabase, PRODUCT_LIST_SELECT);
   let products = primary.products;
   let productError = primary.error;
 
@@ -180,12 +198,12 @@ export async function getCataloguePageData(): Promise<CataloguePageData> {
     categories: categories ?? [],
     error,
   };
-}
+});
 
 export async function getAllProducts(): Promise<Product[]> {
   const supabase = await createClient();
   try {
-    return await fetchProducts(supabase, PRODUCT_SELECT);
+    return await fetchProducts(supabase, PRODUCT_LIST_SELECT);
   } catch (error) {
     console.error('getAllProducts error:', error);
     try {
@@ -196,7 +214,61 @@ export async function getAllProducts(): Promise<Product[]> {
   }
 }
 
-export async function getProductBySlug(slug: string): Promise<Product | null> {
+/**
+ * Lean DB-backed search candidates for header quick search.
+ * Still ranked/trimmed by `quickSearchProducts` for identical hit shape.
+ */
+export async function searchProductsForQuery(
+  query: string,
+  limit = 40,
+): Promise<{ products: Product[]; error: string | null }> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) {
+    return { products: [], error: null };
+  }
+
+  const supabase = await createClient();
+  const escaped = trimmed.replace(/[%_,]/g, '');
+  if (!escaped) {
+    return { products: [], error: null };
+  }
+
+  const pattern = `%${escaped}%`;
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_SEARCH_SELECT)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .or(
+        [
+          `name.ilike."${pattern}"`,
+          `sku.ilike."${pattern}"`,
+          `search_keywords.ilike."${pattern}"`,
+          `description.ilike."${pattern}"`,
+        ].join(','),
+      )
+      .order('name', { ascending: true })
+      .limit(limit);
+
+    if (error) {
+      return { products: [], error: error.message };
+    }
+
+    return {
+      products: ((data ?? []) as unknown as Product[]).map(normalizeProduct),
+      error: null,
+    };
+  } catch (error) {
+    return {
+      products: [],
+      error: error instanceof Error ? error.message : 'Search failed',
+    };
+  }
+}
+
+export const getProductBySlug = cache(async (slug: string): Promise<Product | null> => {
   const supabase = await createClient();
   try {
     const { data, error } = await supabase
@@ -208,18 +280,147 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       .single();
 
     if (error) throw error;
-    return data ? normalizeProduct(data as unknown as Product) : null;
+    if (!data) return null;
+    const product = normalizeProduct(data as unknown as Product);
+    const warehouse_availability = await getStorefrontWarehouseAvailability(product.id);
+    return { ...product, warehouse_availability };
   } catch (error) {
     console.error('getProductBySlug error:', error);
     const { data } = await supabase
       .from('products')
-      .select('*, category:categories(*)')
+      .select(PRODUCT_SELECT_FALLBACK)
       .eq('slug', slug)
       .eq('is_active', true)
       .is('deleted_at', null)
       .single();
-    return data ? normalizeProduct(data as unknown as Product) : null;
+    if (!data) return null;
+    const product = normalizeProduct(data as unknown as Product);
+    const warehouse_availability = await getStorefrontWarehouseAvailability(product.id);
+    return { ...product, warehouse_availability };
   }
+});
+
+async function fetchProductsByIdsPreservingOrder(
+  ids: string[],
+  limit: number,
+): Promise<Product[]> {
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('products')
+    .select(PRODUCT_LIST_SELECT)
+    .in('id', ids)
+    .eq('is_active', true)
+    .is('deleted_at', null)
+    .limit(limit);
+
+  if (error || !data?.length) return [];
+  const byId = new Map(
+    (data as unknown as Product[]).map((p) => [p.id, normalizeProduct(p)]),
+  );
+  return ids.map((id) => byId.get(id)).filter((p): p is Product => Boolean(p)).slice(0, limit);
+}
+
+export async function getProductRelations(
+  productId: string,
+  relationType: ProductRelationType,
+  limit = 4,
+): Promise<Product[]> {
+  const supabase = await createClient();
+  try {
+    const { data: rows, error } = await supabase
+      .from('product_relations')
+      .select('related_product_id, sort_order')
+      .eq('product_id', productId)
+      .eq('relation_type', relationType)
+      .order('sort_order', { ascending: true })
+      .limit(limit);
+
+    if (!error && rows?.length) {
+      const ids = rows.map((r) => r.related_product_id as string);
+      return fetchProductsByIdsPreservingOrder(ids, limit);
+    }
+  } catch (error) {
+    console.error('getProductRelations error:', error);
+  }
+  return [];
+}
+
+export async function getStorefrontWarehouseAvailability(
+  productId: string,
+): Promise<WarehouseAvailabilityRow[]> {
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin');
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from('inventory_levels')
+      .select('available_stock, warehouse:warehouses(id, name, is_active)')
+      .eq('product_id', productId)
+      .gt('available_stock', 0);
+
+    if (error || !data?.length) return [];
+
+    const rows: WarehouseAvailabilityRow[] = [];
+    for (const level of data) {
+      const warehouse = level.warehouse as
+        | { id: string; name: string; is_active: boolean }
+        | { id: string; name: string; is_active: boolean }[]
+        | null;
+      const wh = Array.isArray(warehouse) ? warehouse[0] : warehouse;
+      if (!wh || wh.is_active === false) continue;
+      const qty = Number(level.available_stock) || 0;
+      rows.push({
+        warehouseId: wh.id,
+        warehouseName: wh.name,
+        stockBand: qty <= 5 ? 'limited' : 'in_stock',
+      });
+    }
+    return rows.sort((a, b) => a.warehouseName.localeCompare(b.warehouseName));
+  } catch (error) {
+    console.error('getStorefrontWarehouseAvailability error:', error);
+    return [];
+  }
+}
+
+export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
+  const supabase = await createClient();
+  try {
+    const fromRelations = await getProductRelations(product.id, 'related', limit);
+    if (fromRelations.length > 0) return fromRelations;
+
+    if (product.related_product_ids?.length) {
+      const ordered = await fetchProductsByIdsPreservingOrder(
+        product.related_product_ids,
+        limit,
+      );
+      if (ordered.length) return ordered;
+    }
+
+    if (product.category_id) {
+      const { data, error } = await supabase
+        .from('products')
+        .select(PRODUCT_LIST_SELECT)
+        .eq('category_id', product.category_id)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .neq('id', product.id)
+        .limit(limit);
+
+      if (!error && data?.length) {
+        return (data as unknown as Product[]).map(normalizeProduct);
+      }
+    }
+
+    const random = await getRandomProducts(limit);
+    return random.filter((item) => item.id !== product.id).slice(0, limit);
+  } catch (error) {
+    console.error('getRelatedProducts error:', error);
+    return [];
+  }
+}
+
+export async function getProductsByIds(ids: string[]): Promise<Product[]> {
+  return fetchProductsByIdsPreservingOrder(ids, ids.length);
 }
 
 export async function getFeaturedProducts(limit = 6): Promise<Product[]> {
@@ -227,7 +428,7 @@ export async function getFeaturedProducts(limit = 6): Promise<Product[]> {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select(PRODUCT_SELECT)
+      .select(PRODUCT_LIST_SELECT)
       .eq('is_active', true)
       .is('deleted_at', null)
       .eq('featured', true)
@@ -252,13 +453,14 @@ function shuffleProducts<T>(items: T[]): T[] {
 
 export async function getRandomProducts(limit = 12): Promise<Product[]> {
   const supabase = await createClient();
+  const poolSize = Math.max(limit * 2, 24);
   try {
     const { data, error } = await supabase
       .from('products')
-      .select(PRODUCT_SELECT)
+      .select(PRODUCT_LIST_SELECT)
       .eq('is_active', true)
       .is('deleted_at', null)
-      .limit(Math.max(limit * 4, 48));
+      .limit(poolSize);
 
     if (error) throw error;
 
@@ -272,7 +474,7 @@ export async function getRandomProducts(limit = 12): Promise<Product[]> {
         .select(PRODUCT_SELECT_FALLBACK)
         .eq('is_active', true)
         .is('deleted_at', null)
-        .limit(Math.max(limit * 4, 48));
+        .limit(poolSize);
 
       const products = ((data ?? []) as unknown as Product[]).map(normalizeProduct);
       return shuffleProducts(products).slice(0, limit);
@@ -337,45 +539,5 @@ export async function getHomepageCategories(limit = 20): Promise<HomepageCategor
   } catch (error) {
     console.error('getHomepageCategories error:', error);
     return fallback;
-  }
-}
-
-export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
-  const supabase = await createClient();
-  try {
-    if (product.related_product_ids?.length) {
-      const { data, error } = await supabase
-        .from('products')
-        .select(PRODUCT_SELECT)
-        .in('id', product.related_product_ids)
-        .eq('is_active', true)
-        .is('deleted_at', null)
-        .limit(limit);
-
-      if (!error && data?.length) {
-        return (data as unknown as Product[]).map(normalizeProduct);
-      }
-    }
-
-    if (product.category_id) {
-      const { data, error } = await supabase
-        .from('products')
-        .select(PRODUCT_SELECT)
-        .eq('category_id', product.category_id)
-        .eq('is_active', true)
-        .is('deleted_at', null)
-        .neq('id', product.id)
-        .limit(limit);
-
-      if (!error && data?.length) {
-        return (data as unknown as Product[]).map(normalizeProduct);
-      }
-    }
-
-    const random = await getRandomProducts(limit);
-    return random.filter((item) => item.id !== product.id).slice(0, limit);
-  } catch (error) {
-    console.error('getRelatedProducts error:', error);
-    return [];
   }
 }

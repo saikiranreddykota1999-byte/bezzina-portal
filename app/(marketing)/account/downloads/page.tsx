@@ -27,7 +27,7 @@ export default async function DownloadsPage() {
           {downloads.map((doc) => (
             <li key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
               <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-orange-500" />
+                <FileText className="h-5 w-5 text-orange-800" />
                 <div>
                   <p className="font-medium text-slate-900">{doc.label}</p>
                   <p className="text-xs text-slate-500">
@@ -45,7 +45,7 @@ export default async function DownloadsPage() {
                   href={doc.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-sm font-semibold text-orange-600 hover:underline"
+                  className="text-sm font-semibold text-orange-800 hover:underline"
                 >
                   Download
                 </a>

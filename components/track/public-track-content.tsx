@@ -19,8 +19,8 @@ export function PublicTrackContent() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 md:px-8">
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
+    <div className="mx-auto max-w-3xl px-4 py-12 md:px-8">
+      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A5C00]">
         Joseph Bezzina & Co. Ltd
       </p>
       <h1 className="mt-4 text-3xl font-bold text-slate-900">Track your delivery</h1>
@@ -36,6 +36,7 @@ export function PublicTrackContent() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tracking number or order ID"
+            aria-label="Tracking number or order ID"
             className="w-full rounded-xl border border-slate-300 py-4 pl-12 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-[#0B3D91]"
           />
         </div>
@@ -72,6 +73,6 @@ export function PublicTrackContent() {
         </Link>{' '}
         to view all your orders.
       </p>
-    </main>
+    </div>
   );
 }

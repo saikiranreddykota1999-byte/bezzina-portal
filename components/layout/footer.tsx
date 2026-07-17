@@ -118,7 +118,7 @@ export async function Footer() {
               </a>
             )}
           </nav>
-          <p className="text-slate-400">
+          <p className="text-slate-300">
             Reg. {company.registrationNumber} · Industrial & Marine Supplies, Malta
           </p>
         </div>

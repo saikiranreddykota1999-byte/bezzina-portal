@@ -66,11 +66,11 @@ export function SeoManager({ pages }: Props) {
       <form onSubmit={handleCreate} className={`${adminCardClass} p-6`}>
         <h2 className={adminHeadingClass}>Add / Update SEO Page</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <input className={adminInputClass} placeholder="Path e.g. /products" value={form.path} onChange={(e) => setForm({ ...form, path: e.target.value })} required />
-          <input className={adminInputClass} placeholder="Page title" value={form.page_title} onChange={(e) => setForm({ ...form, page_title: e.target.value })} required />
-          <textarea className={`${adminTextareaClass} sm:col-span-2`} placeholder="Meta description" rows={2} value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} />
-          <input className={adminInputClass} placeholder="Keywords" value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} />
-          <input className={adminInputClass} placeholder="Robots" value={form.robots} onChange={(e) => setForm({ ...form, robots: e.target.value })} />
+          <input className={adminInputClass} placeholder="Path e.g. /products" aria-label="Path e.g. /products" value={form.path} onChange={(e) => setForm({ ...form, path: e.target.value })} required />
+          <input className={adminInputClass} placeholder="Page title" aria-label="Page title" value={form.page_title} onChange={(e) => setForm({ ...form, page_title: e.target.value })} required />
+          <textarea className={`${adminTextareaClass} sm:col-span-2`} placeholder="Meta description" aria-label="Meta description" rows={2} value={form.meta_description} onChange={(e) => setForm({ ...form, meta_description: e.target.value })} />
+          <input className={adminInputClass} placeholder="Keywords" aria-label="Keywords" value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} />
+          <input className={adminInputClass} placeholder="Robots" aria-label="Robots" value={form.robots} onChange={(e) => setForm({ ...form, robots: e.target.value })} />
         </div>
         <button type="submit" disabled={pending} className={`mt-4 ${adminButtonPrimaryClass}`}>
           Save SEO Page

@@ -1,7 +1,7 @@
-import { isStripeEnabled } from '@/lib/stripe/config';
-
 /**
- * Demo mode is used when Stripe keys are not configured.
- * Add STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY for live payments.
+ * Demo mode when Stripe publishable key is absent.
+ * Uses the client-safe check so the banner works in the browser.
  */
-export const isDemoMode = !isStripeEnabled;
+import { isStripeClientEnabled } from '@/lib/stripe/client';
+
+export const isDemoMode = !isStripeClientEnabled();

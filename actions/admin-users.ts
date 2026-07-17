@@ -1,14 +1,15 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireSuperAdminUser } from '@/lib/auth/server-session';
 import { enterprisePasswordSchema } from '@/lib/auth/password-policy';
 import { logActivity } from '@/services/activity-log.service';
-import { signOutAllDevices } from '@/actions/auth';
+import { revokeAllSessionsForUser } from '@/lib/auth/revoke-sessions';
 import type { UserRole } from '@/types/user';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 const PORTAL_ROLES = [
   'customer',
@@ -177,7 +178,7 @@ export async function deleteAdminUser(userId: string): Promise<ActionResult> {
 export async function revokeAllUserSessionsAction(userId: string): Promise<ActionResult> {
   try {
     const { user } = await requireSuperAdminUser();
-    const result = await signOutAllDevices(userId);
+    const result = await revokeAllSessionsForUser(userId);
     if (!result.success) return { success: false, error: result.error };
 
     await logActivity({

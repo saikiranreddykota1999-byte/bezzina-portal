@@ -7,6 +7,10 @@ export type QuoteCartItem = {
   unit: string;
   price: number | null;
   image_url: string | null;
+  variantId?: string | null;
+  variantSku?: string | null;
+  variantName?: string | null;
+  lineNotes?: string | null;
 };
 
 export type QuoteDraft = {

@@ -1,5 +1,7 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import type { MediaAsset } from '@/types/admin';
@@ -11,7 +13,6 @@ import {
   validateUploadFile,
 } from '@/lib/security/upload-validation';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export async function getMediaAssetsAction(folder?: string): Promise<ActionResult<MediaAsset[]>> {
   try {

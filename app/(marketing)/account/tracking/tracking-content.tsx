@@ -41,6 +41,7 @@ export default function TrackingPageContent({ initialOrder = '' }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Enter tracking number or order ID (e.g. MT7829341056)"
+            aria-label="Enter tracking number or order ID (e.g. MT7829341056)"
             className="w-full rounded-xl border border-slate-300 py-3 pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
@@ -91,7 +92,7 @@ export default function TrackingPageContent({ initialOrder = '' }: Props) {
                 </div>
                 <div className="text-right">
                   <p className="font-mono text-sm text-slate-700">{shipment.trackingNumber}</p>
-                  <p className="text-xs capitalize text-orange-600">
+                  <p className="text-xs capitalize text-orange-800">
                     {shipment.status.replace(/_/g, ' ')}
                   </p>
                 </div>
@@ -103,7 +104,7 @@ export default function TrackingPageContent({ initialOrder = '' }: Props) {
 
       <p className="mt-8 text-sm text-slate-500">
         Need help?{' '}
-        <Link href="/account/tickets" className="text-orange-600 hover:underline">
+        <Link href="/account/tickets" className="text-orange-800 hover:underline">
           Open a support ticket
         </Link>
       </p>

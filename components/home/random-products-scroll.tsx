@@ -20,7 +20,7 @@ export async function RandomProductsScroll() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-600">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-800">
               Product spotlight
             </p>
             <h2
@@ -36,7 +36,7 @@ export async function RandomProductsScroll() {
           </div>
           <Link
             href="/products"
-            className="text-sm font-semibold text-orange-600 hover:underline"
+            className="text-sm font-semibold text-orange-800 underline underline-offset-2 hover:text-orange-900"
           >
             View all products →
           </Link>
@@ -51,7 +51,7 @@ export async function RandomProductsScroll() {
         {!loadError && products.length === 0 && (
           <p className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600">
             Products are loading into the catalogue.{' '}
-            <Link href="/products" className="font-semibold text-orange-600 hover:underline">
+            <Link href="/products" className="font-semibold text-orange-800 underline underline-offset-2 hover:text-orange-900">
               Browse the full catalogue
             </Link>
           </p>

@@ -128,9 +128,9 @@ export function UsersManager({ users }: Props) {
     <div className="space-y-8">
       <form onSubmit={handleCreate} className={`max-w-xl space-y-4 ${adminCardClass} p-6`}>
         <h2 className={adminHeadingClass}>Create Portal User</h2>
-        <input className={adminInputClass} placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
-        <input className={adminInputClass} type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-        <input className={adminInputClass} type="password" placeholder="Password (min 8 chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} />
+        <input className={adminInputClass} placeholder="Full name" aria-label="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
+        <input className={adminInputClass} type="email" placeholder="Email" aria-label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+        <input className={adminInputClass} type="password" placeholder="Password (min 8 chars)" aria-label="Password (min 8 chars)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} aria-invalid={error ? true : undefined} />
         <select className={adminSelectClass} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}>
           {CREATE_ROLES.map((role) => (
             <option key={role} value={role}>
@@ -138,7 +138,11 @@ export function UsersManager({ users }: Props) {
             </option>
           ))}
         </select>
-        {error && <p className="text-sm text-[var(--admin-danger)]">{error}</p>}
+        {error && (
+          <p className="text-sm text-[var(--admin-danger)]" role="alert">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={pending} className={adminButtonPrimaryClass}>
           Create User
         </button>

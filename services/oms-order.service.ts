@@ -72,7 +72,9 @@ export async function listOmsOrders(
     .order('created_at', { ascending: false })
     .range(from, to);
 
-  if (filters.omsStatus && filters.omsStatus !== 'all') {
+  if (filters.omsStatuses?.length) {
+    query = query.in('oms_status', filters.omsStatuses);
+  } else if (filters.omsStatus && filters.omsStatus !== 'all') {
     query = query.eq('oms_status', filters.omsStatus);
   }
   if (filters.orderSource && filters.orderSource !== 'all') {

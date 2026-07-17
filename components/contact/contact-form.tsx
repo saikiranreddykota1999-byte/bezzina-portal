@@ -68,7 +68,8 @@ export function ContactForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="contact-name" className="mb-1.5 block text-sm font-medium text-slate-800">
-            Name <span className="text-red-600">*</span>
+            Name <span className="text-red-600" aria-hidden="true">*</span>
+            <span className="sr-only">(required)</span>
           </label>
           <input
             id="contact-name"
@@ -83,7 +84,8 @@ export function ContactForm() {
         </div>
         <div>
           <label htmlFor="contact-email" className="mb-1.5 block text-sm font-medium text-slate-800">
-            Email <span className="text-red-600">*</span>
+            Email <span className="text-red-600" aria-hidden="true">*</span>
+            <span className="sr-only">(required)</span>
           </label>
           <input
             id="contact-email"
@@ -131,7 +133,8 @@ export function ContactForm() {
 
       <div>
         <label htmlFor="contact-subject" className="mb-1.5 block text-sm font-medium text-slate-800">
-          Subject <span className="text-red-600">*</span>
+          Subject <span className="text-red-600" aria-hidden="true">*</span>
+          <span className="sr-only">(required)</span>
         </label>
         <input
           id="contact-subject"
@@ -146,7 +149,8 @@ export function ContactForm() {
 
       <div>
         <label htmlFor="contact-message" className="mb-1.5 block text-sm font-medium text-slate-800">
-          Message <span className="text-red-600">*</span>
+          Message <span className="text-red-600" aria-hidden="true">*</span>
+          <span className="sr-only">(required)</span>
         </label>
         <textarea
           id="contact-message"

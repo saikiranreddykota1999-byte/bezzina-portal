@@ -28,7 +28,8 @@ export function CookieConsent() {
 
   return (
     <div
-      role="dialog"
+      role="region"
+      aria-label="Cookie preferences"
       aria-labelledby="cookie-consent-title"
       aria-describedby="cookie-consent-description"
       className="site-chrome fixed inset-x-4 bottom-4 z-[60] mx-auto max-w-3xl rounded-[20px] border border-slate-200 bg-white p-5 shadow-[0_16px_40px_rgba(11,61,145,0.15)] sm:inset-x-6"

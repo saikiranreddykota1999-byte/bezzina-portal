@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { deleteProduct } from '@/actions/admin-products';
+import { deleteProduct } from '@/actions/admin-products/crud';
 import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 
 type Props = {

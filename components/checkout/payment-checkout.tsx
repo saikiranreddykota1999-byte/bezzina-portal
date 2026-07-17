@@ -1,11 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, MapPin, ShieldCheck, Store } from 'lucide-react';
+import { CreditCard, ShieldCheck } from 'lucide-react';
 import { createPaymentIntentAction } from '@/actions/stripe-payment';
-import { placeOrderAction } from '@/actions/pickup';
+import { placeOrderAction } from '@/actions/pickup/customer';
 import { useCart } from '@/context/cart-context';
 import { useCards } from '@/context/cards-context';
 import { useCheckout } from '@/context/checkout-context';
@@ -19,10 +18,12 @@ import {
   PaymentMethodSelector,
   type CheckoutPaymentMode,
 } from '@/components/checkout/payment-method-selector';
-import { calculateOrderTotals, formatPickupDateTime } from '@/lib/checkout';
+import { calculateOrderTotals } from '@/lib/checkout';
 import { formatPrice, resolveQuoteLinePrice } from '@/lib/pricing';
 import { isStripeClientEnabled } from '@/lib/stripe/client';
 import { RippleButton } from '@/components/ui/ripple-button';
+import { CheckoutFulfillmentSummary } from '@/components/checkout/payment-checkout/fulfillment-summary';
+import { CheckoutOrderSummary } from '@/components/checkout/payment-checkout/order-summary';
 import type { PlaceOrderInput } from '@/lib/validators/pickup';
 
 export function PaymentCheckout() {
@@ -128,8 +129,14 @@ export function PaymentCheckout() {
       if (cancelled) return;
       setInitializingStripe(false);
 
-      if (!result.success || !result.data) {
-        setError(result.error ?? 'Unable to initialize Stripe payment');
+      if (!result.success) {
+        setError(result.error);
+        setClientSecret('');
+        return;
+      }
+
+      if (!result.data) {
+        setError('Unable to initialize Stripe payment');
         setClientSecret('');
         return;
       }
@@ -298,55 +305,23 @@ export function PaymentCheckout() {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-5">
         <div className="space-y-6 lg:col-span-3">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6">
-            <div className="flex items-center gap-2 text-slate-900">
-              {isPickup ? (
-                <Store className="h-5 w-5 text-orange-500" />
-              ) : (
-                <MapPin className="h-5 w-5 text-orange-500" />
-              )}
-              <h2 className="font-semibold">
-                {isPickup ? 'Store pickup' : 'Delivery address'}
-              </h2>
-            </div>
-
-            {isPickup && pickup ? (
-              <div className="mt-4 space-y-3">
-                <p className="text-sm text-slate-600">
-                  Scheduled for {formatPickupDateTime(pickup.pickupDate, pickup.pickupTime)}
-                </p>
-                <Link href="/account/checkout" className="text-sm text-orange-600 hover:underline">
-                  Change pickup details
-                </Link>
-              </div>
-            ) : deliveryAddress ? (
-              <div className="mt-4 space-y-2">
-                <p className="text-sm text-slate-700">{deliveryAddress.formattedAddress}</p>
-                <Link href="/account/checkout" className="text-sm text-orange-600 hover:underline">
-                  Change delivery address
-                </Link>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-red-600">
-                No delivery address set.{' '}
-                <Link href="/account/checkout" className="underline">
-                  Go to checkout
-                </Link>
-              </p>
-            )}
-          </section>
+          <CheckoutFulfillmentSummary
+            isPickup={isPickup}
+            pickup={pickup}
+            deliveryAddress={deliveryAddress}
+          />
 
           <section className="rounded-2xl border border-slate-200 bg-white p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-slate-900">
-                <CreditCard className="h-5 w-5 text-orange-500" />
+                <CreditCard className="h-5 w-5 text-orange-800" />
                 <h2 className="font-semibold">Payment method</h2>
               </div>
               {!stripeEnabled && cards.length > 0 && useOnlinePayment && (
                 <button
                   type="button"
                   onClick={() => setUseInlinePayment((v) => !v)}
-                  className="text-sm text-orange-600 hover:underline"
+                  className="text-sm text-orange-800 hover:underline"
                 >
                   {useInlinePayment ? 'Use saved card' : 'Enter card manually'}
                 </button>
@@ -426,7 +401,7 @@ export function PaymentCheckout() {
                             value={card.id}
                             checked={selectedCardId === card.id}
                             onChange={() => setSelectedCardId(card.id)}
-                            className="text-orange-500"
+                            className="text-orange-800"
                           />
                           <div>
                             <p className="font-medium text-slate-900">
@@ -463,47 +438,14 @@ export function PaymentCheckout() {
           </section>
         </div>
 
-        <aside className="lg:col-span-2">
-          <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-6">
-            <h2 className="font-semibold text-slate-900">Order summary</h2>
-            <ul className="mt-4 max-h-48 space-y-2 overflow-y-auto text-sm text-slate-600">
-              {items.map((item) => (
-                <li key={item.productId} className="flex justify-between gap-2">
-                  <span className="truncate">
-                    {item.quantity}× {item.name}
-                  </span>
-                  <span className="shrink-0">
-                    {formatPrice(resolveQuoteLinePrice(item.price) * item.quantity)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <dl className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Subtotal</dt>
-                <dd>{formatPrice(subtotal)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">
-                  {isPickup ? 'Pickup fee' : 'Shipping'}
-                </dt>
-                <dd>{shipping === 0 ? 'Free' : formatPrice(shipping)}</dd>
-              </div>
-              <div className="flex justify-between border-t border-slate-100 pt-2 text-base font-semibold text-slate-900">
-                <dt>Total</dt>
-                <dd>{formatPrice(total)}</dd>
-              </div>
-            </dl>
-
-            <button
-              type="button"
-              onClick={() => router.push('/account/checkout')}
-              className="mt-6 w-full text-center text-sm text-slate-500 hover:text-slate-900"
-            >
-              Back to checkout
-            </button>
-          </div>
-        </aside>
+        <CheckoutOrderSummary
+          items={items}
+          subtotal={subtotal}
+          shipping={shipping}
+          total={total}
+          isPickup={isPickup}
+          onBack={() => router.push('/account/checkout')}
+        />
       </div>
     </div>
   );

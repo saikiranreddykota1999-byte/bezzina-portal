@@ -86,7 +86,7 @@ export function OrderReceipt({ order }: Props) {
         >
           <div className="rounded-xl bg-white px-6 py-4 shadow-lg">
             <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
-              <Loader2 className="h-4 w-4 animate-spin text-orange-600" aria-hidden />
+              <Loader2 className="h-4 w-4 animate-spin text-orange-800" aria-hidden />
               Generating your invoice PDF...
             </p>
           </div>
@@ -134,7 +134,7 @@ export function OrderReceipt({ order }: Props) {
       <TaxInvoiceDocument order={order} />
 
       <p className="no-print mt-6 text-center text-sm">
-        <Link href="/account/orders" className="text-orange-600 hover:underline">
+        <Link href="/account/orders" className="text-orange-800 hover:underline">
           Back to orders
         </Link>
       </p>

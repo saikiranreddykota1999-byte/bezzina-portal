@@ -103,6 +103,8 @@ export function SuperAdminMfaSetupForm() {
         value={code}
         onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
         placeholder="6-digit code"
+        aria-label="6-digit code"
+        aria-invalid={message ? true : undefined}
         className="admin-input w-full text-center tracking-[0.3em]"
       />
 

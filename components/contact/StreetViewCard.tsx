@@ -40,13 +40,13 @@ export function StreetViewCard({
           <motion.span
             whileHover={reduceMotion ? undefined : { rotate: 12 }}
             transition={defaultTransition}
-            className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D8A106]/20 text-[#D8A106]"
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D8A106]/20 text-[#7A5C00]"
             aria-hidden="true"
           >
             <Compass className="h-5 w-5" />
           </motion.span>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#D8A106]">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#7A5C00]">
               360° Experience
             </p>
             <h3 id="street-view-title" className="text-lg font-bold">
@@ -92,7 +92,7 @@ export function StreetViewCard({
             </p>
           </div>
         )}
-        <div className="pointer-events-none absolute right-3 top-3 rounded-full bg-[#071B35]/85 px-3 py-1 text-xs font-bold text-[#D8A106]">
+        <div className="pointer-events-none absolute right-3 top-3 rounded-full bg-[#071B35]/85 px-3 py-1 text-xs font-bold text-[#7A5C00]">
           360°
         </div>
       </div>

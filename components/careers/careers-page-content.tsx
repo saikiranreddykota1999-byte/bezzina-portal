@@ -44,7 +44,7 @@ export function CareersPageContent({ vacancies }: Props) {
   const reduceMotion = useReducedMotion();
 
   return (
-    <main>
+    <div>
       {/* Hero */}
       <section className="relative overflow-hidden bg-linear-to-br from-slate-950 via-[#0B3D91] to-slate-900 text-white">
         <div className="pointer-events-none absolute inset-0 opacity-30">
@@ -133,6 +133,6 @@ export function CareersPageContent({ vacancies }: Props) {
       <section id="vacancies" className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
         <CareersContent vacancies={vacancies} />
       </section>
-    </main>
+    </div>
   );
 }

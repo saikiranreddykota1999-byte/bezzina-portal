@@ -35,7 +35,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
         </p>
         <Link
           href="/account/quotes"
-          className="mt-6 inline-block text-sm font-semibold text-orange-600 hover:underline"
+          className="mt-6 inline-block text-sm font-semibold text-[#0B3D91] underline underline-offset-2 hover:text-[#09407a]"
         >
           View quote history →
         </Link>
@@ -50,7 +50,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
           <p className="text-slate-700">No products added for quote yet.</p>
           <Link
             href="/products"
-            className="mt-4 inline-block text-sm font-semibold text-orange-600 hover:underline"
+            className="mt-4 inline-block text-sm font-semibold text-[#0B3D91] underline underline-offset-2 hover:text-[#09407a]"
           >
             Browse products →
           </Link>
@@ -78,11 +78,15 @@ export function QuoteCartContent({ drafts = [] }: Props) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-slate-600">{count} item{count !== 1 ? 's' : ''} ready for quote</p>
+      <p className="text-sm text-slate-600">
+        Request a quote for any catalogue item — including special-order or made-to-order
+        products that cannot be purchased online. {count} item{count !== 1 ? 's' : ''} ready for
+        quote.
+      </p>
 
       <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
         {items.map((item) => (
-          <li key={item.productId} className="flex items-center gap-4 p-4">
+          <li key={`${item.productId}:${item.variantId ?? ''}`} className="flex items-center gap-4 p-4">
             <div className="flex-1">
               <p className="font-semibold text-slate-900">{item.name}</p>
               <p className="text-xs text-slate-600">{item.sku}</p>
@@ -96,7 +100,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
               <button
                 type="button"
                 aria-label="Decrease quantity"
-                onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                onClick={() => updateQuantity(item.productId, item.quantity - 1, item.variantId)}
                 disabled={item.quantity <= 1}
                 className="rounded border border-slate-300 p-1 text-slate-700 disabled:opacity-40"
               >
@@ -108,7 +112,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
               <button
                 type="button"
                 aria-label="Increase quantity"
-                onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                onClick={() => updateQuantity(item.productId, item.quantity + 1, item.variantId)}
                 className="rounded border border-slate-300 p-1 text-slate-700"
               >
                 <Plus className="h-4 w-4" />
@@ -117,7 +121,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
             <button
               type="button"
               aria-label="Remove item"
-              onClick={() => removeItem(item.productId)}
+              onClick={() => removeItem(item.productId, item.variantId)}
               className="rounded p-2 text-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
@@ -155,7 +159,7 @@ export function QuoteCartContent({ drafts = [] }: Props) {
       <QuoteDraftsPanel drafts={drafts} notes={notes} />
 
       <p className="text-xs text-slate-600">
-        <Link href="/account/login" className="text-orange-600 hover:underline">
+        <Link href="/account/login" className="font-medium text-[#0B3D91] underline underline-offset-2 hover:text-[#09407a]">
           Sign in
         </Link>{' '}
         to save quote history to your account.

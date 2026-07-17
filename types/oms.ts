@@ -133,6 +133,8 @@ export type OmsOrder = {
 export type OmsOrderFilters = {
   query?: string;
   omsStatus?: OmsOrderStatus | 'all';
+  /** When set, filters by any of these statuses in one query. */
+  omsStatuses?: OmsOrderStatus[];
   orderSource?: OrderSource | 'all';
   fulfillmentMethod?: 'delivery' | 'store_pickup' | 'all';
   assignedSalesmanId?: string;

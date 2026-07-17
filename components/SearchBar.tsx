@@ -67,6 +67,7 @@ export function SearchBar({
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const styles = variantStyles[variant];
   const isCompact = variant === 'header';
@@ -84,12 +85,14 @@ export function SearchBar({
     setError('');
 
     const response = await quickSearchProductsAction(trimmed);
-    if (!response.success) {
+    if (response.success) {
+      setResults(response.data ?? []);
+      setError('');
+      setActiveIndex(-1);
+    } else {
       setError(response.error);
       setResults([]);
-    } else {
-      setResults(response.data);
-      setError('');
+      setActiveIndex(-1);
     }
 
     setHasSearched(true);
@@ -144,15 +147,46 @@ export function SearchBar({
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Escape') {
       setOpen(false);
+      setActiveIndex(-1);
       return;
     }
+
+    if (!showDropdown || results.length === 0) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        navigateToFullSearch(query);
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex((prev) => (prev + 1) % results.length);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((prev) => (prev <= 0 ? results.length - 1 : prev - 1));
+      return;
+    }
+
     if (event.key === 'Enter') {
       event.preventDefault();
+      if (activeIndex >= 0 && results[activeIndex]) {
+        router.push(`/products/${results[activeIndex].slug}`);
+        setOpen(false);
+        return;
+      }
       navigateToFullSearch(query);
     }
   }
 
   const showDropdown = open && query.trim().length >= 2;
+  const activeOptionId =
+    activeIndex >= 0 && results[activeIndex]
+      ? `${listboxId}-option-${results[activeIndex].id}`
+      : undefined;
 
   return (
     <div
@@ -177,10 +211,12 @@ export function SearchBar({
             aria-expanded={showDropdown}
             aria-controls={showDropdown ? listboxId : undefined}
             aria-autocomplete="list"
+            aria-activedescendant={activeOptionId}
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
               setOpen(true);
+              setActiveIndex(-1);
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={handleKeyDown}
@@ -191,7 +227,7 @@ export function SearchBar({
           />
           <button
             type="submit"
-            className={`absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-[#0B3D91] font-semibold text-white transition hover:bg-[#09407a] ${
+            className={`absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-[#0B3D91] font-semibold text-white transition hover:bg-[#09407a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B3D91] ${
               isCompact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'
             }`}
           >
@@ -225,14 +261,22 @@ export function SearchBar({
 
           {!loading && !error && results.length > 0 && (
             <ul>
-              {results.map((product) => {
+              {results.map((product, index) => {
                 const priceLabel = formatCataloguePrice(product.price) ?? formatAvailabilityLabel(product.availability, product.in_stock);
+                const selected = index === activeIndex;
                 return (
-                  <li key={product.id} role="option" aria-selected={false}>
+                  <li
+                    key={product.id}
+                    id={`${listboxId}-option-${product.id}`}
+                    role="option"
+                    aria-selected={selected}
+                  >
                     <Link
                       href={`/products/${product.slug}`}
                       onClick={() => setOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 transition ${styles.result}`}
+                      className={`flex items-center gap-3 px-4 py-3 transition ${styles.result} ${
+                        selected ? 'bg-slate-100' : ''
+                      }`}
                     >
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                         {product.image_url ? (
@@ -253,7 +297,7 @@ export function SearchBar({
                         <p className="truncate text-sm font-semibold">{product.name}</p>
                         <p className={`truncate text-xs ${styles.muted}`}>{product.sku}</p>
                       </div>
-                      <p className="shrink-0 text-sm font-semibold text-orange-500">
+                      <p className="shrink-0 text-sm font-semibold text-orange-800">
                         {priceLabel}
                       </p>
                     </Link>

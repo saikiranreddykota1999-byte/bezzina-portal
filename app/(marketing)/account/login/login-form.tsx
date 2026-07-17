@@ -269,7 +269,7 @@ export default function LoginForm({
           <button
             type="button"
             onClick={() => switchMode('email-otp')}
-            className="text-sm text-orange-600 hover:underline"
+            className="text-sm text-orange-800 hover:underline"
           >
             Use OTP instead
           </button>
@@ -345,7 +345,7 @@ export default function LoginForm({
               <button
                 type="button"
                 onClick={resetOtpState}
-                className="mt-2 text-sm text-orange-600 hover:underline"
+                className="mt-2 text-sm text-orange-800 hover:underline"
               >
                 {mode === 'email-otp' ? 'Use a different email' : 'Use a different number'}
               </button>
@@ -369,7 +369,7 @@ export default function LoginForm({
           <button
             type="button"
             onClick={() => switchMode('password')}
-            className="font-medium text-orange-600 hover:underline"
+            className="font-medium text-orange-800 hover:underline"
           >
             Sign in with password
           </button>

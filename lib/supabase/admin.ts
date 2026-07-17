@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import 'server-only';
 
 export function getAdminClientConfigError(): string | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();

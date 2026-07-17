@@ -1,10 +1,11 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireSuperAdminUser } from '@/lib/auth/server-session';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 type SettingsKey = 'company' | 'social' | 'business_hours';
 

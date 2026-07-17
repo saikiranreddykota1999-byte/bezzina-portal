@@ -1,7 +1,10 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { assertCustomerOtpEligible } from '@/lib/auth/otp-eligibility';
 import {
   buildOtpForStorage,
   hashOtpCode,
@@ -11,10 +14,110 @@ import {
 } from '@/lib/otp/phone';
 import { sendPhoneOtpSchema, verifyPhoneOtpSchema } from '@/lib/validators/phone-otp';
 import { isSmsConfigured, sendOtpSms } from '@/services/sms.service';
+import { getProfileRole } from '@/lib/auth/get-profile-role';
 
-type ActionResult<T = void> =
-  | { success: true; data?: T }
-  | { success: false; error: string };
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+async function findUserIdByPhone(admin: AdminClient, phone: string): Promise<string | null> {
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('phone', phone)
+    .maybeSingle();
+
+  return profile?.id ?? null;
+}
+
+async function findUserIdBySyntheticEmail(
+  admin: AdminClient,
+  syntheticEmail: string,
+): Promise<string | null> {
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('email', syntheticEmail)
+    .maybeSingle();
+
+  return profile?.id ?? null;
+}
+
+async function ensurePhoneUser(
+  admin: AdminClient,
+  phone: string,
+): Promise<{ userId: string; email: string }> {
+  const syntheticEmail = phoneToSyntheticEmail(phone);
+  const existingId =
+    (await findUserIdByPhone(admin, phone)) ??
+    (await findUserIdBySyntheticEmail(admin, syntheticEmail));
+
+  if (existingId) {
+    const role = await getProfileRole(admin, existingId);
+    const eligibility = assertCustomerOtpEligible(role);
+    if (!eligibility.ok) {
+      throw new Error(eligibility.error);
+    }
+
+    const { data: userData } = await admin.auth.admin.getUserById(existingId);
+    const email = userData.user?.email ?? syntheticEmail;
+
+    await admin.from('profiles').upsert({
+      id: existingId,
+      email,
+      phone,
+      role: role ?? 'customer',
+    });
+
+    return { userId: existingId, email };
+  }
+
+  const { data: created, error } = await admin.auth.admin.createUser({
+    email: syntheticEmail,
+    phone,
+    email_confirm: true,
+    phone_confirm: true,
+    user_metadata: { login_method: 'phone_otp' },
+  });
+
+  if (error) {
+    const fallbackId =
+      (await findUserIdByPhone(admin, phone)) ??
+      (await findUserIdBySyntheticEmail(admin, syntheticEmail));
+    if (!fallbackId) {
+      throw new Error(error.message);
+    }
+
+    const role = await getProfileRole(admin, fallbackId);
+    const eligibility = assertCustomerOtpEligible(role);
+    if (!eligibility.ok) {
+      throw new Error(eligibility.error);
+    }
+
+    const { data: userData } = await admin.auth.admin.getUserById(fallbackId);
+    const email = userData.user?.email ?? syntheticEmail;
+
+    await admin.from('profiles').upsert({
+      id: fallbackId,
+      email,
+      phone,
+      role: role ?? 'customer',
+    });
+
+    return { userId: fallbackId, email };
+  }
+
+  if (!created.user) {
+    throw new Error('Failed to create account for this phone number');
+  }
+
+  await admin.from('profiles').upsert({
+    id: created.user.id,
+    email: syntheticEmail,
+    phone,
+    role: 'customer',
+  });
+
+  return { userId: created.user.id, email: syntheticEmail };
+}
 
 export async function sendPhoneOtpAction(
   input: unknown,
@@ -33,7 +136,24 @@ export async function sendPhoneOtpAction(
       return { success: false, error: 'Enter a valid phone number with country code' };
     }
 
+    const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
+    const { getClientIp } = await import('@/lib/security/rate-limit');
+    const ip = (await getClientIp()) ?? 'unknown';
+    const allowed = await checkPublicRateLimit('phone_otp_send', `${ip}:${phone}`, 5, 15);
+    if (!allowed) {
+      return { success: false, error: 'Too many OTP requests. Please try again later.' };
+    }
+
     const admin = createAdminClient();
+    const existingId = await findUserIdByPhone(admin, phone);
+    if (existingId) {
+      const role = await getProfileRole(admin, existingId);
+      const eligibility = assertCustomerOtpEligible(role);
+      if (!eligibility.ok) {
+        return { success: false, error: eligibility.error };
+      }
+    }
+
     const { code, codeHash, expiresAt, sendWindowStart } = buildOtpForStorage(phone);
 
     const { count } = await admin
@@ -85,94 +205,7 @@ export async function sendPhoneOtpAction(
   }
 }
 
-async function findUserIdByPhone(admin: ReturnType<typeof createAdminClient>, phone: string) {
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('phone', phone)
-    .maybeSingle();
-
-  return profile?.id ?? null;
-}
-
-async function ensurePhoneUser(admin: ReturnType<typeof createAdminClient>, phone: string) {
-  const syntheticEmail = phoneToSyntheticEmail(phone);
-  const existingId = await findUserIdByPhone(admin, phone);
-
-  if (existingId) {
-    const { data: userData } = await admin.auth.admin.getUserById(existingId);
-    if (userData.user) {
-      return { userId: existingId, email: userData.user.email ?? syntheticEmail };
-    }
-  }
-
-  const { data: listData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const existingUser = listData.users.find(
-    (user) => user.email === syntheticEmail || user.phone === phone,
-  );
-
-  if (existingUser) {
-    const { data: existingProfile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', existingUser.id)
-      .maybeSingle();
-    await admin.from('profiles').upsert({
-      id: existingUser.id,
-      email: existingUser.email ?? syntheticEmail,
-      phone,
-      ...(existingProfile?.role ? { role: existingProfile.role } : { role: 'customer' as const }),
-    });
-    return { userId: existingUser.id, email: existingUser.email ?? syntheticEmail };
-  }
-
-  const { data: created, error } = await admin.auth.admin.createUser({
-    email: syntheticEmail,
-    phone,
-    email_confirm: true,
-    phone_confirm: true,
-    user_metadata: { login_method: 'phone_otp' },
-  });
-
-  if (error) {
-    const { data: listData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const fallback = listData.users.find(
-      (user) => user.email === syntheticEmail || user.phone === phone,
-    );
-    if (!fallback) {
-      throw new Error(error.message);
-    }
-    const { data: fallbackProfile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', fallback.id)
-      .maybeSingle();
-    await admin.from('profiles').upsert({
-      id: fallback.id,
-      email: fallback.email ?? syntheticEmail,
-      phone,
-      ...(fallbackProfile?.role ? { role: fallbackProfile.role } : { role: 'customer' as const }),
-    });
-    return { userId: fallback.id, email: fallback.email ?? syntheticEmail };
-  }
-
-  if (!created.user) {
-    throw new Error('Failed to create account for this phone number');
-  }
-
-  await admin.from('profiles').upsert({
-    id: created.user.id,
-    email: syntheticEmail,
-    phone,
-    role: 'customer',
-  });
-
-  return { userId: created.user.id, email: syntheticEmail };
-}
-
-export async function verifyPhoneOtpAction(
-  input: unknown,
-): Promise<ActionResult> {
+export async function verifyPhoneOtpAction(input: unknown): Promise<ActionResult> {
   try {
     const parsed = verifyPhoneOtpSchema.safeParse(input);
     if (!parsed.success) {

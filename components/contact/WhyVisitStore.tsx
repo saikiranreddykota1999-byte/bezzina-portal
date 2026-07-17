@@ -23,7 +23,7 @@ export function WhyVisitStore() {
           transition={defaultTransition}
           className="max-w-3xl"
         >
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A5C00]">
             Why Visit
           </p>
           <h2 id="why-visit-title" className="mt-4 text-3xl font-bold text-[#071B35] sm:text-4xl">

@@ -1,5 +1,7 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import { categoryFormSchema } from '@/lib/validators/catalogue';
@@ -8,7 +10,6 @@ import { productIdSchema } from '@/lib/security/bulk-ids';
 import { categorySoftDeletePayload } from '@/lib/security/soft-delete';
 import type { Category, CategoryDivision } from '@/types/product';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export type CategoryTree = {
   parents: Category[];

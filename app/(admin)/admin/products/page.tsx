@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { guardAdminPage } from '@/lib/admin/guard-page';
-import { getAdminProducts } from '@/actions/admin-products';
+import { getAdminProducts } from '@/actions/admin-products/crud';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { ProductImportPanel } from '@/components/admin/product-import-panel';
 import { ProductsTable } from '@/components/admin/products-table';

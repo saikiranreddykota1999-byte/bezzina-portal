@@ -1,11 +1,12 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import type { NewsletterSubscriber } from '@/types/admin';
 import { parseBulkIds, productIdSchema } from '@/lib/security/bulk-ids';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export async function getNewsletterSubscribersAction(): Promise<ActionResult<NewsletterSubscriber[]>> {
   try {

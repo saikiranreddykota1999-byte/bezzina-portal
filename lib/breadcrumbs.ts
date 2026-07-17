@@ -13,7 +13,10 @@ export function buildProductBreadcrumbs(
   product: Product,
   options: BuildProductBreadcrumbsOptions = {},
 ): BreadcrumbItem[] {
-  const crumbs: BreadcrumbItem[] = [{ label: 'Products', href: '/products' }];
+  const crumbs: BreadcrumbItem[] = [
+    { label: 'Home', href: '/' },
+    { label: 'Products', href: '/products' },
+  ];
 
   if (product.category?.division) {
     const divisionHref = product.category.division === 'marine' ? '/marine' : '/industrial';
@@ -23,7 +26,12 @@ export function buildProductBreadcrumbs(
     });
   }
 
-  if (product.category?.name) {
+  if (product.category?.name && product.category.slug) {
+    crumbs.push({
+      label: product.category.name,
+      href: `/products?category=${encodeURIComponent(product.category.slug)}`,
+    });
+  } else if (product.category?.name) {
     crumbs.push({ label: product.category.name });
   }
 
@@ -32,4 +40,11 @@ export function buildProductBreadcrumbs(
   }
 
   return crumbs;
+}
+
+/** Generic marketing breadcrumb trail: Home → …sections → current. */
+export function buildPageBreadcrumbs(
+  sections: Array<{ label: string; href?: string }>,
+): BreadcrumbItem[] {
+  return [{ label: 'Home', href: '/' }, ...sections];
 }

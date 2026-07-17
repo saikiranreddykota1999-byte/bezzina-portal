@@ -9,7 +9,7 @@ import {
   reorderProductImages,
   setPrimaryProductImage,
   uploadProductImage,
-} from '@/actions/admin-products';
+} from '@/actions/admin-products/media';
 import type { ProductImage } from '@/types/product';
 import {
   adminCardClass,

@@ -46,14 +46,31 @@ export async function createPaymentIntentAction(
       };
     }
 
-    const { supabase, user, profile } = await requireAuthenticatedUser();
+    const session = await requireAuthenticatedUser();
+    const { supabase, profile } = session;
+    const user = session.user!;
+
+    const { getClientIp, enforceRateLimit } = await import('@/lib/security/rate-limit');
+    const ip = (await getClientIp()) ?? 'unknown';
+    const allowed = await enforceRateLimit({
+      action: 'create_payment_intent',
+      identifier: `${user.id}:${ip}`,
+      maxAttempts: 20,
+      windowMinutes: 15,
+    });
+    if (!allowed) {
+      return { success: false, error: 'Too many payment attempts. Please try again later.' };
+    }
+
     const { fulfillmentMethod, items } = parsed.data;
 
     const productIds = items.map((item) => item.productId);
     const { data: dbProducts, error: priceError } = await supabase
       .from('products')
       .select('id, price, name')
-      .in('id', productIds);
+      .in('id', productIds)
+      .is('deleted_at', null)
+      .eq('is_active', true);
 
     if (priceError) {
       return { success: false, error: priceError.message };

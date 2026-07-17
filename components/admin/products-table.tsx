@@ -7,9 +7,11 @@ import {
   bulkArchiveProducts,
   bulkDeleteProducts,
   bulkPublishProducts,
+} from '@/actions/admin-products/bulk';
+import {
   duplicateProduct,
   restoreProduct,
-} from '@/actions/admin-products';
+} from '@/actions/admin-products/crud';
 import { AdminDataTable, exportToCsv, type Column } from '@/components/admin/admin-data-table';
 import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
 import {

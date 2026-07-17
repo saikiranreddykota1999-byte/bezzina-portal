@@ -78,19 +78,23 @@ export function AddressBook({ addresses: initial }: Props) {
       <form onSubmit={handleAdd} className="rounded-xl border border-slate-200 p-5 space-y-3">
         <h3 className="font-semibold text-slate-900">Add Address</h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Label" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
-          <input value={form.line1} onChange={(e) => setForm({ ...form, line1: e.target.value })} placeholder="Address line 1" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
-          <input value={form.line2} onChange={(e) => setForm({ ...form, line2: e.target.value })} placeholder="Address line 2" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-          <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="City" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
-          <input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} placeholder="Postal code" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-          <input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="Country" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
+          <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Label" aria-label="Label" aria-invalid={error ? true : undefined} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
+          <input value={form.line1} onChange={(e) => setForm({ ...form, line1: e.target.value })} placeholder="Address line 1" aria-label="Address line 1" aria-invalid={error ? true : undefined} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
+          <input value={form.line2} onChange={(e) => setForm({ ...form, line2: e.target.value })} placeholder="Address line 2" aria-label="Address line 2" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="City" aria-label="City" aria-invalid={error ? true : undefined} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
+          <input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} placeholder="Postal code" aria-label="Postal code" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          <input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="Country" aria-label="Country" aria-invalid={error ? true : undefined} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={form.is_default} onChange={(e) => setForm({ ...form, is_default: e.target.checked })} />
           Set as default
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button type="submit" disabled={pending} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white">
+        {error && (
+          <p className="text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={pending} className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white">
           Save Address
         </button>
       </form>

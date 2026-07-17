@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { INDUSTRIAL_TOOLS_CATALOGUE, type CatalogueProductDef } from '@/config/catalogue/industrial-tools';
+import { slugify } from '@/lib/utils/slugify';
 
 export type ImportRow = {
   category?: string;
@@ -34,13 +35,6 @@ type SchemaFlags = {
   productVariants: boolean;
   publishStatus: boolean;
 };
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
 
 function parseBool(value: boolean | string | undefined, fallback = false): boolean {
   if (typeof value === 'boolean') return value;

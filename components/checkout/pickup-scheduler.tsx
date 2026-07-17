@@ -5,7 +5,7 @@ import {
   getActivePickupLocations,
   getPickupAvailableDates,
   getPickupAvailableSlots,
-} from '@/actions/pickup';
+} from '@/actions/pickup/customer';
 import type {
   AvailablePickupSlot,
   CheckoutPickupSelection,

@@ -46,6 +46,8 @@ export function RequiredPasswordChangeForm({ userRole }: Props) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="New password"
+        aria-label="New password"
+        aria-invalid={message ? true : undefined}
         className="admin-input w-full"
         autoComplete="new-password"
       />

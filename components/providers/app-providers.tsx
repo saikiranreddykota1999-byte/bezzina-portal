@@ -5,6 +5,7 @@ import { WishlistProvider } from '@/context/wishlist-context';
 import { CardsProvider } from '@/context/cards-context';
 import { CheckoutProvider } from '@/context/checkout-context';
 import { QuoteCartProvider } from '@/context/quote-cart-context';
+import { CompareTray } from '@/components/products/compare-tray';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +13,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <QuoteCartProvider>
         <WishlistProvider>
           <CardsProvider>
-            <CheckoutProvider>{children}</CheckoutProvider>
+            <CheckoutProvider>
+              {children}
+              <CompareTray />
+            </CheckoutProvider>
           </CardsProvider>
         </WishlistProvider>
       </QuoteCartProvider>

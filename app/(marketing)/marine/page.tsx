@@ -1,15 +1,21 @@
 import { Suspense } from 'react';
 import { ProductsCatalogueSection } from '@/components/products/products-catalogue-section';
 import { CatalogueSkeleton } from '@/components/products/catalogue-skeleton';
-import { buildPageMetadata } from '@/lib/seo/metadata';
+import { JsonLd } from '@/components/seo/json-ld';
+import { buildPageBreadcrumbs } from '@/lib/breadcrumbs';
 import type { CatalogueSearchParams } from '@/lib/catalogue-params';
+import { buildPageMetadata } from '@/lib/seo/metadata';
+import { getBreadcrumbSchema, getCollectionPageSchema } from '@/lib/structuredData';
+
+const PAGE_TITLE = 'Marine Supplies | Joseph Bezzina & Co Ltd';
+const PAGE_DESCRIPTION =
+  'Full marine supplies catalogue — anchors, pumps, safety equipment, navigation, and more.';
 
 export async function generateMetadata() {
   return buildPageMetadata({
     path: '/marine',
-    fallbackTitle: 'Marine Supplies | Joseph Bezzina & Co Ltd',
-    fallbackDescription:
-      'Full marine supplies catalogue — anchors, pumps, safety equipment, navigation, and more.',
+    fallbackTitle: PAGE_TITLE,
+    fallbackDescription: PAGE_DESCRIPTION,
   });
 }
 
@@ -21,7 +27,22 @@ type PageProps = {
 
 export default function MarinePage({ searchParams }: PageProps) {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-12 md:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-12 md:px-8">
+      <JsonLd
+        data={[
+          getCollectionPageSchema({
+            name: 'Marine Supplies',
+            description: PAGE_DESCRIPTION,
+            path: '/marine',
+          }),
+          getBreadcrumbSchema(
+            buildPageBreadcrumbs([
+              { label: 'Products', href: '/products' },
+              { label: 'Marine Supplies', href: '/marine' },
+            ]),
+          ),
+        ]}
+      />
       <div className="mb-10">
         <h1 className="text-3xl font-bold text-slate-900">Marine Supplies</h1>
         <p className="mt-3 max-w-3xl text-base leading-7 text-slate-700">
@@ -33,6 +54,6 @@ export default function MarinePage({ searchParams }: PageProps) {
       <Suspense fallback={<CatalogueSkeleton />}>
         <ProductsCatalogueSection searchParams={searchParams} division="marine" />
       </Suspense>
-    </main>
+    </div>
   );
 }

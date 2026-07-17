@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getCustomerOrderByNumber } from '@/actions/pickup';
+import { getCustomerOrderByNumber } from '@/actions/pickup/customer';
 import { OrderReceipt } from '@/components/orders/order-receipt';
 
 type Props = {

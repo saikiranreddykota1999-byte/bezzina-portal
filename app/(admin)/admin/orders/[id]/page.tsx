@@ -13,7 +13,11 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   const result = await getOmsOrderAction(id);
 
   if (!result.success || !result.data) {
-    return <p className="text-[var(--admin-danger)]">{result.error ?? 'Order not found'}</p>;
+    return (
+      <p className="text-[var(--admin-danger)]">
+        {!result.success ? result.error : 'Order not found'}
+      </p>
+    );
   }
 
   const order = result.data;

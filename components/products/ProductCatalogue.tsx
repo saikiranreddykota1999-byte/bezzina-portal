@@ -15,6 +15,10 @@ import {
 } from '@/lib/catalogue-params';
 import ProductCard from './ProductCard';
 import { CatalogueEmptyState } from './catalogue-empty-state';
+import {
+  CatalogueFilterGroup,
+  CatalogueFilterToggle,
+} from './catalogue/catalogue-filters';
 
 interface Props {
   result: PaginatedProducts;
@@ -172,9 +176,10 @@ export default function ProductCatalogue({
           <button
             type="button"
             onClick={() => setShowFilters((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 lg:hidden"
+            aria-expanded={showFilters}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] lg:hidden"
           >
-            <SlidersHorizontal className="h-4 w-4" />
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
             More filters
           </button>
         </div>
@@ -182,8 +187,9 @@ export default function ProductCatalogue({
 
       <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
         <aside className={`space-y-5 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-          <FilterGroup label="Material">
+          <CatalogueFilterGroup label="Material" htmlFor="catalogue-material">
             <select
+              id="catalogue-material"
               value={filters.material}
               onChange={(e) => navigate({ material: e.target.value, page: 1 })}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
@@ -195,10 +201,11 @@ export default function ProductCatalogue({
                 </option>
               ))}
             </select>
-          </FilterGroup>
+          </CatalogueFilterGroup>
 
-          <FilterGroup label="Standard">
+          <CatalogueFilterGroup label="Standard" htmlFor="catalogue-standard">
             <select
+              id="catalogue-standard"
               value={filters.standard}
               onChange={(e) => navigate({ standard: e.target.value, page: 1 })}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
@@ -210,7 +217,7 @@ export default function ProductCatalogue({
                 </option>
               ))}
             </select>
-          </FilterGroup>
+          </CatalogueFilterGroup>
 
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input
@@ -222,8 +229,9 @@ export default function ProductCatalogue({
             Available only
           </label>
 
-          <FilterGroup label="Availability">
+          <CatalogueFilterGroup label="Availability" htmlFor="catalogue-availability">
             <select
+              id="catalogue-availability"
               value={filters.availability}
               onChange={(e) => navigate({ availability: e.target.value, page: 1 })}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
@@ -234,34 +242,34 @@ export default function ProductCatalogue({
               <option value="made_to_order">Made To Order</option>
               <option value="out_of_stock">Request Availability</option>
             </select>
-          </FilterGroup>
+          </CatalogueFilterGroup>
 
-          <FilterToggle
+          <CatalogueFilterToggle
             label="Marine Grade"
             checked={filters.marineGrade}
             onChange={(checked) => navigate({ marineGrade: checked, page: 1 })}
           />
-          <FilterToggle
+          <CatalogueFilterToggle
             label="Industrial Grade"
             checked={filters.industrialGrade}
             onChange={(checked) => navigate({ industrialGrade: checked, page: 1 })}
           />
-          <FilterToggle
+          <CatalogueFilterToggle
             label="Featured"
             checked={filters.featured}
             onChange={(checked) => navigate({ featured: checked, page: 1 })}
           />
-          <FilterToggle
+          <CatalogueFilterToggle
             label="Fast Selling"
             checked={filters.fastSelling}
             onChange={(checked) => navigate({ fastSelling: checked, page: 1 })}
           />
-          <FilterToggle
+          <CatalogueFilterToggle
             label="New Arrival"
             checked={filters.newArrival}
             onChange={(checked) => navigate({ newArrival: checked, page: 1 })}
           />
-          <FilterToggle
+          <CatalogueFilterToggle
             label="Recently Added"
             checked={filters.recentlyAdded}
             onChange={(checked) => navigate({ recentlyAdded: checked, page: 1 })}
@@ -279,8 +287,12 @@ export default function ProductCatalogue({
             <CatalogueEmptyState filtered />
           ) : (
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4 md:gap-6">
-              {result.products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {result.products.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  priority={result.page === 1 && index < 4}
+                />
               ))}
             </div>
           )}
@@ -314,35 +326,3 @@ export default function ProductCatalogue({
   );
 }
 
-function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-        {label}
-      </p>
-      {children}
-    </div>
-  );
-}
-
-function FilterToggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center gap-2 text-sm text-slate-700">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="rounded border-slate-300"
-      />
-      {label}
-    </label>
-  );
-}

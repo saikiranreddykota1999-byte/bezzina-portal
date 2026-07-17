@@ -129,7 +129,7 @@ export function DeliveryAddressForm({ value, onChange }: Props) {
           <button
             type="button"
             onClick={() => setManual(true)}
-            className="text-sm text-orange-600 hover:underline"
+            className="text-sm text-orange-800 hover:underline"
           >
             Enter address manually
           </button>
@@ -143,12 +143,14 @@ export function DeliveryAddressForm({ value, onChange }: Props) {
           )}
           <input
             placeholder="Address line 1"
+            aria-label="Address line 1"
             value={form.line1}
             onChange={(e) => setForm((f) => ({ ...f, line1: e.target.value }))}
             className={inputClass}
           />
           <input
             placeholder="Address line 2 (optional)"
+            aria-label="Address line 2 (optional)"
             value={form.line2}
             onChange={(e) => setForm((f) => ({ ...f, line2: e.target.value }))}
             className={inputClass}
@@ -156,12 +158,14 @@ export function DeliveryAddressForm({ value, onChange }: Props) {
           <div className="grid gap-3 sm:grid-cols-2">
             <input
               placeholder="City"
+              aria-label="City"
               value={form.city}
               onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
               className={inputClass}
             />
             <input
               placeholder="Postal code"
+              aria-label="Postal code"
               value={form.postalCode}
               onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))}
               className={inputClass}
@@ -169,6 +173,7 @@ export function DeliveryAddressForm({ value, onChange }: Props) {
           </div>
           <input
             placeholder="Country"
+            aria-label="Country"
             value={form.country}
             onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
             className={inputClass}
@@ -181,7 +186,7 @@ export function DeliveryAddressForm({ value, onChange }: Props) {
             Confirm address
           </button>
           {GOOGLE_KEY && (
-            <button type="button" onClick={() => setManual(false)} className="ml-3 text-sm text-orange-600 hover:underline">
+            <button type="button" onClick={() => setManual(false)} className="ml-3 text-sm text-orange-800 hover:underline">
               Use Google search
             </button>
           )}

@@ -1,12 +1,7 @@
 'use client';
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-} from 'react';
-import { useLocalStorage } from '@/lib/hooks/use-local-storage';
+import { createContext, useContext, useMemo } from 'react';
+import { useQuantityListStorage } from '@/hooks/use-quantity-list-storage';
 import type { CartItem } from '@/types/user';
 
 type CartContextValue = {
@@ -22,48 +17,19 @@ const CartContext = createContext<CartContextValue | null>(null);
 const STORAGE_KEY = 'bezzina-cart';
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useLocalStorage<CartItem[]>(STORAGE_KEY, []);
-
-  const addItem = useCallback((item: Omit<CartItem, 'quantity'>, quantity = 1) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.productId === item.productId);
-      if (existing) {
-        return prev.map((i) =>
-          i.productId === item.productId
-            ? { ...i, quantity: i.quantity + quantity }
-            : i,
-        );
-      }
-      return [...prev, { ...item, quantity }];
-    });
-  }, [setItems]);
-
-  const removeItem = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
-  }, [setItems]);
-
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.productId !== productId));
-      return;
-    }
-    setItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, quantity } : i)),
-    );
-  }, [setItems]);
-
-  const clearCart = useCallback(() => setItems([]), [setItems]);
+  const { items, count, addItem, removeItem, updateQuantity, clear } =
+    useQuantityListStorage<CartItem>(STORAGE_KEY, { removeOnZero: true });
 
   const value = useMemo(
     () => ({
       items,
-      count: items.reduce((sum, i) => sum + i.quantity, 0),
+      count,
       addItem,
       removeItem,
       updateQuantity,
-      clearCart,
+      clearCart: clear,
     }),
-    [items, addItem, removeItem, updateQuantity, clearCart],
+    [items, count, addItem, removeItem, updateQuantity, clear],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

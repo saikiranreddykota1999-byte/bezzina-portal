@@ -36,7 +36,7 @@ export function HowItWorksTimeline() {
           transition={defaultTransition}
           className="mx-auto max-w-2xl text-center"
         >
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A5C00]">
             Process
           </p>
           <h2
@@ -88,7 +88,7 @@ export function HowItWorksTimeline() {
                   </h3>
                   {index < HOW_IT_WORKS_STEPS.length - 1 && (
                     <span
-                      className="mt-6 text-2xl text-[#D8A106] sm:col-span-2 lg:hidden"
+                      className="mt-6 text-2xl text-[#7A5C00] sm:col-span-2 lg:hidden"
                       aria-hidden="true"
                     >
                       ↓
@@ -96,7 +96,7 @@ export function HowItWorksTimeline() {
                   )}
                   {index < HOW_IT_WORKS_STEPS.length - 1 && (
                     <span
-                      className="pointer-events-none absolute -right-3 top-8 hidden text-2xl text-[#D8A106] lg:block xl:-right-5"
+                      className="pointer-events-none absolute -right-3 top-8 hidden text-2xl text-[#7A5C00] lg:block xl:-right-5"
                       aria-hidden="true"
                     >
                       →

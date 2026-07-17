@@ -25,7 +25,7 @@ export function AboutPageContent() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <main>
+    <div>
       <section className="relative overflow-hidden bg-white py-14 sm:py-20">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(11,61,145,0.08),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(216,161,6,0.08),transparent_40%)]"
@@ -167,6 +167,6 @@ export function AboutPageContent() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

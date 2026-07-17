@@ -1,10 +1,11 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { requirePermission, getAuthenticatedUser } from '@/lib/auth/server-session';
 import type { Notification } from '@/types/notification';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export async function getNotifications(): Promise<ActionResult<Notification[]>> {
   try {

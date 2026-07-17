@@ -19,7 +19,7 @@ export function ServicesPageContent() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <main>
+    <div>
       <section className="relative overflow-hidden bg-white py-14 sm:py-20">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(11,61,145,0.08),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(216,161,6,0.08),transparent_40%)]"
@@ -32,7 +32,7 @@ export function ServicesPageContent() {
             transition={{ ...defaultTransition, duration: 0.5 }}
             className="max-w-3xl"
           >
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D8A106]">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#7A5C00]">
               {SERVICES_PAGE_CONTENT.eyebrow}
             </p>
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#071B35] sm:text-5xl">
@@ -100,6 +100,6 @@ export function ServicesPageContent() {
           </div>
         </motion.div>
       </section>
-    </main>
+    </div>
   );
 }

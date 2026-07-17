@@ -2,31 +2,51 @@ import type Stripe from 'stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logServerError } from '@/lib/security/sanitize-error';
 
-export async function isWebhookEventProcessed(eventId: string): Promise<boolean> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from('stripe_webhook_events')
-    .select('id')
-    .eq('event_id', eventId)
-    .maybeSingle();
-  return Boolean(data);
+function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === '23505' || Boolean(error.message?.toLowerCase().includes('duplicate'));
 }
 
-export async function recordWebhookEvent(
+/**
+ * Atomically claims a webhook event for processing.
+ * Returns false when the event was already recorded (idempotent skip).
+ */
+export async function claimWebhookEvent(
   event: Stripe.Event,
   paymentIntentId: string | null,
-  metadata: Record<string, unknown> = {},
-): Promise<void> {
+): Promise<boolean> {
   const admin = createAdminClient();
   const { error } = await admin.from('stripe_webhook_events').insert({
     event_id: event.id,
     event_type: event.type,
     payment_intent_id: paymentIntentId,
-    metadata,
+    metadata: { status: 'processing' },
   });
 
-  if (error && !error.message.includes('duplicate')) {
-    logServerError('recordWebhookEvent', error);
+  if (isUniqueViolation(error)) {
+    return false;
+  }
+
+  if (error) {
+    logServerError('claimWebhookEvent', error);
+    throw new Error('Failed to claim webhook event');
+  }
+
+  return true;
+}
+
+export async function finalizeWebhookEvent(
+  eventId: string,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('stripe_webhook_events')
+    .update({ metadata })
+    .eq('event_id', eventId);
+
+  if (error) {
+    logServerError('finalizeWebhookEvent', error);
   }
 }
 
@@ -64,24 +84,40 @@ export async function reconcilePaymentIntentSucceeded(
 }
 
 export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<void> {
-  if (await isWebhookEventProcessed(event.id)) {
+  let paymentIntentId: string | null = null;
+
+  if (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed') {
+    paymentIntentId = (event.data.object as Stripe.PaymentIntent).id;
+  }
+
+  const claimed = await claimWebhookEvent(event, paymentIntentId);
+  if (!claimed) {
     return;
   }
 
-  let paymentIntentId: string | null = null;
-  let metadata: Record<string, unknown> = {};
+  let metadata: Record<string, unknown> = { status: 'processed' };
 
-  if (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed') {
-    const intent = event.data.object as Stripe.PaymentIntent;
-    paymentIntentId = intent.id;
+  try {
+    if (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed') {
+      const intent = event.data.object as Stripe.PaymentIntent;
 
-    if (event.type === 'payment_intent.succeeded') {
-      const result = await reconcilePaymentIntentSucceeded(intent);
-      metadata = { reconciled: result.reconciled, order_id: result.orderId ?? null };
-    } else {
-      metadata = { status: intent.status, last_error: intent.last_payment_error?.message ?? null };
+      if (event.type === 'payment_intent.succeeded') {
+        const result = await reconcilePaymentIntentSucceeded(intent);
+        metadata = { reconciled: result.reconciled, order_id: result.orderId ?? null };
+      } else {
+        metadata = {
+          status: intent.status,
+          last_error: intent.last_payment_error?.message ?? null,
+        };
+      }
     }
+  } catch (error) {
+    logServerError('handleStripeWebhookEvent', error);
+    metadata = {
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Webhook handler failed',
+    };
   }
 
-  await recordWebhookEvent(event, paymentIntentId, metadata);
+  await finalizeWebhookEvent(event.id, metadata);
 }

@@ -2,7 +2,6 @@
 
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { isPortalRole, isSuperAdminRole } from '@/lib/auth/roles';
 import {
   checkLoginLockout,
@@ -148,6 +147,15 @@ export async function customerPasswordLogin(
     return { success: false, error: 'Your account has been disabled.' };
   }
 
+  if (isPortalRole(profile?.role)) {
+    await supabase.auth.signOut();
+    await recordLoginAttempt(normalizedEmail, false);
+    return {
+      success: false,
+      error: 'Staff accounts must sign in through the admin portal.',
+    };
+  }
+
   await recordLoginAttempt(normalizedEmail, true);
   await logActivity({
     userId: data.user.id,
@@ -165,18 +173,19 @@ export async function requestPasswordReset(email: string): Promise<LoginResult> 
   }
 
   const ip = (await getClientIp()) ?? 'unknown';
-  const supabase = await createClient();
-  const { data: allowed } = await supabase.rpc('check_rate_limit', {
-    p_action: 'password_reset',
-    p_identifier: `${ip}:${parsed.data.email}`,
-    p_max_attempts: 3,
-    p_window_minutes: 60,
-  });
+  const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
+  const allowed = await checkPublicRateLimit(
+    'password_reset',
+    `${ip}:${parsed.data.email.toLowerCase()}`,
+    3,
+    60,
+  );
 
   if (!allowed) {
     return { success: false, error: 'Too many requests. Please try again later.' };
   }
 
+  const supabase = await createClient();
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${origin}/account/reset-password`,
@@ -189,18 +198,6 @@ export async function requestPasswordReset(email: string): Promise<LoginResult> 
   return {
     success: true,
   };
-}
-
-export async function signOutAllDevices(userId: string): Promise<LoginResult> {
-  try {
-    const admin = createAdminClient();
-    const { error } = await admin.auth.admin.signOut(userId, 'global');
-    if (error) return { success: false, error: 'Failed to revoke sessions.' };
-    return { success: true };
-  } catch (error) {
-    logServerError('signOutAllDevices', error);
-    return { success: false, error: 'Failed to revoke sessions.' };
-  }
 }
 
 export async function customerOAuthLogin(provider: 'google' | 'facebook') {

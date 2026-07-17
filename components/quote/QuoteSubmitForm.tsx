@@ -21,6 +21,7 @@ export function QuoteSubmitForm({ items, notes, onBack, onSuccess }: QuoteSubmit
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loadingPrefill, setLoadingPrefill] = useState(true);
@@ -59,7 +60,11 @@ export function QuoteSubmitForm({ items, notes, onBack, onSuccess }: QuoteSubmit
     setSubmitting(true);
     setError('');
 
-    const result = await submitQuoteRequest(items, { name, email, phone }, notes);
+    const result = await submitQuoteRequest(
+      items,
+      { name, email, phone, companyName },
+      notes,
+    );
 
     if (result.success && result.data) {
       onSuccess(result.data.reference);
@@ -75,7 +80,7 @@ export function QuoteSubmitForm({ items, notes, onBack, onSuccess }: QuoteSubmit
       <button
         type="button"
         onClick={onBack}
-        className="text-sm font-medium text-orange-600 hover:underline"
+        className="text-sm font-medium text-[#0B3D91] underline underline-offset-2 hover:text-[#09407a]"
       >
         ← Back to quote cart
       </button>
@@ -131,6 +136,22 @@ export function QuoteSubmitForm({ items, notes, onBack, onSuccess }: QuoteSubmit
             disabled={loadingPrefill || submitting}
             className={inputClassName}
             placeholder="+356 7757 6721"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="quote-company" className="mb-1.5 block text-sm font-medium text-slate-700">
+            Company <span className="font-normal text-slate-500">(optional)</span>
+          </label>
+          <input
+            id="quote-company"
+            type="text"
+            autoComplete="organization"
+            value={companyName}
+            onChange={(event) => setCompanyName(event.target.value)}
+            disabled={loadingPrefill || submitting}
+            className={inputClassName}
+            placeholder="Company name"
           />
         </div>
 

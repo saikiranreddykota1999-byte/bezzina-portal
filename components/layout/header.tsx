@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,10 +13,30 @@ import { isActivePath } from '@/lib/navigation';
 import { useCart } from '@/context/cart-context';
 import { useWishlist } from '@/context/wishlist-context';
 import { useQuoteCart } from '@/context/quote-cart-context';
-import { QuoteCartDrawer } from '@/components/quote/quote-cart-drawer';
-import { SearchBar } from '@/components/SearchBar';
 import { AnimatedLogo } from '@/components/brand/AnimatedLogo';
+import { focusRingClass } from '@/hooks/use-dialog-a11y';
 import { MobileNav } from './mobile-nav';
+
+const SearchBar = dynamic(
+  () => import('@/components/SearchBar').then((mod) => ({ default: mod.SearchBar })),
+  {
+    ssr: true,
+    loading: () => (
+      <div
+        className="h-10 w-full animate-pulse rounded-lg bg-slate-100"
+        aria-hidden="true"
+      />
+    ),
+  },
+);
+
+const QuoteCartDrawer = dynamic(
+  () =>
+    import('@/components/quote/quote-cart-drawer').then((mod) => ({
+      default: mod.QuoteCartDrawer,
+    })),
+  { ssr: false },
+);
 
 const NAV_EXCLUDED = new Set(['/quote', '/search']);
 
@@ -35,7 +56,17 @@ export function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!isMobileOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsMobileOpen(false);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isMobileOpen]);
+
   const closeMobileNav = () => setIsMobileOpen(false);
+  const iconControlClass = `relative rounded-md p-2 text-slate-700 transition hover:bg-slate-50 ${focusRingClass}`;
 
   const navLinks = useMemo(
     () => navigation.filter((item) => !NAV_EXCLUDED.has(item.href)),
@@ -71,7 +102,7 @@ export function Header() {
         <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
           <a
             href={`tel:${company.contact.phone1.replace(/\s/g, '')}`}
-            className="hidden items-center gap-1.5 rounded-md p-2 text-slate-700 transition hover:bg-slate-50 2xl:inline-flex"
+            className={`hidden items-center gap-1.5 2xl:inline-flex ${iconControlClass}`}
             aria-label={`Call ${company.contact.phone1}`}
           >
             <Phone className="h-4 w-4 shrink-0 text-[#0B3D91]" aria-hidden="true" />
@@ -81,49 +112,63 @@ export function Header() {
           <button
             type="button"
             onClick={() => setQuoteDrawerOpen(true)}
-            className="relative rounded-md p-2 text-slate-700 transition hover:bg-slate-50"
-            aria-label="Ask for quote"
+            className={iconControlClass}
+            aria-label={
+              quoteCount > 0
+                ? `Ask for quote, ${quoteCount} item${quoteCount === 1 ? '' : 's'}`
+                : 'Ask for quote'
+            }
+            aria-haspopup="dialog"
+            aria-expanded={quoteDrawerOpen}
           >
-            <ClipboardList className="h-5 w-5" />
-            {quoteCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white">
+            <ClipboardList className="h-5 w-5" aria-hidden="true" />
+            {quoteCount > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white" aria-hidden="true">
                 {quoteCount}
               </span>
-            )}
+            ) : null}
           </button>
 
           <Link
             href="/account/wishlist"
-            className="relative hidden rounded-md p-2 text-slate-700 transition hover:bg-slate-50 sm:inline-flex"
-            aria-label="Wishlist"
+            className={`hidden sm:inline-flex ${iconControlClass}`}
+            aria-label={
+              wishlistItems.length > 0
+                ? `Wishlist, ${wishlistItems.length} item${wishlistItems.length === 1 ? '' : 's'}`
+                : 'Wishlist'
+            }
           >
-            <Heart className="h-5 w-5" />
-            {wishlistItems.length > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white">
+            <Heart className="h-5 w-5" aria-hidden="true" />
+            {wishlistItems.length > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white" aria-hidden="true">
                 {wishlistItems.length}
               </span>
-            )}
+            ) : null}
           </Link>
 
           <Link
             href="/account/cart"
-            className="relative rounded-md p-2 text-slate-700 transition hover:bg-slate-50"
-            aria-label="Cart"
+            className={iconControlClass}
+            aria-label={
+              cartCount > 0
+                ? `Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`
+                : 'Cart'
+            }
           >
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white">
+            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+            {cartCount > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0B3D91] text-[10px] font-bold text-white" aria-hidden="true">
                 {cartCount}
               </span>
-            )}
+            ) : null}
           </Link>
 
           <Link
             href="/account"
-            className="inline-flex rounded-md p-2 text-slate-700 transition hover:bg-slate-50"
+            className={`inline-flex ${iconControlClass}`}
             aria-label="Account"
           >
-            <User className="h-5 w-5" />
+            <User className="h-5 w-5" aria-hidden="true" />
           </Link>
 
           {quoteLink ? (
@@ -168,6 +213,7 @@ export function Header() {
                 aria-current={active ? 'page' : undefined}
                 className={[
                   'whitespace-nowrap rounded-md px-1 py-1 text-sm font-medium transition-colors',
+                  focusRingClass,
                   active ? 'text-[#0B3D91]' : 'text-slate-700 hover:text-slate-900',
                 ].join(' ')}
               >
@@ -195,7 +241,9 @@ export function Header() {
           </motion.div>
         )}
       </AnimatePresence>
-      <QuoteCartDrawer open={quoteDrawerOpen} onClose={() => setQuoteDrawerOpen(false)} />
+      {quoteDrawerOpen ? (
+        <QuoteCartDrawer open={quoteDrawerOpen} onClose={() => setQuoteDrawerOpen(false)} />
+      ) : null}
     </header>
   );
 }

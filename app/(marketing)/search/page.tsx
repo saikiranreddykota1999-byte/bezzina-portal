@@ -33,12 +33,12 @@ async function SearchResults({ searchParams }: PageProps) {
 
 export default function SearchPage({ searchParams }: PageProps) {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10 md:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-10 md:px-8">
       <SearchHeader searchParams={searchParams} />
       <Suspense fallback={<CatalogueSkeleton />}>
         <SearchResults searchParams={searchParams} />
       </Suspense>
-    </main>
+    </div>
   );
 }
 

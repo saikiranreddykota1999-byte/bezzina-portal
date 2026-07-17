@@ -1,12 +1,13 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requirePermission, requireSuperAdminUser } from '@/lib/auth/server-session';
 import type { AdminCustomer } from '@/types/admin';
 import { parseBulkIds } from '@/lib/security/bulk-ids';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 const updateCustomerSchema = z.object({
   id: z.string().uuid(),
@@ -83,6 +84,12 @@ export async function updateAdminCustomer(input: unknown): Promise<ActionResult>
       .eq('role', 'customer');
 
     if (error) return { success: false, error: error.message };
+
+    if (parsed.data.is_disabled === true) {
+      const { revokeAllSessionsForUser } = await import('@/lib/auth/revoke-sessions');
+      await revokeAllSessionsForUser(parsed.data.id);
+    }
+
     revalidatePath('/admin/customers');
     revalidatePath(`/admin/customers/${parsed.data.id}`);
     return { success: true };
@@ -109,6 +116,10 @@ export async function bulkDisableCustomers(ids: string[]): Promise<ActionResult>
       .eq('role', 'customer');
 
     if (error) return { success: false, error: error.message };
+
+    const { revokeAllSessionsForUser } = await import('@/lib/auth/revoke-sessions');
+    await Promise.all(idsParsed.data.map((id) => revokeAllSessionsForUser(id)));
+
     revalidatePath('/admin/customers');
     return { success: true };
   } catch (error) {

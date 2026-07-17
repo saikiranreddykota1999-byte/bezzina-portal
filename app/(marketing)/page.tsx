@@ -30,7 +30,7 @@ export default async function Home() {
   ]);
 
   return (
-    <main>
+    <div>
       <Hero content={heroContent as Partial<HeroContent>} />
       <TrustBar />
       <Suspense
@@ -49,6 +49,6 @@ export default async function Home() {
       <Categories />
       <Services content={servicesContent as Partial<ServicesContent>} />
       <CTA content={ctaContent as Partial<CtaContent>} />
-    </main>
+    </div>
   );
 }

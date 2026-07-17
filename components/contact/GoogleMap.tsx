@@ -36,7 +36,7 @@ export function GoogleMap({
         className="overflow-hidden rounded-[20px] border border-slate-200/80 bg-white shadow-[0_8px_32px_rgba(11,61,145,0.1)]"
       >
         <div className="border-b border-slate-100 bg-[#F8FAFC] px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#D8A106]">
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#7A5C00]">
             Find Us
           </p>
           <h2 id="google-map-title" className="mt-1 text-lg font-bold text-[#071B35]">

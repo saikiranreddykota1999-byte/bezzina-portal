@@ -7,6 +7,17 @@ describe('submitQuoteCustomerSchema', () => {
       name: 'John Bezzina',
       email: 'john@company.com',
       phone: '+356 7757 6721',
+      companyName: 'Bezzina Marine',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts empty optional company name', () => {
+    const result = submitQuoteCustomerSchema.safeParse({
+      name: 'John Bezzina',
+      email: 'john@company.com',
+      phone: '+356 7757 6721',
+      companyName: '',
     });
     expect(result.success).toBe(true);
   });

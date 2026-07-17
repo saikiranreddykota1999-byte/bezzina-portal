@@ -65,14 +65,14 @@ export function TrackingTimeline({ shipment }: Props) {
               <div
                 className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                   event.completed
-                    ? 'bg-orange-500 text-white'
+                    ? 'bg-orange-700 text-white'
                     : 'border-2 border-slate-200 bg-white text-slate-300'
                 }`}
               >
                 <Icon className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1 pt-0.5">
-                <p className={`font-medium ${event.completed ? 'text-slate-900' : 'text-slate-400'}`}>
+                <p className={`font-medium ${event.completed ? 'text-slate-900' : 'text-slate-500'}`}>
                   {event.label}
                 </p>
                 <p className="mt-0.5 text-sm text-slate-500">{event.description}</p>

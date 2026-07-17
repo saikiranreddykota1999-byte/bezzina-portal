@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Trash2 } from 'lucide-react';
-import { deleteProductDocument, uploadProductDocument } from '@/actions/admin-products';
+import { deleteProductDocument, uploadProductDocument } from '@/actions/admin-products/media';
 import type { ProductDocument, ProductDocumentType } from '@/types/product';
 import {
   adminCardClass,

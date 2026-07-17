@@ -1,5 +1,7 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
@@ -12,7 +14,6 @@ import { vacancySoftDeletePayload } from '@/lib/security/soft-delete';
 import { jobApplicationSchema, vacancySchema } from '@/lib/validators/catalogue';
 import type { Vacancy } from '@/types/quote';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export async function getActiveVacancies(): Promise<Vacancy[]> {
   const supabase = await createClient();
@@ -29,11 +30,6 @@ export async function getActiveVacancies(): Promise<Vacancy[]> {
     return [];
   }
   return (data ?? []) as Vacancy[];
-}
-
-/** @deprecated Use getActiveVacancies */
-export async function getActiveJobPostings(): Promise<Vacancy[]> {
-  return getActiveVacancies();
 }
 
 export async function getVacancy(id: string): Promise<Vacancy | null> {

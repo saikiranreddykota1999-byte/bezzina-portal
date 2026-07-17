@@ -1,5 +1,7 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getAuthenticatedUser } from '@/lib/auth/server-session';
@@ -16,7 +18,6 @@ const addressSchema = z.object({
   is_default: z.boolean().default(false),
 });
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;

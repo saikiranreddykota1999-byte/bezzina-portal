@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getCustomerOrders } from '@/actions/pickup';
+import { getCustomerOrders } from '@/actions/pickup/customer';
 import { PickupOrderStatus } from '@/components/account/pickup-order-status';
 import { RippleButton } from '@/components/ui/ripple-button';
 import { getPickupStatusLabel } from '@/lib/pickup/slots';
@@ -50,7 +50,7 @@ export default async function OrdersPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-slate-900">€{Number(order.total).toFixed(2)}</p>
-                  <p className="text-sm capitalize text-orange-600">
+                  <p className="text-sm capitalize text-orange-800">
                     {order.fulfillment_method === 'store_pickup'
                       ? getPickupStatusLabel(order.pickup_status)
                       : order.status}
@@ -82,7 +82,7 @@ export default async function OrdersPage() {
 
       <p className="mt-8 text-sm text-slate-500">
         Track any shipment at{' '}
-        <Link href="/track" className="text-orange-600 hover:underline">
+        <Link href="/track" className="text-orange-800 hover:underline">
           /track
         </Link>
       </p>

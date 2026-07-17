@@ -15,7 +15,7 @@ export function PickupInstructions({ location, compact = false }: Props) {
       }`}
     >
       <div className="flex items-start gap-3">
-        <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-orange-500" />
+        <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-orange-800" />
         <div>
           <p className="font-medium text-slate-900">{location.name}</p>
           <p className="mt-1 text-sm text-slate-600">{formatPickupAddress(location)}</p>

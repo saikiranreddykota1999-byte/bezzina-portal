@@ -10,7 +10,7 @@ import {
   savePickupOpeningHoursAction,
   savePickupTimeSlotsAction,
   upsertPickupLocationAction,
-} from '@/actions/pickup';
+} from '@/actions/pickup/staff';
 import type {
   PickupLocation,
   PickupOpeningHour,

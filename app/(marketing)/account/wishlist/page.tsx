@@ -26,7 +26,7 @@ export default function WishlistPage() {
                 <Link href={`/products/${item.slug}`} className="font-medium text-slate-900 hover:underline">
                   {item.name}
                 </Link>
-                <p className="text-xs text-slate-400">{item.sku}</p>
+                <p className="text-xs text-slate-600">{item.sku}</p>
                 <button type="button" onClick={() => remove(item.productId)} className="mt-2 text-sm text-red-600">
                   Remove
                 </button>

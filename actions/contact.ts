@@ -1,12 +1,13 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { headers } from 'next/headers';
 import { contactEnquirySchema } from '@/lib/validators/contact';
 import { sendContactEnquiryEmail } from '@/services/contact-email.service';
 import { notifyStaff } from '@/services/notification.service';
 import { checkPublicRateLimit } from '@/lib/auth/login-security';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export async function submitContactEnquiryAction(
   input: unknown,

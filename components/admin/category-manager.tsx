@@ -19,6 +19,7 @@ import {
   adminTextareaClass,
 } from '@/components/admin/admin-styles';
 import { ConfirmDestructiveDialog } from '@/components/admin/confirm-destructive-dialog';
+import { slugify } from '@/lib/utils/slugify';
 
 type Props = {
   parents: Category[];
@@ -33,10 +34,6 @@ type FormState = {
   parent_id: string;
   sort_order: string;
 };
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
 
 function emptyForm(parentId = ''): FormState {
   return {

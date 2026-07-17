@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { archiveProduct } from '@/actions/admin-products';
+import { archiveProduct } from '@/actions/admin-products/crud';
 
 export function ArchiveProductButton({ id, name }: { id: string; name: string }) {
   const router = useRouter();

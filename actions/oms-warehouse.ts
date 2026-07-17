@@ -20,20 +20,26 @@ const WAREHOUSE_QUEUE_STATUSES: OmsOrderStatus[] = [
 export async function getWarehouseQueueAction(): Promise<ActionResult<PaginatedOmsOrders>> {
   try {
     await requirePermission('warehouse:operate');
-    const results = await Promise.all(
-      WAREHOUSE_QUEUE_STATUSES.map((status) =>
-        getOmsOrdersAction({ omsStatus: status, pageSize: 50 }),
-      ),
-    );
+    const result = await getOmsOrdersAction({
+      omsStatuses: WAREHOUSE_QUEUE_STATUSES,
+      pageSize: 200,
+      page: 1,
+    });
 
-    const orders = results.flatMap((r) => (r.success ? r.data?.orders ?? [] : []));
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        error: !result.success ? result.error : 'Failed to load warehouse queue',
+      };
+    }
+
     return {
       success: true,
       data: {
-        orders,
-        total: orders.length,
+        orders: result.data.orders,
+        total: result.data.orders.length,
         page: 1,
-        pageSize: orders.length,
+        pageSize: result.data.orders.length,
         totalPages: 1,
       },
     };

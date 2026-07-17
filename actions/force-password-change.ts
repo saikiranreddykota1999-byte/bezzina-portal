@@ -1,13 +1,15 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAdminAuthenticatedUser } from '@/lib/auth/server-session';
 import { mustChangePassword } from '@/lib/auth/staff-setup';
 import { changePasswordSchema } from '@/lib/validators/auth';
 import { logActivity } from '@/services/activity-log.service';
 
-type ActionResult = { success: true } | { success: false; error: string };
 
 export async function completeRequiredPasswordChangeAction(
   input: unknown,
@@ -36,7 +38,9 @@ export async function completeRequiredPasswordChangeAction(
       return { success: false, error: 'Unable to update password. Please try again.' };
     }
 
-    const { error: profileError } = await supabase
+    // Privileged column — must use service role after session auth checks.
+    const admin = createAdminClient();
+    const { error: profileError } = await admin
       .from('profiles')
       .update({ force_password_change: false })
       .eq('id', session.user!.id);

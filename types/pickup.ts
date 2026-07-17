@@ -185,8 +185,4 @@ export interface PlaceOrderResult {
   error?: string;
 }
 
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+export type { ActionResult } from '@/types/action';

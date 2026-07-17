@@ -1,9 +1,10 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { requirePermission } from '@/lib/auth/server-session';
 import type { ActivityLog } from '@/types/admin';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export async function getActivityLogs(limit = 50): Promise<ActionResult<ActivityLog[]>> {
   try {

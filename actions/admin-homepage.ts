@@ -1,12 +1,13 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/server-session';
 import type { HomepageSectionKey } from '@/types/cms';
 import { sanitizeCmsLinks } from '@/lib/security/safe-href';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 const sectionKeySchema = z.enum(['hero', 'about', 'services', 'why_choose', 'contact', 'footer']);
 

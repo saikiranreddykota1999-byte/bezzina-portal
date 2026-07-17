@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getStaffPickupOrders, updatePickupOrderStatusAction } from '@/actions/pickup';
+import { getStaffPickupOrders, updatePickupOrderStatusAction } from '@/actions/pickup/staff';
 import type { OrderWithPickup } from '@/types/pickup';
 import { formatPickupDateTime } from '@/lib/checkout';
 import { getPickupStatusLabel } from '@/lib/pickup/slots';

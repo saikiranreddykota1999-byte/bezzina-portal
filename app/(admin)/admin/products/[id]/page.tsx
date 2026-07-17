@@ -1,6 +1,6 @@
 import { guardAdminPage } from '@/lib/admin/guard-page';
 import { notFound } from 'next/navigation';
-import { getAdminProduct, getAdminCategoryOptions } from '@/actions/admin-products';
+import { getAdminProduct, getAdminCategoryOptions } from '@/actions/admin-products/crud';
 import { AdminPageHeader } from '@/components/admin/admin-page-header';
 import { DeleteProductButton } from '@/app/(admin)/admin/products/delete-product-button';
 import { ProductForm } from '@/components/admin/product-form';

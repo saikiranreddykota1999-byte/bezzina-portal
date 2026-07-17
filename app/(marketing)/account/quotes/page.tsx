@@ -10,7 +10,7 @@ export default async function QuoteHistoryPage() {
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center">
         <p className="text-slate-700">{result.error}</p>
-        <Link href="/account/login" className="mt-4 inline-block text-sm font-semibold text-orange-600 hover:underline">
+        <Link href="/account/login" className="mt-4 inline-block text-sm font-semibold text-orange-800 hover:underline">
           Sign in →
         </Link>
       </div>
@@ -27,7 +27,7 @@ export default async function QuoteHistoryPage() {
       {quotes.length === 0 ? (
         <p className="mt-8 text-slate-600">
           No quotes yet.{' '}
-          <Link href="/quote" className="text-orange-600 hover:underline">Build a quote →</Link>
+          <Link href="/quote" className="text-orange-800 hover:underline">Build a quote →</Link>
         </p>
       ) : (
         <ul className="mt-8 space-y-4">

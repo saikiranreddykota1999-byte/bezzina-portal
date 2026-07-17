@@ -33,7 +33,7 @@ export function NotificationList({ notifications: initial }: Props) {
               {n.body && <p className="mt-1 text-sm text-slate-600">{n.body}</p>}
               <p className="mt-2 text-xs text-slate-500">{new Date(n.created_at).toLocaleString('en-GB')}</p>
               {n.link && (
-                <Link href={n.link} className="mt-2 inline-block text-sm font-medium text-orange-600 hover:underline">
+                <Link href={n.link} className="mt-2 inline-block text-sm font-medium text-orange-800 hover:underline">
                   View details →
                 </Link>
               )}

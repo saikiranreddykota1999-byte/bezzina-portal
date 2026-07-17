@@ -11,7 +11,9 @@ export default function MarketingLayout({
   return (
     <>
       <Header />
-      <div id="main-content" className="flex-1 pb-16 md:pb-0">{children}</div>
+      <main id="main-content" tabIndex={-1} className="flex-1 pb-16 md:pb-0 outline-none">
+        {children}
+      </main>
       <Footer />
       <MobileCtaBar />
       <CookieConsent />

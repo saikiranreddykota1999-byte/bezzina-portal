@@ -23,7 +23,7 @@ export function MobileCtaBar() {
         </Link>
         <a
           href={phoneHref}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-300 px-3 py-2.5 text-xs font-semibold text-slate-900"
+          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-300 px-3 py-2.5 text-xs font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2"
         >
           <Phone className="h-4 w-4 text-[#0B3D91]" aria-hidden="true" />
           Call
@@ -33,7 +33,7 @@ export function MobileCtaBar() {
             href={whatsappHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-800"
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-semibold text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
             WhatsApp

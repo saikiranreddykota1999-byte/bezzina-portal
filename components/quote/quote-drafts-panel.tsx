@@ -65,12 +65,12 @@ export function QuoteDraftsPanel({ drafts: initialDrafts, notes = '', onDraftLoa
   return (
     <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
       <div className="flex items-center gap-2">
-        <Bookmark className="h-5 w-5 text-orange-500" />
+        <Bookmark className="h-5 w-5 text-orange-800" />
         <h2 className="text-lg font-semibold text-slate-900">Saved Quote Drafts</h2>
       </div>
       <p className="mt-1 text-sm text-slate-600">
         Save your current cart and resume later.{' '}
-        <Link href="/account/login" className="text-orange-600 hover:underline">Sign in</Link> required.
+        <Link href="/account/login" className="font-medium text-[#0B3D91] underline underline-offset-2 hover:text-[#09407a]">Sign in</Link> required.
       </p>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -78,6 +78,7 @@ export function QuoteDraftsPanel({ drafts: initialDrafts, notes = '', onDraftLoa
           value={draftName}
           onChange={(e) => setDraftName(e.target.value)}
           placeholder="Draft name (optional)"
+          aria-label="Draft name (optional)"
           className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
         <button
@@ -90,8 +91,12 @@ export function QuoteDraftsPanel({ drafts: initialDrafts, notes = '', onDraftLoa
         </button>
       </div>
 
-      {message && <p className="mt-3 text-sm text-green-700">{message}</p>}
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {message && <p className="mt-3 text-sm text-green-700" role="status">{message}</p>}
+      {error && (
+        <p className="mt-3 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
 
       {drafts.length > 0 && (
         <ul className="mt-4 space-y-2">
@@ -108,11 +113,16 @@ export function QuoteDraftsPanel({ drafts: initialDrafts, notes = '', onDraftLoa
                 <button
                   type="button"
                   onClick={() => handleLoadDraft(draft)}
-                  className="text-orange-600 hover:underline"
+                  className="text-[#0B3D91] underline underline-offset-2 hover:text-[#09407a]"
                 >
                   Load
                 </button>
-                <button type="button" onClick={() => handleDelete(draft.id)} className="text-red-500">
+                <button
+                  type="button"
+                  onClick={() => handleDelete(draft.id)}
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-red-500"
+                  aria-label={`Delete draft ${draft.name}`}
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>

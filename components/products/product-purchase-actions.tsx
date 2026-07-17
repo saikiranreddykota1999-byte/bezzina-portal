@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ClipboardList, ShoppingCart, Zap } from 'lucide-react';
 import { useCart } from '@/context/cart-context';
 import { useQuoteCart } from '@/context/quote-cart-context';
-import { buildCartLineItem } from '@/lib/products/build-cart-line-item';
+import { buildCartLineItem, buildQuoteLineItem } from '@/lib/products/build-cart-line-item';
 import type { Product, ProductVariant } from '@/types/product';
 
 export type PurchaseProduct = Pick<
@@ -31,8 +31,11 @@ export function ProductPurchaseActions({
   const { addItem: addToQuote } = useQuoteCart();
   const [cartAdded, setCartAdded] = useState(false);
 
-  const isDisabled = disabled || !product.in_stock;
+  const isDisabled =
+    disabled ||
+    (selectedVariant ? !selectedVariant.in_stock : !product.in_stock);
   const lineItem = buildCartLineItem(product, selectedVariant);
+  const quoteLineItem = buildQuoteLineItem(product, selectedVariant);
 
   const btnBase =
     layout === 'detail'
@@ -53,7 +56,7 @@ export function ProductPurchaseActions({
   }
 
   function handleAskForQuote() {
-    addToQuote(lineItem);
+    addToQuote(quoteLineItem);
     router.push('/quote');
   }
 
@@ -71,7 +74,7 @@ export function ProductPurchaseActions({
         className={`${btnBase} ${
           cartAdded
             ? 'bg-emerald-600 text-white'
-            : 'bg-orange-500 text-white hover:bg-orange-600'
+            : 'bg-orange-700 text-white hover:bg-orange-800'
         }`}
       >
         <ShoppingCart className="h-4 w-4" aria-hidden="true" />

@@ -19,6 +19,33 @@ export interface ProductImage {
   is_primary: boolean;
 }
 
+export type ProductRelationType = 'related' | 'accessory' | 'fbt';
+
+export interface ProductRelation {
+  id: string;
+  product_id: string;
+  related_product_id: string;
+  relation_type: ProductRelationType;
+  sort_order: number;
+}
+
+export interface Product360Frame {
+  id: string;
+  product_id: string;
+  url: string;
+  thumbnail_url: string | null;
+  sort_order: number;
+}
+
+/** Storefront-safe stock projection — never expose exact on-hand quantities. */
+export type WarehouseStockBand = 'limited' | 'in_stock';
+
+export type WarehouseAvailabilityRow = {
+  warehouseId: string;
+  warehouseName: string;
+  stockBand: WarehouseStockBand;
+};
+
 export type InventoryStatus =
   | 'available'
   | 'limited_stock'
@@ -128,12 +155,17 @@ export interface Product {
   publish_status?: 'draft' | 'published';
   related_product_ids?: string[] | null;
 
-  // populated via join
+  created_at?: string | null;
+  updated_at?: string | null;
+
+  // populated via join / service
   category?: Category | null;
   brand?: Brand | null;
   images?: ProductImage[];
   documents?: ProductDocument[];
   variants?: ProductVariant[];
+  spin_frames?: Product360Frame[];
+  warehouse_availability?: WarehouseAvailabilityRow[];
 }
 
 export const INVENTORY_STATUS_OPTIONS: { value: InventoryStatus; label: string }[] = [

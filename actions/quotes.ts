@@ -1,5 +1,7 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { getAuthenticatedUser, requirePermission } from '@/lib/auth/server-session';
 import { submitQuoteCustomerSchema } from '@/lib/validators/quote';
@@ -9,7 +11,6 @@ import { sendQuoteConfirmationEmail } from '@/services/quote-email.service';
 import { logActivity } from '@/services/activity-log.service';
 import type { QuoteCartItem } from '@/types/quote';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export type QuoteCustomerPrefill = {
   name: string;
@@ -96,6 +97,15 @@ export async function submitQuoteRequest(
   }
 
   try {
+    const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
+    const { getClientIp } = await import('@/lib/security/rate-limit');
+    const ip = (await getClientIp()) ?? 'unknown';
+    const rateKey = `${ip}:${parsed.data.email.toLowerCase()}`;
+    const allowed = await checkPublicRateLimit('quote_submit', rateKey, 8, 15);
+    if (!allowed) {
+      return { success: false, error: 'Too many quote requests. Please try again later.' };
+    }
+
     const session = await getAuthenticatedUser();
     const supabase = session.supabase;
     const customer = parsed.data;
@@ -125,14 +135,26 @@ export async function submitQuoteRequest(
 
       rows.push({
         product_id: product.id,
-        sku: product.sku,
-        name: product.name,
+        sku: item.variantSku?.trim() || product.sku,
+        name: item.variantName
+          ? `${product.name} — ${item.variantName}`
+          : product.name,
         slug: product.slug,
         quantity: item.quantity,
         unit: product.unit ?? item.unit,
         unit_price: product.price ?? null,
+        variant_id: item.variantId ?? null,
+        variant_sku: item.variantSku ?? null,
+        variant_name: item.variantName ?? null,
+        notes: item.lineNotes?.trim() || null,
       });
     }
+
+    const lineNotesAppendix = items
+      .filter((item) => item.lineNotes?.trim())
+      .map((item) => `${item.sku}: ${item.lineNotes?.trim()}`)
+      .join('\n');
+    const combinedNotes = [notes?.trim(), lineNotesAppendix].filter(Boolean).join('\n\n') || null;
 
     const reference = generateQuoteReference();
 
@@ -142,12 +164,13 @@ export async function submitQuoteRequest(
         user_id: session.user?.id ?? null,
         reference,
         status: 'pending',
-        notes: notes?.trim() || null,
-        customer_notes: notes?.trim() || null,
+        notes: combinedNotes,
+        customer_notes: combinedNotes,
         channel: 'web',
         customer_email: customer.email,
         customer_name: customer.name,
         customer_phone: customer.phone,
+        company_name: customer.companyName?.trim() || null,
         timeline: [{ status: 'pending', created_at: new Date().toISOString() }],
       })
       .select('id')

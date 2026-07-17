@@ -32,6 +32,7 @@ export function SignOutButton({
       onClick={handleSignOut}
       disabled={loading}
       className={className}
+      aria-label={loading ? 'Signing out' : 'Sign out'}
     >
       {loading ? 'Signing out…' : children}
     </button>

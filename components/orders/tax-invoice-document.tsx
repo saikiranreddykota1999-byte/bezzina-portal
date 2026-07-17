@@ -145,7 +145,7 @@ export function TaxInvoiceDocument({ order }: Props) {
                 </p>
                 <p className="text-sm text-slate-700">{formatPickupAddress(order.pickup_location)}</p>
                 {order.pickup_date && order.pickup_time ? (
-                  <p className="inv-pickup-time mt-3 text-sm font-semibold text-orange-600">
+                  <p className="inv-pickup-time mt-3 text-sm font-semibold text-orange-800">
                     Pickup: {formatPickupDateTime(order.pickup_date, order.pickup_time)}
                   </p>
                 ) : null}

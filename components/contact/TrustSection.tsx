@@ -84,7 +84,7 @@ export function TrustSection() {
               transition={defaultTransition}
               className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-sm"
             >
-              <p className="text-3xl font-bold text-[#D8A106] sm:text-4xl">
+              <p className="text-3xl font-bold text-[#7A5C00] sm:text-4xl">
                 <AnimatedStatValue
                   value={stat.value}
                   suffix={stat.suffix}

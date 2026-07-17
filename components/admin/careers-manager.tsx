@@ -88,6 +88,7 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
           <h2 className={adminHeadingClass}>{editing.id ? 'Edit' : 'New'} Vacancy</h2>
           <input
             placeholder="Title"
+            aria-label="Title"
             value={editing.title ?? ''}
             onChange={(e) => setEditing({ ...editing, title: e.target.value })}
             className={adminInputClass}
@@ -96,6 +97,7 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
           <div className="grid gap-4 sm:grid-cols-2">
             <input
               placeholder="Department"
+              aria-label="Department"
               value={editing.department ?? ''}
               onChange={(e) => setEditing({ ...editing, department: e.target.value })}
               className={adminInputClass}
@@ -103,6 +105,7 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
             />
             <input
               placeholder="Location"
+              aria-label="Location"
               value={editing.location ?? ''}
               onChange={(e) => setEditing({ ...editing, location: e.target.value })}
               className={adminInputClass}
@@ -111,6 +114,7 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
           </div>
           <textarea
             placeholder="Short description (shown on careers page)"
+            aria-label="Short description (shown on careers page)"
             value={editing.short_description ?? ''}
             onChange={(e) => setEditing({ ...editing, short_description: e.target.value })}
             rows={2}
@@ -119,6 +123,7 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
           />
           <textarea
             placeholder="Full description"
+            aria-label="Full description"
             value={editing.description ?? ''}
             onChange={(e) => setEditing({ ...editing, description: e.target.value })}
             rows={4}
@@ -127,6 +132,7 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
           />
           <textarea
             placeholder="Requirements (optional)"
+            aria-label="Requirements (optional)"
             value={editing.requirements ?? ''}
             onChange={(e) => setEditing({ ...editing, requirements: e.target.value })}
             rows={2}
@@ -154,7 +160,11 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
               Active (visible on careers page)
             </label>
           </div>
-          {error && <p className="text-sm text-[var(--admin-danger)]">{error}</p>}
+          {error && (
+            <p className="text-sm text-[var(--admin-danger)]" role="alert">
+              {error}
+            </p>
+          )}
           <div className="flex gap-3">
             <button type="submit" disabled={pending} className={adminButtonPrimaryClass}>
               Save
@@ -174,7 +184,10 @@ export function AdminCareersManager({ initialVacancies }: { initialVacancies: Va
       )}
 
       {error && !editing && (
-        <p className="rounded-lg border border-[var(--admin-danger-light)] bg-[var(--admin-danger-light)] px-4 py-3 text-sm text-[var(--admin-danger)]">
+        <p
+          className="rounded-lg border border-[var(--admin-danger-light)] bg-[var(--admin-danger-light)] px-4 py-3 text-sm text-[var(--admin-danger)]"
+          role="alert"
+        >
           {error}
         </p>
       )}

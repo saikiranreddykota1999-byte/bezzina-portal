@@ -1,5 +1,7 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -10,7 +12,6 @@ import {
   type ImportSummary,
 } from '@/services/product-import.service';
 
-type ActionResult<T = void> = { success: true; data: T } | { success: false; error: string };
 
 export async function importIndustrialCatalogueAction(): Promise<ActionResult<ImportSummary>> {
   try {

@@ -1,5 +1,7 @@
 'use server';
 
+import type { ActionResult } from '@/types/action';
+
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { requireAdminAuthenticatedUser } from '@/lib/auth/server-session';
@@ -14,7 +16,6 @@ import { mfaCodeSchema, mfaFactorIdSchema } from '@/lib/validators/mfa';
 import { logActivity } from '@/services/activity-log.service';
 import { enforceRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
-type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
 
 export type MfaEnrollmentPayload = {
   factorId: string;
