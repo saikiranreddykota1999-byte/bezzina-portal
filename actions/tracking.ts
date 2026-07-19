@@ -18,6 +18,11 @@ const querySchema = z
   .max(80)
   .regex(/^[A-Za-z0-9._-]+$/, 'Tracking query contains invalid characters');
 
+const publicTrackSchema = z.object({
+  query: querySchema,
+  email: z.string().trim().email('Enter the email used on the order'),
+});
+
 type OrderTrackRow = {
   order_number: string | null;
   tracking_number: string | null;
@@ -27,11 +32,16 @@ type OrderTrackRow = {
   created_at: string;
   pickup_date: string | null;
   timeline: unknown;
+  customer_email: string | null;
   items: { name: string; quantity: number }[] | null;
 };
 
 const ORDER_TRACK_SELECT =
-  'order_number, tracking_number, status, oms_status, fulfillment_method, created_at, pickup_date, timeline, items:order_items(name, quantity)';
+  'order_number, tracking_number, status, oms_status, fulfillment_method, created_at, pickup_date, timeline, customer_email, items:order_items(name, quantity)';
+
+function emailsMatch(left: string | null | undefined, right: string): boolean {
+  return Boolean(left?.trim() && left.trim().toLowerCase() === right.trim().toLowerCase());
+}
 
 async function fetchOrderByQuery(
   client: SupabaseClient,
@@ -79,25 +89,37 @@ function toShipment(order: OrderTrackRow): Shipment {
   });
 }
 
+/**
+ * Public tracking requires order reference + matching customer email.
+ * Prevents unauthenticated enumeration of orders via the service role.
+ */
 export async function trackPublicShipmentAction(
   input: unknown,
 ): Promise<ActionResult<Shipment | null>> {
   try {
-    const parsed = querySchema.safeParse(input);
+    const parsed = publicTrackSchema.safeParse(input);
     if (!parsed.success) {
       return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid query' };
     }
 
     const h = await headers();
     const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const allowed = await checkPublicRateLimit('public_track', ip);
+    const allowed = await checkPublicRateLimit(
+      'public_track',
+      `${ip}:${parsed.data.email.toLowerCase()}`,
+    );
     if (!allowed) {
       return { success: false, error: 'Too many requests. Please try again later.' };
     }
 
     const admin = createAdminClient();
-    const order = await fetchOrderByQuery(admin, parsed.data);
-    return { success: true, data: order ? toShipment(order) : null };
+    const order = await fetchOrderByQuery(admin, parsed.data.query);
+    if (!order || !emailsMatch(order.customer_email, parsed.data.email)) {
+      // Uniform response — do not reveal whether the order exists.
+      return { success: true, data: null };
+    }
+
+    return { success: true, data: toShipment(order) };
   } catch (error) {
     logServerError('trackPublicShipmentAction', error);
     return { success: false, error: toUserError(error) };

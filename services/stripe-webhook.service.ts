@@ -50,6 +50,15 @@ export async function finalizeWebhookEvent(
   }
 }
 
+/** Unclaims a failed event so Stripe can retry delivery. */
+export async function releaseWebhookEventClaim(eventId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin.from('stripe_webhook_events').delete().eq('event_id', eventId);
+  if (error) {
+    logServerError('releaseWebhookEventClaim', error);
+  }
+}
+
 export async function reconcilePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent,
 ): Promise<{ reconciled: boolean; orderId?: string }> {
@@ -95,15 +104,19 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
     return;
   }
 
-  let metadata: Record<string, unknown> = { status: 'processed' };
-
   try {
+    let metadata: Record<string, unknown> = { status: 'processed' };
+
     if (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed') {
       const intent = event.data.object as Stripe.PaymentIntent;
 
       if (event.type === 'payment_intent.succeeded') {
         const result = await reconcilePaymentIntentSucceeded(intent);
-        metadata = { reconciled: result.reconciled, order_id: result.orderId ?? null };
+        metadata = {
+          status: 'processed',
+          reconciled: result.reconciled,
+          order_id: result.orderId ?? null,
+        };
       } else {
         metadata = {
           status: intent.status,
@@ -111,13 +124,11 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
         };
       }
     }
+
+    await finalizeWebhookEvent(event.id, metadata);
   } catch (error) {
     logServerError('handleStripeWebhookEvent', error);
-    metadata = {
-      status: 'error',
-      error: error instanceof Error ? error.message : 'Webhook handler failed',
-    };
+    await releaseWebhookEventClaim(event.id);
+    throw error;
   }
-
-  await finalizeWebhookEvent(event.id, metadata);
 }

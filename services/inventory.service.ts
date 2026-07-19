@@ -8,7 +8,9 @@ type ReserveItem = {
   warehouseId?: string;
 };
 
-export async function getDefaultWarehouseId(supabase: SupabaseClient): Promise<string> {
+export async function getDefaultWarehouseId(
+  supabase: SupabaseClient,
+): Promise<string | null> {
   const { data, error } = await supabase
     .from('warehouses')
     .select('id')
@@ -18,8 +20,13 @@ export async function getDefaultWarehouseId(supabase: SupabaseClient): Promise<s
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  if (!data?.id) throw new Error('No active warehouse configured');
-  return data.id;
+  return data?.id ?? null;
+}
+
+async function requireDefaultWarehouseId(supabase: SupabaseClient): Promise<string> {
+  const warehouseId = await getDefaultWarehouseId(supabase);
+  if (!warehouseId) throw new Error('No active warehouse configured');
+  return warehouseId;
 }
 
 export async function getOrCreateInventoryLevel(
@@ -58,14 +65,38 @@ export async function getOrCreateInventoryLevel(
   return data as InventoryLevel;
 }
 
+async function hasActiveReservation(
+  supabase: SupabaseClient,
+  orderId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('inventory_transactions')
+    .select('transaction_type, quantity')
+    .eq('order_id', orderId)
+    .in('transaction_type', ['reserve', 'release', 'deduct']);
+
+  if (error) throw new Error(error.message);
+
+  let netReserved = 0;
+  for (const tx of data ?? []) {
+    if (tx.transaction_type === 'reserve') netReserved += tx.quantity;
+    else netReserved -= tx.quantity;
+  }
+  return netReserved > 0;
+}
+
 export async function reserveInventoryForOrder(
   supabase: SupabaseClient,
   orderId: string,
   items: ReserveItem[],
   actorId: string,
 ): Promise<void> {
+  // Idempotent: skip if placement already reserved (OMS approve re-entry).
+  if (await hasActiveReservation(supabase, orderId)) return;
+
   for (const item of items) {
-    const warehouseId = item.warehouseId ?? (await getDefaultWarehouseId(supabase));
+    const warehouseId =
+      item.warehouseId ?? (await requireDefaultWarehouseId(supabase));
     const level = await getOrCreateInventoryLevel(supabase, {
       productId: item.variantId ? null : item.productId,
       variantId: item.variantId ?? null,
@@ -76,15 +107,23 @@ export async function reserveInventoryForOrder(
       throw new Error(`Insufficient stock for ${item.productId}`);
     }
 
-    const { error: updateError } = await supabase
+    const nextReserved = level.reserved_stock + item.quantity;
+    const { data: updated, error: updateError } = await supabase
       .from('inventory_levels')
       .update({
-        reserved_stock: level.reserved_stock + item.quantity,
+        reserved_stock: nextReserved,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', level.id);
+      .eq('id', level.id)
+      .eq('reserved_stock', level.reserved_stock)
+      .lte('reserved_stock', level.current_stock - item.quantity)
+      .select('id')
+      .maybeSingle();
 
     if (updateError) throw new Error(updateError.message);
+    if (!updated) {
+      throw new Error(`Stock reservation conflict for ${item.productId}. Please retry.`);
+    }
 
     await supabase.from('inventory_transactions').insert({
       inventory_level_id: level.id,
@@ -92,9 +131,22 @@ export async function reserveInventoryForOrder(
       transaction_type: 'reserve',
       quantity: item.quantity,
       actor_id: actorId,
-      note: 'Reserved on order approval',
+      note: 'Reserved on order placement',
     });
   }
+}
+
+/** Reserves OMS inventory when a warehouse exists; otherwise skips. */
+export async function tryReserveInventoryForOrder(
+  supabase: SupabaseClient,
+  orderId: string,
+  items: ReserveItem[],
+  actorId: string,
+): Promise<'reserved' | 'skipped'> {
+  const warehouseId = await getDefaultWarehouseId(supabase);
+  if (!warehouseId) return 'skipped';
+  await reserveInventoryForOrder(supabase, orderId, items, actorId);
+  return 'reserved';
 }
 
 export async function deductInventoryForOrder(
@@ -104,7 +156,8 @@ export async function deductInventoryForOrder(
   actorId: string,
 ): Promise<void> {
   for (const item of items) {
-    const warehouseId = item.warehouseId ?? (await getDefaultWarehouseId(supabase));
+    const warehouseId =
+      item.warehouseId ?? (await requireDefaultWarehouseId(supabase));
     const level = await getOrCreateInventoryLevel(supabase, {
       productId: item.variantId ? null : item.productId,
       variantId: item.variantId ?? null,

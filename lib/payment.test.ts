@@ -3,11 +3,16 @@ import { detectCardBrand, isDemoPaymentAllowed } from '@/lib/payment';
 
 describe('isDemoPaymentAllowed', () => {
   it('blocks demo payment when Stripe is enabled', () => {
-    expect(isDemoPaymentAllowed(true)).toBe(false);
+    expect(isDemoPaymentAllowed(true, 'development')).toBe(false);
   });
 
-  it('allows demo payment when Stripe is disabled', () => {
-    expect(isDemoPaymentAllowed(false)).toBe(true);
+  it('allows demo payment in non-production when Stripe is disabled', () => {
+    expect(isDemoPaymentAllowed(false, 'development')).toBe(true);
+    expect(isDemoPaymentAllowed(false, 'test')).toBe(true);
+  });
+
+  it('blocks demo payment in production even when Stripe is disabled', () => {
+    expect(isDemoPaymentAllowed(false, 'production')).toBe(false);
   });
 });
 

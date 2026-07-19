@@ -69,7 +69,7 @@ export async function createPaymentIntentAction(
 
     const { data: dbProducts, error: priceError } = await supabase
       .from('products')
-      .select('id, price, name')
+      .select('id, price, name, in_stock, stock_quantity')
       .in('id', uniqueIds)
       .is('deleted_at', null)
       .eq('is_active', true);
@@ -82,6 +82,24 @@ export async function createPaymentIntentAction(
     const validated = validateOrderItems(items, dbProducts ?? []);
     if (!validated.ok) {
       return { success: false, error: validated.error };
+    }
+
+    const { checkCatalogueStock } = await import('@/lib/checkout/stock');
+    const stockCheck = checkCatalogueStock(
+      validated.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        name: item.name,
+      })),
+      (dbProducts ?? []).map((product) => ({
+        id: product.id,
+        name: product.name,
+        in_stock: product.in_stock,
+        stock_quantity: product.stock_quantity,
+      })),
+    );
+    if (!stockCheck.ok) {
+      return { success: false, error: stockCheck.error };
     }
 
     const totals = calculateOrderTotals(

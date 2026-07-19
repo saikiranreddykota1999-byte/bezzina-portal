@@ -34,12 +34,14 @@ export function TrackingTimeline({ shipment }: Props) {
       <div className="mb-6 rounded-xl bg-slate-50 p-4">
         <p className="text-sm text-slate-500">Estimated delivery</p>
         <p className="font-semibold text-slate-900">
-          {new Date(shipment.estimatedDelivery).toLocaleDateString('en-GB', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}
+          {shipment.estimatedDelivery === 'TBD'
+            ? 'To be confirmed'
+            : new Date(shipment.estimatedDelivery).toLocaleDateString('en-GB', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
         </p>
       </div>
 

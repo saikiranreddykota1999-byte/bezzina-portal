@@ -70,12 +70,6 @@ export function resolveDeliveryStatus(order: TrackableOrder): DeliveryStatus {
   return 'order_placed';
 }
 
-function addDaysIso(isoDate: string, days: number): string {
-  const date = new Date(isoDate);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 export function buildShipmentFromOrder(order: TrackableOrder): Shipment {
   const current = resolveDeliveryStatus(order);
   const currentIndex = PIPELINE.indexOf(current);
@@ -118,7 +112,7 @@ export function buildShipmentFromOrder(order: TrackableOrder): Shipment {
 
   const estimatedDelivery =
     order.pickup_date ??
-    addDaysIso(order.created_at, order.fulfillment_method === 'store_pickup' ? 0 : 3);
+    (order.fulfillment_method === 'store_pickup' ? order.created_at.slice(0, 10) : 'TBD');
 
   return {
     orderId,

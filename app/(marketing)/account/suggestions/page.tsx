@@ -47,7 +47,7 @@ export default function SuggestionsPage() {
           />
           {error && (
             <p className="text-sm text-red-600" role="alert">
-              {error}
+              {typeof error === 'string' ? error : 'Unable to submit suggestion. Please try again.'}
             </p>
           )}
           <RippleButton type="submit" disabled={isPending}>

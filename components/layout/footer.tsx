@@ -4,27 +4,23 @@ import { BezzinaLogoSvg } from '@/components/brand/bezzina-logo-svg';
 import { navigation } from '@/config/navigation';
 import { FacebookIcon } from '@/components/icons/facebook';
 import { FooterNewsletter } from '@/components/layout/footer-newsletter';
+import {
+  formatCompanyAddress,
+  getDefaultCompanySettings,
+  normalizeCompanySettings,
+} from '@/lib/company-settings';
 import { getHomepageSection, getSiteSetting } from '@/services/cms.service';
 import type { FooterContent, CompanySettings, SocialSettings } from '@/types/cms';
-
-function formatAddress(address: unknown): string {
-  if (typeof address === 'string' && address.trim()) return address;
-  if (address && typeof address === 'object') {
-    const record = address as Record<string, string | undefined>;
-    return [record.line1, record.city, record.postalCode, record.country].filter(Boolean).join(', ');
-  }
-  return `${company.address.line1}, ${company.address.city}, ${company.address.postalCode}, ${company.address.country}`;
-}
 
 export async function Footer() {
   const [footerSection, siteCompany, socialSettings] = await Promise.all([
     getHomepageSection('footer'),
-    getSiteSetting('company', company as unknown as CompanySettings),
+    getSiteSetting<CompanySettings>('company', getDefaultCompanySettings()),
     getSiteSetting<SocialSettings>('social', company.social),
   ]);
 
   const footer = footerSection as Partial<FooterContent>;
-  const settings = siteCompany as CompanySettings;
+  const settings = normalizeCompanySettings(siteCompany);
   const facebookUrl = socialSettings.facebook?.trim() || company.social.facebook;
   const quickLinks = navigation.filter((item) => item.href !== '/quote');
 
@@ -36,14 +32,17 @@ export async function Footer() {
             <BezzinaLogoSvg variant="compact" className="h-14 w-auto max-w-[220px]" title={company.name} />
           </Link>
           <h2 id="footer-company" className="mt-4 text-lg font-semibold text-white">
-            {settings.name ?? company.name}
+            {settings.name}
           </h2>
           <p className="mt-3 max-w-sm text-sm leading-6 text-slate-300">
-            {footer.tagline ?? settings.tagline ?? company.tagline}
+            {typeof footer.tagline === 'string'
+              ? footer.tagline
+              : (settings.tagline ?? company.tagline)}
           </p>
           <p className="mt-4 text-sm text-slate-300">
-            {footer.about ??
-              `Serving Malta with industrial, marine, and engineering supplies since ${company.founded}.`}
+            {typeof footer.about === 'string'
+              ? footer.about
+              : `Serving Malta with industrial, marine, and engineering supplies since ${company.founded}.`}
           </p>
         </section>
 
@@ -67,15 +66,15 @@ export async function Footer() {
             Contact
           </h2>
           <address className="mt-4 space-y-3 text-sm not-italic text-slate-300">
-            <p>{formatAddress(settings.address)}</p>
+            <p>{formatCompanyAddress(settings.address)}</p>
             <p>
-              <a href={`tel:${settings.phone ?? company.contact.phone1}`} className="hover:text-white">
-                {settings.phone ?? company.contact.phone1}
+              <a href={`tel:${settings.phone}`} className="hover:text-white">
+                {settings.phone}
               </a>
             </p>
             <p>
-              <a href={`mailto:${settings.email ?? company.contact.email}`} className="hover:text-white">
-                {settings.email ?? company.contact.email}
+              <a href={`mailto:${settings.email}`} className="hover:text-white">
+                {settings.email}
               </a>
             </p>
             {facebookUrl && (
@@ -101,7 +100,7 @@ export async function Footer() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 text-sm text-slate-300 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <p>
             {footer.copyright ??
-              `© ${new Date().getFullYear()} ${settings.name ?? company.name}. All rights reserved.`}
+              `© ${new Date().getFullYear()} ${settings.name}. All rights reserved.`}
           </p>
           <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1">
             <Link href="/privacy" className="hover:text-white">Privacy</Link>

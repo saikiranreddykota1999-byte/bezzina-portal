@@ -20,6 +20,7 @@ import {
 } from '@/components/checkout/payment-method-selector';
 import { calculateOrderTotals } from '@/lib/checkout';
 import { formatPrice, resolveQuoteLinePrice } from '@/lib/pricing';
+import { isDemoPaymentAllowed } from '@/lib/payment';
 import { isStripeClientEnabled } from '@/lib/stripe/client';
 import { RippleButton } from '@/components/ui/ripple-button';
 import { CheckoutFulfillmentSummary } from '@/components/checkout/payment-checkout/fulfillment-summary';
@@ -44,6 +45,7 @@ export function PaymentCheckout() {
 
   const isPickup = fulfillmentMethod === 'store_pickup';
   const stripeEnabled = isStripeClientEnabled();
+  const demoPaymentsAllowed = isDemoPaymentAllowed(stripeEnabled);
   const effectivePaymentMode = isPickup ? paymentMode : 'online';
   const useOnlinePayment = !isPickup || effectivePaymentMode === 'online';
   const isCashOnPickup = isPickup && effectivePaymentMode === 'cash_on_pickup';
@@ -208,6 +210,11 @@ export function PaymentCheckout() {
       return;
     }
 
+    if (!demoPaymentsAllowed) {
+      setError('Card payments require Stripe. Configure live payment keys before checkout.');
+      return;
+    }
+
     if (isPickup && !pickup) {
       setError('Complete store pickup details on checkout before paying.');
       return;
@@ -292,7 +299,7 @@ export function PaymentCheckout() {
                 <CreditCard className="h-5 w-5 text-orange-800" />
                 <h2 className="font-semibold">Payment method</h2>
               </div>
-              {!stripeEnabled && cards.length > 0 && useOnlinePayment && (
+              {!stripeEnabled && demoPaymentsAllowed && cards.length > 0 && useOnlinePayment && (
                 <button
                   type="button"
                   onClick={() => setUseInlinePayment((v) => !v)}
@@ -355,7 +362,7 @@ export function PaymentCheckout() {
                   <p className="text-sm text-red-600">{error || 'Unable to load payment form.'}</p>
                 )}
               </div>
-            ) : useOnlinePayment ? (
+            ) : useOnlinePayment && demoPaymentsAllowed ? (
               <form onSubmit={handleDemoPay} className="mt-4 space-y-4">
                 {useInlinePayment || cards.length === 0 ? (
                   <InlinePaymentForm values={inlinePayment} onChange={setInlinePayment} />
@@ -405,6 +412,11 @@ export function PaymentCheckout() {
                   Demo mode — add Stripe keys in .env.local for real payments.
                 </p>
               </form>
+            ) : useOnlinePayment ? (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Online card payments are not configured. Add Stripe keys to enable checkout, or choose
+                cash on pickup for store collection orders.
+              </div>
             ) : (
               <p className="mt-4 text-sm text-slate-600">
                 Select a payment option above to continue.

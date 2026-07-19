@@ -121,7 +121,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
     const { data: dbProducts, error: priceError } = await supabase
       .from('products')
-      .select('id, price')
+      .select('id, price, in_stock, stock_quantity, name')
       .in('id', uniqueIds)
       .is('deleted_at', null)
       .eq('is_active', true);
@@ -134,6 +134,25 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
     const validated = validateOrderItems(payload.items, dbProducts ?? []);
     if (!validated.ok) {
       return { success: false, error: validated.error };
+    }
+
+    const { checkCatalogueStock, decrementCatalogueStock, restoreCatalogueStock } =
+      await import('@/lib/checkout/stock');
+    const stockCheck = checkCatalogueStock(
+      validated.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        name: item.name,
+      })),
+      (dbProducts ?? []).map((product) => ({
+        id: product.id,
+        name: product.name,
+        in_stock: product.in_stock,
+        stock_quantity: product.stock_quantity,
+      })),
+    );
+    if (!stockCheck.ok) {
+      return { success: false, error: stockCheck.error };
     }
 
     const validatedItems = validated.items;
@@ -308,6 +327,45 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
       return { success: false, error: toUserError(itemsError) };
     }
 
+    const stockLines = validatedItems.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      name: item.name,
+    }));
+
+    const { createAdminClient } = await import('@/lib/supabase/admin');
+    const admin = createAdminClient();
+    let stockDecremented = false;
+
+    try {
+      await decrementCatalogueStock(admin, stockLines);
+      stockDecremented = true;
+
+      const { tryReserveInventoryForOrder } = await import('@/services/inventory.service');
+      await tryReserveInventoryForOrder(
+        admin,
+        order.id,
+        stockLines.map((line) => ({
+          productId: line.productId,
+          quantity: line.quantity,
+        })),
+        user!.id,
+      );
+    } catch (stockError) {
+      logServerError('placeOrderAction.stock', stockError);
+      if (stockDecremented) {
+        await restoreCatalogueStock(admin, stockLines);
+      }
+      await compensateFailedOrder(admin, order.id);
+      return {
+        success: false,
+        error:
+          stockError instanceof Error && stockError.message.toLowerCase().includes('stock')
+            ? stockError.message
+            : 'Unable to reserve stock for this order. Please try again.',
+      };
+    }
+
     if (payload.fulfillmentMethod === 'store_pickup') {
       const slotTime = normalizeTimeValue(payload.pickup.pickupTime);
       const { error: bookingError } = await supabase.from('pickup_slot_bookings').insert({
@@ -319,7 +377,10 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
       if (bookingError) {
         logServerError('placeOrderAction.booking', bookingError);
-        await compensateFailedOrder(supabase, order.id);
+        const { releaseInventoryForOrder } = await import('@/services/inventory.service');
+        await releaseInventoryForOrder(admin, order.id, user!.id).catch(() => undefined);
+        await restoreCatalogueStock(admin, stockLines);
+        await compensateFailedOrder(admin, order.id);
         return { success: false, error: toUserError(bookingError) };
       }
 
@@ -334,7 +395,10 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
         logServerError('placeOrderAction.overbook', {
           message: `Slot over capacity: ${bookedCount}/${slotMaxCapacity}`,
         });
-        await compensateFailedOrder(supabase, order.id);
+        const { releaseInventoryForOrder } = await import('@/services/inventory.service');
+        await releaseInventoryForOrder(admin, order.id, user!.id).catch(() => undefined);
+        await restoreCatalogueStock(admin, stockLines);
+        await compensateFailedOrder(admin, order.id);
         return { success: false, error: 'Selected pickup slot is fully booked' };
       }
 
@@ -376,8 +440,6 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
     const { notifyOmsRoles } = await import('@/services/oms-notification.service');
     const { recordStatusHistory } = await import('@/services/oms-order.service');
-    const { createAdminClient } = await import('@/lib/supabase/admin');
-    const admin = createAdminClient();
     const initialOmsStatus =
       payload.fulfillmentMethod === 'store_pickup' ? 'approved' : 'waiting_for_approval';
 

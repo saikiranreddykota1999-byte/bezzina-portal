@@ -45,12 +45,32 @@ export function SettingsManager({ company, social, businessHours }: Props) {
             save('company', Object.fromEntries(fd.entries()));
           }}
         >
-          {['name', 'email', 'phone', 'whatsapp', 'address', 'logoUrl', 'faviconUrl'].map((field) => (
-            <div key={field}>
-              <label className={`mb-1 block ${adminLabelClass}`}>{field}</label>
-              <input name={field} defaultValue={String(company[field] ?? '')} className={adminInputClass} />
-            </div>
-          ))}
+          {['name', 'email', 'phone', 'whatsapp', 'address', 'logoUrl', 'faviconUrl'].map((field) => {
+            const raw = company[field];
+            const defaultValue =
+              field === 'address'
+                ? typeof raw === 'string'
+                  ? raw
+                  : raw && typeof raw === 'object'
+                    ? [
+                        (raw as Record<string, unknown>).line1,
+                        (raw as Record<string, unknown>).city,
+                        (raw as Record<string, unknown>).postalCode ??
+                          (raw as Record<string, unknown>).postal_code,
+                        (raw as Record<string, unknown>).country,
+                      ]
+                        .filter((part) => typeof part === 'string' && part.trim())
+                        .join(', ')
+                    : ''
+                : String(raw ?? '');
+
+            return (
+              <div key={field}>
+                <label className={`mb-1 block ${adminLabelClass}`}>{field}</label>
+                <input name={field} defaultValue={defaultValue} className={adminInputClass} />
+              </div>
+            );
+          })}
           <button type="submit" disabled={pending} className={`${adminButtonPrimaryClass} sm:col-span-2`}>
             Save Company
           </button>

@@ -44,5 +44,6 @@ describe('buildShipmentFromOrder', () => {
     expect(shipment.items).toHaveLength(1);
     expect(shipment.events.find((e) => e.status === 'packed')?.completed).toBe(true);
     expect(shipment.events.find((e) => e.status === 'delivered')?.completed).toBe(false);
+    expect(shipment.estimatedDelivery).toBe('TBD');
   });
 });

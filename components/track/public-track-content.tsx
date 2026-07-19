@@ -10,6 +10,7 @@ import type { Shipment } from '@/types/payment';
 
 export function PublicTrackContent() {
   const [query, setQuery] = useState('');
+  const [email, setEmail] = useState('');
   const [result, setResult] = useState<Shipment | null>(null);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +21,7 @@ export function PublicTrackContent() {
     setError('');
     setSearched(true);
     startTransition(async () => {
-      const response = await trackPublicShipmentAction(query);
+      const response = await trackPublicShipmentAction({ query, email });
       if (!response.success) {
         setResult(null);
         setError(response.error);
@@ -37,10 +38,10 @@ export function PublicTrackContent() {
       </p>
       <h1 className="mt-4 text-3xl font-bold text-slate-900">Track your delivery</h1>
       <p className="mt-2 text-slate-600">
-        Enter your tracking number or order reference to see live delivery status.
+        Enter your order reference and the email address used on the order to view delivery status.
       </p>
 
-      <form onSubmit={handleSearch} className="mt-8">
+      <form onSubmit={handleSearch} className="mt-8 space-y-4">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
           <input
@@ -49,10 +50,26 @@ export function PublicTrackContent() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tracking number or order ID"
             aria-label="Tracking number or order ID"
+            required
             className="w-full rounded-xl border border-slate-300 py-4 pl-12 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-[#0B3D91]"
           />
         </div>
-        <RippleButton type="submit" className="mt-4" disabled={isPending}>
+        <div>
+          <label htmlFor="track-email" className="mb-1.5 block text-sm font-medium text-slate-700">
+            Order email
+          </label>
+          <input
+            id="track-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            required
+            autoComplete="email"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#0B3D91]"
+          />
+        </div>
+        <RippleButton type="submit" className="mt-2" disabled={isPending}>
           {isPending ? 'Searching…' : 'Track'}
         </RippleButton>
       </form>
@@ -68,7 +85,7 @@ export function PublicTrackContent() {
           <Package className="mx-auto h-12 w-12 text-slate-300" />
           <p className="mt-4 font-medium text-slate-700">Shipment not found</p>
           <p className="mt-1 text-sm text-slate-500">
-            Check your tracking number or order reference. For assistance, contact our team.
+            Check the order reference and email. For assistance, contact our team.
           </p>
           <Link
             href="/contact"

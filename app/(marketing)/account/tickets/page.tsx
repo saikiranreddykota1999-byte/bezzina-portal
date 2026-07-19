@@ -55,7 +55,7 @@ export default function TicketsPage() {
           />
           {error && (
             <p className="text-sm text-red-600" role="alert">
-              {error}
+              {typeof error === 'string' ? error : 'Unable to submit ticket. Please try again.'}
             </p>
           )}
           <RippleButton type="submit" disabled={isPending}>

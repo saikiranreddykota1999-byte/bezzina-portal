@@ -6,11 +6,16 @@ import { useWishlist } from '@/context/wishlist-context';
 import { RippleButton } from '@/components/ui/ripple-button';
 
 export default function WishlistPage() {
-  const { items, remove } = useWishlist();
+  const { items, remove, synced } = useWishlist();
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Wishlist</h1>
+      <p className="mt-1 text-sm text-slate-500">
+        {synced
+          ? 'Saved to your account and available across devices.'
+          : 'Sign in to sync your wishlist across devices.'}
+      </p>
       {items.length === 0 ? (
         <p className="mt-8 text-slate-500">No saved products yet.</p>
       ) : (
@@ -27,7 +32,11 @@ export default function WishlistPage() {
                   {item.name}
                 </Link>
                 <p className="text-xs text-slate-600">{item.sku}</p>
-                <button type="button" onClick={() => remove(item.productId)} className="mt-2 text-sm text-red-600">
+                <button
+                  type="button"
+                  onClick={() => remove(item.productId)}
+                  className="mt-2 text-sm text-red-600"
+                >
                   Remove
                 </button>
               </div>
@@ -35,7 +44,9 @@ export default function WishlistPage() {
           ))}
         </ul>
       )}
-      <RippleButton href="/products" className="mt-6" variant="secondary">Browse Products</RippleButton>
+      <RippleButton href="/products" className="mt-6" variant="secondary">
+        Browse Products
+      </RippleButton>
     </div>
   );
 }
