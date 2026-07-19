@@ -71,23 +71,23 @@ describe('normalizeSearchQueries', () => {
 });
 
 describe('isAskBezzinaConfigured', () => {
-  const previousKey = process.env.OPENAI_API_KEY;
+  const previousKey = process.env.GEMINI_API_KEY;
 
   afterEach(() => {
     if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.GEMINI_API_KEY;
     } else {
-      process.env.OPENAI_API_KEY = previousKey;
+      process.env.GEMINI_API_KEY = previousKey;
     }
   });
 
-  it('is false when OPENAI_API_KEY is missing (graceful degrade path)', () => {
-    delete process.env.OPENAI_API_KEY;
+  it('is false when GEMINI_API_KEY is missing (graceful degrade path)', () => {
+    delete process.env.GEMINI_API_KEY;
     expect(isAskBezzinaConfigured()).toBe(false);
   });
 
-  it('is true when OPENAI_API_KEY is set', () => {
-    process.env.OPENAI_API_KEY = 'sk-test-key';
+  it('is true when GEMINI_API_KEY is set', () => {
+    process.env.GEMINI_API_KEY = 'test-gemini-key';
     expect(isAskBezzinaConfigured()).toBe(true);
   });
 });
