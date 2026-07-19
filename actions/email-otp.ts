@@ -164,10 +164,9 @@ export async function sendEmailOtpAction(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to send OTP',
-    };
+    const { logServerError, toUserError } = await import('@/lib/security/sanitize-error');
+    logServerError('sendEmailOtpAction', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 
@@ -227,7 +226,9 @@ export async function verifyEmailOtpAction(input: unknown): Promise<ActionResult
     });
 
     if (linkError || !linkData.properties?.hashed_token) {
-      return { success: false, error: linkError?.message ?? 'Failed to start session' };
+      const { logServerError, toUserError } = await import('@/lib/security/sanitize-error');
+      logServerError('verifyEmailOtpAction.link', linkError);
+      return { success: false, error: toUserError(linkError) };
     }
 
     const supabase = await createClient();
@@ -237,7 +238,9 @@ export async function verifyEmailOtpAction(input: unknown): Promise<ActionResult
     });
 
     if (sessionError) {
-      return { success: false, error: sessionError.message };
+      const { logServerError, toUserError } = await import('@/lib/security/sanitize-error');
+      logServerError('verifyEmailOtpAction.session', sessionError);
+      return { success: false, error: toUserError(sessionError, 'auth') };
     }
 
     await admin
@@ -249,10 +252,9 @@ export async function verifyEmailOtpAction(input: unknown): Promise<ActionResult
 
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to verify OTP',
-    };
+    const { logServerError, toUserError } = await import('@/lib/security/sanitize-error');
+    logServerError('verifyEmailOtpAction', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 

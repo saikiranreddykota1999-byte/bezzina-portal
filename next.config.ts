@@ -18,6 +18,12 @@ const cspImageSources = [
   "https://maps.gstatic.com",
 ].join(" ");
 
+/** Dev tooling may need eval; production CSP drops unsafe-eval. */
+const scriptSrc =
+  process.env.NODE_ENV === "production"
+    ? "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com";
+
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
@@ -56,7 +62,7 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               `img-src ${cspImageSources}`,
               "font-src 'self' https://fonts.gstatic.com data:",

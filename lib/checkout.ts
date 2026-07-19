@@ -1,4 +1,5 @@
 import type { FulfillmentMethod } from '@/types/pickup';
+import { splitVatInclusive } from '@/lib/receipt';
 
 export const DELIVERY_SHIPPING_COST = 12.5;
 
@@ -10,6 +11,7 @@ export function calculateShippingCost(
   return method === 'store_pickup' ? 0 : DELIVERY_SHIPPING_COST;
 }
 
+/** Totals are VAT-inclusive (Malta 18%); vat/net are for display/receipts. */
 export function calculateOrderTotals(
   subtotal: number,
   method: FulfillmentMethod,
@@ -17,7 +19,8 @@ export function calculateOrderTotals(
 ) {
   const shipping = calculateShippingCost(method, itemCount);
   const total = subtotal + shipping;
-  return { subtotal, shipping, total };
+  const { net, vat } = splitVatInclusive(total);
+  return { subtotal, shipping, total, vat, net };
 }
 
 export function formatPickupAddress(location: {

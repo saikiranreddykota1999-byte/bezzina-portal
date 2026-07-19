@@ -18,6 +18,9 @@ function getOtpPepper(): string {
     throw new Error('OTP_SECRET must be set in production');
   }
 
+  console.warn(
+    '[otp] OTP_SECRET is not set; using a development-only pepper. Set OTP_SECRET before any shared/staging deploy.',
+  );
   return 'bezzina-otp-dev-pepper';
 }
 

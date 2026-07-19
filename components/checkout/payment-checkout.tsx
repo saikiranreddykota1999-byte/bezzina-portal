@@ -35,9 +35,6 @@ export function PaymentCheckout() {
   const [useInlinePayment, setUseInlinePayment] = useState(cards.length === 0);
   const [inlinePayment, setInlinePayment] = useState({ cardholderName: '', cardNumber: '' });
   const [processing, setProcessing] = useState(false);
-  const success = false;
-  const orderNumber = '';
-  const pickupCode = '';
   const [error, setError] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [initializingStripe, setInitializingStripe] = useState(false);
@@ -54,7 +51,11 @@ export function PaymentCheckout() {
     (sum, i) => sum + resolveQuoteLinePrice(i.price) * i.quantity,
     0,
   );
-  const { shipping, total } = calculateOrderTotals(subtotal, fulfillmentMethod, items.length);
+  const { shipping, total, vat, net } = calculateOrderTotals(
+    subtotal,
+    fulfillmentMethod,
+    items.length,
+  );
   const selectedCard = cards.find((c) => c.id === selectedCardId) ?? defaultCard;
 
   const orderItems = useMemo(
@@ -256,32 +257,6 @@ export function PaymentCheckout() {
     router.push(`/account/orders/${encodeURIComponent(result.orderNumber ?? '')}/receipt`);
   }
 
-  if (success) {
-    return (
-      <div className="mx-auto max-w-lg text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <ShieldCheck className="h-8 w-8 text-green-600" />
-        </div>
-        <h1 className="mt-6 text-2xl font-bold text-slate-900">Demo payment complete</h1>
-        <p className="mt-2 text-slate-500">
-          Order <span className="font-mono font-medium">{orderNumber}</span> — simulated for
-          demonstration.
-        </p>
-        {isPickup && pickupCode && (
-          <div className="mx-auto mt-6 max-w-sm rounded-2xl border border-orange-200 bg-orange-50 p-5">
-            <p className="text-sm font-semibold uppercase tracking-wide text-orange-700">
-              Your pickup code
-            </p>
-            <p className="mt-2 font-mono text-3xl font-bold text-slate-900">{pickupCode}</p>
-          </div>
-        )}
-        <div className="mt-8">
-          <RippleButton href="/products">Continue shopping</RippleButton>
-        </div>
-      </div>
-    );
-  }
-
   if (items.length === 0) {
     return (
       <div>
@@ -443,6 +418,8 @@ export function PaymentCheckout() {
           subtotal={subtotal}
           shipping={shipping}
           total={total}
+          vat={vat}
+          net={net}
           isPickup={isPickup}
           onBack={() => router.push('/account/checkout')}
         />

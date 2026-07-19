@@ -1,23 +1,39 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { submitSuggestionAction } from '@/actions/support';
 import { RippleButton } from '@/components/ui/ripple-button';
 
 export default function SuggestionsPage() {
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const [isPending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSent(true);
+    setError('');
+    startTransition(async () => {
+      const result = await submitSuggestionAction({ message });
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      setSent(true);
+      setMessage('');
+    });
   }
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Suggestion Box</h1>
-      <p className="mt-1 text-sm text-slate-500">Tell us what products or brands you would like us to stock.</p>
+      <p className="mt-1 text-sm text-slate-500">
+        Tell us what products or brands you would like us to stock.
+      </p>
       {sent ? (
-        <p className="mt-8 text-green-600">Thank you for your suggestion!</p>
+        <p className="mt-8 text-green-600" role="status">
+          Thank you for your suggestion!
+        </p>
       ) : (
         <form onSubmit={handleSubmit} className="mt-8 max-w-lg space-y-4">
           <textarea
@@ -26,9 +42,17 @@ export default function SuggestionsPage() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Your suggestion..."
+            aria-label="Your suggestion"
             className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
-          <RippleButton type="submit">Submit Suggestion</RippleButton>
+          {error && (
+            <p className="text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
+          <RippleButton type="submit" disabled={isPending}>
+            {isPending ? 'Submitting…' : 'Submit Suggestion'}
+          </RippleButton>
         </form>
       )}
     </div>

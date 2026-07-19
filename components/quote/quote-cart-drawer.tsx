@@ -71,7 +71,7 @@ export function QuoteCartDrawer({ open, onClose }: Props) {
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                         <Image
                           src={item.image_url}
-                          alt=""
+                          alt={item.name}
                           fill
                           sizes="56px"
                           className="object-cover"

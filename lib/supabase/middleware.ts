@@ -25,8 +25,6 @@ const PUBLIC_ACCOUNT_PATHS = [
   '/account/reset-password',
   '/account/cart',
   '/account/wishlist',
-  '/account/tracking',
-  '/account/quotes',
 ];
 
 function isPublicAccountPath(pathname: string) {

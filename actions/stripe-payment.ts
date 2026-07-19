@@ -2,8 +2,10 @@
 
 import { z } from 'zod';
 import { requireAuthenticatedUser } from '@/lib/auth/server-session';
+import { buildCartFingerprint } from '@/lib/checkout/cart-fingerprint';
+import { validateOrderItems } from '@/lib/checkout/validate-order-items';
 import { calculateOrderTotals } from '@/lib/checkout';
-import { DEFAULT_PRODUCT_PRICE, resolveQuoteLinePrice } from '@/lib/pricing';
+import { logServerError, toUserError } from '@/lib/security/sanitize-error';
 import {
   isStripeEnabled,
   STRIPE_CURRENCY,
@@ -63,38 +65,32 @@ export async function createPaymentIntentAction(
     }
 
     const { fulfillmentMethod, items } = parsed.data;
+    const uniqueIds = [...new Set(items.map((item) => item.productId))];
 
-    const productIds = items.map((item) => item.productId);
     const { data: dbProducts, error: priceError } = await supabase
       .from('products')
       .select('id, price, name')
-      .in('id', productIds)
+      .in('id', uniqueIds)
       .is('deleted_at', null)
       .eq('is_active', true);
 
     if (priceError) {
-      return { success: false, error: priceError.message };
+      logServerError('createPaymentIntentAction.prices', priceError);
+      return { success: false, error: toUserError(priceError) };
     }
 
-    if ((dbProducts ?? []).length !== productIds.length) {
-      return { success: false, error: 'One or more products are no longer available' };
+    const validated = validateOrderItems(items, dbProducts ?? []);
+    if (!validated.ok) {
+      return { success: false, error: validated.error };
     }
 
-    const priceMap = new Map(
-      (dbProducts ?? []).map((product) => [product.id, resolveQuoteLinePrice(product.price)]),
+    const totals = calculateOrderTotals(
+      validated.subtotal,
+      fulfillmentMethod,
+      validated.items.length,
     );
-
-    const validatedItems = items.map((item) => ({
-      ...item,
-      price: priceMap.get(item.productId) ?? DEFAULT_PRODUCT_PRICE,
-    }));
-
-    const subtotal = validatedItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
-    const totals = calculateOrderTotals(subtotal, fulfillmentMethod, validatedItems.length);
     const amount = toStripeAmount(totals.total);
+    const cartFingerprint = buildCartFingerprint(validated.items, fulfillmentMethod);
 
     if (amount < 50) {
       return { success: false, error: 'Order total must be at least €0.50' };
@@ -110,11 +106,13 @@ export async function createPaymentIntentAction(
       },
       ...(isValidReceiptEmail(profile?.email) ? { receipt_email: profile.email } : {}),
       metadata: {
-        user_id: user!.id,
+        user_id: user.id,
         fulfillment_method: fulfillmentMethod,
-        item_count: String(validatedItems.length),
+        cart_fingerprint: cartFingerprint,
+        item_count: String(validated.items.length),
         subtotal: totals.subtotal.toFixed(2),
         shipping: totals.shipping.toFixed(2),
+        vat: totals.vat.toFixed(2),
         total: totals.total.toFixed(2),
       },
     });
@@ -132,9 +130,10 @@ export async function createPaymentIntentAction(
       },
     };
   } catch (error) {
+    logServerError('createPaymentIntentAction', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create payment',
+      error: toUserError(error),
     };
   }
 }
@@ -143,6 +142,7 @@ export async function verifyStripePaymentIntent(
   paymentIntentId: string,
   expectedTotal: number,
   userId: string,
+  cartFingerprint: string,
 ): Promise<{ ok: true; reference: string } | { ok: false; error: string }> {
   try {
     const stripe = getStripe();
@@ -153,11 +153,18 @@ export async function verifyStripePaymentIntent(
       intent.status !== 'processing' &&
       intent.status !== 'requires_capture'
     ) {
-      return { ok: false, error: `Payment status: ${intent.status}. Please try again.` };
+      return { ok: false, error: 'Payment is not complete. Please try again.' };
     }
 
     if (intent.metadata.user_id !== userId) {
       return { ok: false, error: 'Payment does not belong to this account' };
+    }
+
+    if (intent.metadata.cart_fingerprint !== cartFingerprint) {
+      return {
+        ok: false,
+        error: 'Payment does not match the current cart. Please pay again.',
+      };
     }
 
     const expectedAmount = toStripeAmount(expectedTotal);
@@ -170,9 +177,10 @@ export async function verifyStripePaymentIntent(
 
     return { ok: true, reference: intent.id };
   } catch (error) {
+    logServerError('verifyStripePaymentIntent', error);
     return {
       ok: false,
-      error: error instanceof Error ? error.message : 'Payment verification failed',
+      error: toUserError(error),
     };
   }
 }

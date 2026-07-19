@@ -27,7 +27,6 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
   const [cardNumber, setCardNumber] = useState('');
   const [expiryMonth, setExpiryMonth] = useState('');
   const [expiryYear, setExpiryYear] = useState('');
-  const [cvv, setCvv] = useState('');
   const [setAsDefault, setSetAsDefault] = useState(true);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -45,10 +44,6 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
       setError('Please enter the expiry date.');
       return;
     }
-    if (cvv.length < 3) {
-      setError('Please enter a valid CVV.');
-      return;
-    }
 
     addCard({
       cardholderName: cardholderName.trim(),
@@ -64,7 +59,6 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
     setCardNumber('');
     setExpiryMonth('');
     setExpiryYear('');
-    setCvv('');
     onSuccess?.();
     setTimeout(() => setSaved(false), 3000);
   }
@@ -96,7 +90,7 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
           aria-invalid={error ? true : undefined}
           className="w-full rounded-xl border border-slate-300 px-4 py-3 font-mono text-sm"
         />
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <input
             required
             inputMode="numeric"
@@ -104,7 +98,7 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
             value={expiryMonth}
             onChange={(e) => setExpiryMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
             placeholder="MM"
-            aria-label="MM"
+            aria-label="Expiry month"
             aria-invalid={error ? true : undefined}
             className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
           />
@@ -115,23 +109,14 @@ export function AddCardForm({ onSuccess }: { onSuccess?: () => void }) {
             value={expiryYear}
             onChange={(e) => setExpiryYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
             placeholder="YYYY"
-            aria-label="YYYY"
+            aria-label="Expiry year"
             aria-invalid={error ? true : undefined}
             className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
-          />
-          <input
-            required
-            inputMode="numeric"
-            maxLength={4}
-            value={cvv}
-            onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            placeholder="CVV"
-            aria-label="CVV"
-            aria-invalid={error ? true : undefined}
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
-            autoComplete="cc-csc"
           />
         </div>
+        <p className="text-xs text-slate-500">
+          Demo vault stores last 4 digits only — never enter a real CVV here.
+        </p>
         <label className="flex items-center gap-2 text-sm text-slate-600">
           <input
             type="checkbox"

@@ -25,9 +25,9 @@ function loadEnvFile() {
 
 loadEnvFile();
 
-const DEMO_EMAIL = process.env.DEMO_CUSTOMER_EMAIL ?? 'saikiranreddy.kota1999@gmail.com';
+const DEMO_EMAIL = process.env.DEMO_CUSTOMER_EMAIL;
 const DEMO_PASSWORD = process.env.DEMO_CUSTOMER_PASSWORD;
-const DEMO_NAME = process.env.DEMO_CUSTOMER_NAME ?? 'Saikiran Reddy (Demo)';
+const DEMO_NAME = process.env.DEMO_CUSTOMER_NAME ?? 'Demo Customer';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,10 +37,15 @@ if (!supabaseUrl || !serviceKey) {
   process.exit(1);
 }
 
-if (!DEMO_PASSWORD) {
-  console.error('Set DEMO_CUSTOMER_PASSWORD in .env.local (do not commit this value).');
+if (!DEMO_EMAIL || !DEMO_PASSWORD) {
+  console.error(
+    'Set DEMO_CUSTOMER_EMAIL and DEMO_CUSTOMER_PASSWORD in .env.local (do not commit these values).',
+  );
   process.exit(1);
 }
+
+const demoEmail = DEMO_EMAIL;
+const demoPassword = DEMO_PASSWORD;
 
 const admin = createClient(supabaseUrl, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -53,14 +58,14 @@ async function findUserByEmail(email: string) {
 }
 
 async function main() {
-  const email = DEMO_EMAIL.toLowerCase();
+  const email = demoEmail.toLowerCase();
   let userId: string;
 
   const existing = await findUserByEmail(email);
 
   if (existing) {
     const { data, error } = await admin.auth.admin.updateUserById(existing.id, {
-      password: DEMO_PASSWORD,
+      password: demoPassword,
       email_confirm: true,
       user_metadata: { full_name: DEMO_NAME, login_method: 'password' },
     });
@@ -70,7 +75,7 @@ async function main() {
   } else {
     const { data, error } = await admin.auth.admin.createUser({
       email,
-      password: DEMO_PASSWORD,
+      password: demoPassword,
       email_confirm: true,
       user_metadata: { full_name: DEMO_NAME, login_method: 'password' },
     });

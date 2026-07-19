@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { requireAuthenticatedUser } from '@/lib/auth/server-session';
 import { placeOrderSchema } from '@/lib/validators/pickup';
 import { calculateOrderTotals } from '@/lib/checkout';
-import { DEFAULT_PRODUCT_PRICE, resolveQuoteLinePrice } from '@/lib/pricing';
+import { buildCartFingerprint } from '@/lib/checkout/cart-fingerprint';
+import { compensateFailedOrder } from '@/lib/checkout/compensate-order';
+import { validateOrderItems } from '@/lib/checkout/validate-order-items';
 import { isStripeEnabled } from '@/lib/stripe/config';
 import { isDemoPaymentAllowed } from '@/lib/payment';
 import {
@@ -17,6 +19,7 @@ import { generateOrderNumber, generatePickupCode, normalizeTimeValue } from '@/l
 import { verifyStripePaymentIntent } from '@/actions/stripe-payment';
 import { sendPickupConfirmationEmail } from '@/services/pickup-email.service';
 import { resolveContactEmail, resolveReceiptCustomer } from '@/lib/receipt';
+import { logServerError, toUserError } from '@/lib/security/sanitize-error';
 import type {
   ActionResult,
   AvailablePickupSlot,
@@ -25,6 +28,7 @@ import type {
   PlaceOrderResult,
 } from '@/types/pickup';
 import type { CartItem } from '@/types/user';
+
 export async function getActivePickupLocations(): Promise<ActionResult<PickupLocation[]>> {
   try {
     const { supabase } = await requireAuthenticatedUser();
@@ -34,10 +38,14 @@ export async function getActivePickupLocations(): Promise<ActionResult<PickupLoc
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      logServerError('getActivePickupLocations', error);
+      return { success: false, error: toUserError(error) };
+    }
     return { success: true, data: data ?? [] };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to load branches' };
+    logServerError('getActivePickupLocations', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 
@@ -61,10 +69,8 @@ export async function getPickupAvailableDates(
 
     return { success: true, data: dates };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to load pickup dates',
-    };
+    logServerError('getPickupAvailableDates', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 
@@ -97,10 +103,8 @@ export async function getPickupAvailableSlots(
 
     return { success: true, data: available };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to load pickup slots',
-    };
+    logServerError('getPickupAvailableSlots', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 
@@ -113,40 +117,37 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
     const { supabase, user, profile } = await requireAuthenticatedUser();
     const payload = parsed.data;
+    const uniqueIds = [...new Set(payload.items.map((item) => item.productId))];
 
-    const productIds = payload.items.map((item) => item.productId);
     const { data: dbProducts, error: priceError } = await supabase
       .from('products')
       .select('id, price')
-      .in('id', productIds)
-      .is('deleted_at', null);
+      .in('id', uniqueIds)
+      .is('deleted_at', null)
+      .eq('is_active', true);
 
     if (priceError) {
-      return { success: false, error: priceError.message };
+      logServerError('placeOrderAction.prices', priceError);
+      return { success: false, error: toUserError(priceError) };
     }
 
-    if ((dbProducts ?? []).length !== productIds.length) {
-      return { success: false, error: 'One or more products are no longer available' };
+    const validated = validateOrderItems(payload.items, dbProducts ?? []);
+    if (!validated.ok) {
+      return { success: false, error: validated.error };
     }
 
-    const priceMap = new Map(
-      (dbProducts ?? []).map((product) => [product.id, resolveQuoteLinePrice(product.price)]),
+    const validatedItems = validated.items;
+    const totals = calculateOrderTotals(
+      validated.subtotal,
+      payload.fulfillmentMethod,
+      validatedItems.length,
     );
-
-    const validatedItems = payload.items.map((item) => ({
-      ...item,
-      price: priceMap.get(item.productId) ?? DEFAULT_PRODUCT_PRICE,
-    }));
-
-    const subtotal = validatedItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0,
-    );
-    const totals = calculateOrderTotals(subtotal, payload.fulfillmentMethod, validatedItems.length);
+    const cartFingerprint = buildCartFingerprint(validatedItems, payload.fulfillmentMethod);
     const orderNumber = generateOrderNumber();
     const pickupCode =
       payload.fulfillmentMethod === 'store_pickup' ? generatePickupCode() : null;
 
+    let slotMaxCapacity = 0;
     if (payload.fulfillmentMethod === 'store_pickup') {
       const slotTime = normalizeTimeValue(payload.pickup.pickupTime);
       const { data: slotConfig } = await supabase
@@ -160,6 +161,8 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
         return { success: false, error: 'Selected pickup time is not available' };
       }
 
+      slotMaxCapacity = slotConfig.max_capacity;
+
       const { count } = await supabase
         .from('pickup_slot_bookings')
         .select('*', { count: 'exact', head: true })
@@ -167,7 +170,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
         .eq('slot_date', payload.pickup.pickupDate)
         .eq('slot_time', slotTime);
 
-      if ((count ?? 0) >= slotConfig.max_capacity) {
+      if ((count ?? 0) >= slotMaxCapacity) {
         return { success: false, error: 'Selected pickup slot is fully booked' };
       }
     }
@@ -185,6 +188,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
         payload.payment.paymentIntentId,
         totals.total,
         user!.id,
+        cartFingerprint,
       );
 
       if (!verification.ok) {
@@ -234,8 +238,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
     const orderInsert: Record<string, unknown> = {
       user_id: user!.id,
       order_number: orderNumber,
-      status:
-        payload.fulfillmentMethod === 'store_pickup' ? 'confirmed' : 'confirmed',
+      status: 'confirmed',
       order_source: 'online',
       oms_status:
         payload.fulfillmentMethod === 'store_pickup'
@@ -285,7 +288,8 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
       .single();
 
     if (orderError || !order) {
-      return { success: false, error: orderError?.message ?? 'Failed to create order' };
+      logServerError('placeOrderAction.insert', orderError);
+      return { success: false, error: toUserError(orderError) };
     }
 
     const orderItems = validatedItems.map((item) => ({
@@ -299,7 +303,9 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
     const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
     if (itemsError) {
-      return { success: false, error: itemsError.message };
+      logServerError('placeOrderAction.items', itemsError);
+      await compensateFailedOrder(supabase, order.id);
+      return { success: false, error: toUserError(itemsError) };
     }
 
     if (payload.fulfillmentMethod === 'store_pickup') {
@@ -312,7 +318,24 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
       });
 
       if (bookingError) {
-        return { success: false, error: bookingError.message };
+        logServerError('placeOrderAction.booking', bookingError);
+        await compensateFailedOrder(supabase, order.id);
+        return { success: false, error: toUserError(bookingError) };
+      }
+
+      const { count: bookedCount } = await supabase
+        .from('pickup_slot_bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('location_id', payload.pickup.locationId)
+        .eq('slot_date', payload.pickup.pickupDate)
+        .eq('slot_time', slotTime);
+
+      if ((bookedCount ?? 0) > slotMaxCapacity) {
+        logServerError('placeOrderAction.overbook', {
+          message: `Slot over capacity: ${bookedCount}/${slotMaxCapacity}`,
+        });
+        await compensateFailedOrder(supabase, order.id);
+        return { success: false, error: 'Selected pickup slot is fully booked' };
       }
 
       const { data: location } = await supabase
@@ -336,7 +359,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
           order_id: order.id,
           channel: 'email',
           recipient: profile.email,
-          subject: `Pickup confirmed â€” ${order.order_number ?? orderNumber}`,
+          subject: `Pickup confirmed — ${order.order_number ?? orderNumber}`,
           status: emailResult.status,
           payload: {
             pickupCode: order.pickup_code ?? pickupCode,
@@ -382,10 +405,8 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
       pickupCode: order.pickup_code ?? pickupCode ?? undefined,
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to place order',
-    };
+    logServerError('placeOrderAction', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 
@@ -398,13 +419,14 @@ export async function getCustomerOrders(): Promise<ActionResult<OrderWithPickup[
       .eq('user_id', user!.id)
       .order('created_at', { ascending: false });
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      logServerError('getCustomerOrders', error);
+      return { success: false, error: toUserError(error) };
+    }
     return { success: true, data: (data ?? []) as OrderWithPickup[] };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to load orders',
-    };
+    logServerError('getCustomerOrders', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 
@@ -420,7 +442,10 @@ export async function getCustomerOrderByNumber(
       .eq('order_number', orderNumber)
       .maybeSingle();
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      logServerError('getCustomerOrderByNumber', error);
+      return { success: false, error: toUserError(error) };
+    }
     if (!data) return { success: false, error: 'Order not found' };
 
     const { data: freshProfile, error: profileError } = await supabase
@@ -429,15 +454,16 @@ export async function getCustomerOrderByNumber(
       .eq('id', user!.id)
       .maybeSingle();
 
-    if (profileError) return { success: false, error: profileError.message };
+    if (profileError) {
+      logServerError('getCustomerOrderByNumber.profile', profileError);
+      return { success: false, error: toUserError(profileError) };
+    }
 
     const customer = resolveReceiptCustomer(data, freshProfile ?? profile, user);
     return { success: true, data: { ...data, customer } as OrderWithPickup };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to load order',
-    };
+    logServerError('getCustomerOrderByNumber', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 

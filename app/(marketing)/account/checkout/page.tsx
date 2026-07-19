@@ -31,7 +31,11 @@ export default function CheckoutPage() {
     (sum, item) => sum + resolveQuoteLinePrice(item.price) * item.quantity,
     0,
   );
-  const { shipping, total } = calculateOrderTotals(subtotal, fulfillmentMethod, items.length);
+  const { shipping, total, vat, net } = calculateOrderTotals(
+    subtotal,
+    fulfillmentMethod,
+    items.length,
+  );
 
   function handleContinue() {
     if (!isFulfillmentComplete) return;
@@ -104,7 +108,7 @@ export default function CheckoutPage() {
           <h2 className="font-semibold text-slate-900">Summary</h2>
           <dl className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-500">Subtotal</dt>
+              <dt className="text-slate-500">Subtotal (incl. VAT)</dt>
               <dd>{formatPrice(subtotal)}</dd>
             </div>
             <div className="flex justify-between">
@@ -112,6 +116,14 @@ export default function CheckoutPage() {
                 {fulfillmentMethod === 'store_pickup' ? 'Pickup fee' : 'Shipping'}
               </dt>
               <dd>{shipping === 0 ? 'Free' : `€${shipping.toFixed(2)}`}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-slate-500">Net</dt>
+              <dd>{formatPrice(net)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-slate-500">VAT (18%)</dt>
+              <dd>{formatPrice(vat)}</dd>
             </div>
             <div className="flex justify-between border-t border-slate-100 pt-2 text-lg font-bold">
               <dt>Total</dt>

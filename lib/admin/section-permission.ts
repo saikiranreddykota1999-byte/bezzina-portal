@@ -1,8 +1,8 @@
 import { ADMIN_NAV } from '@/config/admin-nav';
 import type { AdminPermission } from '@/types/admin';
 
-export function getAdminPermissionForSection(section: string): AdminPermission {
+export function getAdminPermissionForSection(section: string): AdminPermission | null {
   const href = `/admin/${section}`;
   const item = ADMIN_NAV.find((nav) => nav.href === href);
-  return item?.permission ?? 'dashboard:view';
+  return item?.permission ?? null;
 }

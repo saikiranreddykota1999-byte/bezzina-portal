@@ -150,7 +150,7 @@ export default function AdminLoginForm({ redirectPath }: Props) {
           animate="animate"
           transition={{ delay: 0.26 }}
         >
-          <Link href="/account/forgot-password" className="admin-link text-sm">
+          <Link href="/account/forgot-password?audience=staff" className="admin-link text-sm">
             Forgot password?
           </Link>
         </motion.div>

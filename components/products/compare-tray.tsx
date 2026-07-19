@@ -32,7 +32,7 @@ export function CompareTray() {
                   {item.image_url ? (
                     <Image
                       src={item.image_url}
-                      alt=""
+                      alt={item.name}
                       fill
                       className="object-contain p-0.5"
                       sizes="40px"

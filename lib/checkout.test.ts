@@ -12,12 +12,12 @@ describe('checkout helpers', () => {
     expect(calculateShippingCost('delivery', 0)).toBe(0);
   });
 
-  it('calculates totals with free pickup shipping', () => {
-    expect(calculateOrderTotals(100, 'store_pickup', 1)).toEqual({
-      subtotal: 100,
-      shipping: 0,
-      total: 100,
-    });
+  it('calculates totals with free pickup shipping and VAT breakdown', () => {
+    const totals = calculateOrderTotals(100, 'store_pickup', 1);
+    expect(totals.subtotal).toBe(100);
+    expect(totals.shipping).toBe(0);
+    expect(totals.total).toBe(100);
+    expect(totals.vat + totals.net).toBeCloseTo(100, 2);
   });
 
   it('formats pickup addresses', () => {

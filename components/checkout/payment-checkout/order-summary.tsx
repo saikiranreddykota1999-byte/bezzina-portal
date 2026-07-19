@@ -6,6 +6,8 @@ type Props = {
   subtotal: number;
   shipping: number;
   total: number;
+  vat?: number;
+  net?: number;
   isPickup: boolean;
   onBack: () => void;
 };
@@ -15,6 +17,8 @@ export function CheckoutOrderSummary({
   subtotal,
   shipping,
   total,
+  vat,
+  net,
   isPickup,
   onBack,
 }: Props) {
@@ -36,13 +40,25 @@ export function CheckoutOrderSummary({
         </ul>
         <dl className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm">
           <div className="flex justify-between">
-            <dt className="text-slate-500">Subtotal</dt>
+            <dt className="text-slate-500">Subtotal (incl. VAT)</dt>
             <dd>{formatPrice(subtotal)}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-slate-500">{isPickup ? 'Pickup fee' : 'Shipping'}</dt>
             <dd>{shipping === 0 ? 'Free' : formatPrice(shipping)}</dd>
           </div>
+          {typeof net === 'number' && typeof vat === 'number' && (
+            <>
+              <div className="flex justify-between">
+                <dt className="text-slate-500">Net</dt>
+                <dd>{formatPrice(net)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-500">VAT (18%)</dt>
+                <dd>{formatPrice(vat)}</dd>
+              </div>
+            </>
+          )}
           <div className="flex justify-between border-t border-slate-100 pt-2 text-base font-semibold text-slate-900">
             <dt>Total</dt>
             <dd>{formatPrice(total)}</dd>

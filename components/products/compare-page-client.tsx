@@ -103,7 +103,7 @@ export function ComparePageClient() {
                       {product.image_url ? (
                         <Image
                           src={product.image_url}
-                          alt=""
+                          alt={product.name}
                           fill
                           className="object-contain p-1"
                           sizes="64px"

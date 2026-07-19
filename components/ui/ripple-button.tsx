@@ -11,6 +11,7 @@ type RippleButtonProps = {
   className?: string;
   type?: 'button' | 'submit';
   variant?: 'primary' | 'secondary' | 'ghost';
+  disabled?: boolean;
 };
 
 const variants = {
@@ -26,6 +27,7 @@ export function RippleButton({
   className = '',
   type = 'button',
   variant = 'primary',
+  disabled = false,
 }: RippleButtonProps) {
   const [ripples, setRipples] = useState<{ x: number; y: number; id: number }[]>([]);
 
@@ -41,7 +43,7 @@ export function RippleButton({
     }, 600);
   }
 
-  const classes = `relative inline-flex items-center justify-center overflow-hidden rounded-full px-6 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 ${variants[variant]} ${className}`;
+  const classes = `relative inline-flex items-center justify-center overflow-hidden rounded-full px-6 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`;
 
   const content = (
     <>
@@ -62,9 +64,15 @@ export function RippleButton({
   if (href) {
     return (
       <Link
-        href={href}
-        className={classes}
+        href={disabled ? '#' : href}
+        aria-disabled={disabled || undefined}
+        tabIndex={disabled ? -1 : undefined}
+        className={`${classes}${disabled ? ' pointer-events-none' : ''}`}
         onClick={(event) => {
+          if (disabled) {
+            event.preventDefault();
+            return;
+          }
           handleRipple(event);
           onClick?.();
         }}
@@ -77,9 +85,11 @@ export function RippleButton({
   return (
     <motion.button
       type={type}
-      whileTap={{ scale: 0.98 }}
+      disabled={disabled}
+      whileTap={disabled ? undefined : { scale: 0.98 }}
       className={classes}
       onClick={(e) => {
+        if (disabled) return;
         handleRipple(e);
         onClick?.();
       }}

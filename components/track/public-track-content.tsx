@@ -1,21 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Search, Package } from 'lucide-react';
 import { TrackingTimeline } from '@/components/account/tracking-timeline';
-import { findShipment } from '@/lib/tracking';
+import { trackPublicShipmentAction } from '@/actions/tracking';
 import { RippleButton } from '@/components/ui/ripple-button';
 import Link from 'next/link';
+import type { Shipment } from '@/types/payment';
 
 export function PublicTrackContent() {
   const [query, setQuery] = useState('');
-  const [result, setResult] = useState<ReturnType<typeof findShipment>>(null);
+  const [result, setResult] = useState<Shipment | null>(null);
   const [searched, setSearched] = useState(false);
+  const [error, setError] = useState('');
+  const [isPending, startTransition] = useTransition();
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    setResult(findShipment(query));
+    setError('');
     setSearched(true);
+    startTransition(async () => {
+      const response = await trackPublicShipmentAction(query);
+      if (!response.success) {
+        setResult(null);
+        setError(response.error);
+        return;
+      }
+      setResult(response.data ?? null);
+    });
   }
 
   return (
@@ -40,12 +52,18 @@ export function PublicTrackContent() {
             className="w-full rounded-xl border border-slate-300 py-4 pl-12 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-[#0B3D91]"
           />
         </div>
-        <RippleButton type="submit" className="mt-4">
-          Track
+        <RippleButton type="submit" className="mt-4" disabled={isPending}>
+          {isPending ? 'Searching…' : 'Track'}
         </RippleButton>
       </form>
 
-      {searched && !result && (
+      {error && (
+        <p className="mt-4 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+
+      {searched && !error && !result && !isPending && (
         <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-10 text-center">
           <Package className="mx-auto h-12 w-12 text-slate-300" />
           <p className="mt-4 font-medium text-slate-700">Shipment not found</p>

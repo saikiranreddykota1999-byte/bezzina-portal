@@ -7,7 +7,7 @@ import { contactEnquirySchema } from '@/lib/validators/contact';
 import { sendContactEnquiryEmail } from '@/services/contact-email.service';
 import { notifyStaff } from '@/services/notification.service';
 import { checkPublicRateLimit } from '@/lib/auth/login-security';
-
+import { logServerError, toUserError } from '@/lib/security/sanitize-error';
 
 export async function submitContactEnquiryAction(
   input: unknown,
@@ -38,9 +38,7 @@ export async function submitContactEnquiryAction(
 
     return { success: true, data: { channel: delivery.channel } };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to send enquiry',
-    };
+    logServerError('submitContactEnquiryAction', error);
+    return { success: false, error: toUserError(error) };
   }
 }
