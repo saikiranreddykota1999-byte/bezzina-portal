@@ -460,11 +460,14 @@ export async function getRandomProducts(limit = 12): Promise<Product[]> {
       .select(PRODUCT_LIST_SELECT)
       .eq('is_active', true)
       .is('deleted_at', null)
+      .not('image_url', 'is', null)
       .limit(poolSize);
 
     if (error) throw error;
 
-    const products = ((data ?? []) as unknown as Product[]).map(normalizeProduct);
+    const products = ((data ?? []) as unknown as Product[])
+      .map(normalizeProduct)
+      .filter((product) => Boolean(product.image_url));
     return shuffleProducts(products).slice(0, limit);
   } catch (error) {
     console.error('getRandomProducts error:', error);
@@ -474,9 +477,12 @@ export async function getRandomProducts(limit = 12): Promise<Product[]> {
         .select(PRODUCT_SELECT_FALLBACK)
         .eq('is_active', true)
         .is('deleted_at', null)
+        .not('image_url', 'is', null)
         .limit(poolSize);
 
-      const products = ((data ?? []) as unknown as Product[]).map(normalizeProduct);
+      const products = ((data ?? []) as unknown as Product[])
+        .map(normalizeProduct)
+        .filter((product) => Boolean(product.image_url));
       return shuffleProducts(products).slice(0, limit);
     } catch {
       return [];
