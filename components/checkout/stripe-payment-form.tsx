@@ -64,9 +64,14 @@ function StripeCheckoutForm({ total, disabled, onPay }: StripeCheckoutFormProps)
       return;
     }
 
-    const validStatuses = ['succeeded', 'processing', 'requires_capture'];
+    // requires_capture is not treated as paid; only succeeded/processing may place an order.
+    const validStatuses = ['succeeded', 'processing'];
     if (!validStatuses.includes(paymentIntent.status)) {
-      setError(`Payment was not completed (status: ${paymentIntent.status}).`);
+      setError(
+        paymentIntent.status === 'requires_capture'
+          ? 'Payment was authorized but not captured. Please use a different payment method.'
+          : `Payment was not completed (status: ${paymentIntent.status}).`,
+      );
       setProcessing(false);
       return;
     }

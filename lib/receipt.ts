@@ -137,6 +137,7 @@ export function formatPaymentStatusLabel(
   method: string | null | undefined,
 ): string {
   if (status === 'paid') return 'PAID IN FULL';
+  if (status === 'processing') return 'PAYMENT PROCESSING';
   if (method === 'cash_on_pickup' && status === 'pending') return 'PAY ON PICKUP';
   if (status === 'pending') return 'PAYMENT PENDING';
   if (status === 'failed') return 'PAYMENT FAILED';

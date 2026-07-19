@@ -1,3 +1,4 @@
+import { AskBezzinaWidget } from "@/components/ask-bezzina/ask-bezzina-widget";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { MobileCtaBar } from "@/components/layout/mobile-cta-bar";
@@ -16,6 +17,7 @@ export default function MarketingLayout({
       </main>
       <Footer />
       <MobileCtaBar />
+      <AskBezzinaWidget />
       <CookieConsent />
     </>
   );

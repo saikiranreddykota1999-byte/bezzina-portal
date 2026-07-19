@@ -1,0 +1,16 @@
+---
+description: Performance and Core Web Vitals targets
+alwaysApply: true
+---
+
+# Performance
+
+Optimize for Core Web Vitals.
+
+Targets:
+
+- LCP < 2.5s
+- CLS < 0.1
+- INP < 200ms
+
+Optimize images, fonts, JS bundles, CSS, network requests, caching, and lazy loading.

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { captureException } from '@/lib/monitoring/capture';
 import type { BarcodeLookupResult, InventoryLevel, ProductLocation } from '@/types/oms';
 
 type ReserveItem = {
@@ -91,48 +92,54 @@ export async function reserveInventoryForOrder(
   items: ReserveItem[],
   actorId: string,
 ): Promise<void> {
-  // Idempotent: skip if placement already reserved (OMS approve re-entry).
-  if (await hasActiveReservation(supabase, orderId)) return;
+  try {
+    // Idempotent: skip if placement already reserved (OMS approve re-entry).
+    if (await hasActiveReservation(supabase, orderId)) return;
 
-  for (const item of items) {
-    const warehouseId =
-      item.warehouseId ?? (await requireDefaultWarehouseId(supabase));
-    const level = await getOrCreateInventoryLevel(supabase, {
-      productId: item.variantId ? null : item.productId,
-      variantId: item.variantId ?? null,
-      warehouseId,
-    });
+    for (const item of items) {
+      const warehouseId =
+        item.warehouseId ?? (await requireDefaultWarehouseId(supabase));
+      const level = await getOrCreateInventoryLevel(supabase, {
+        productId: item.variantId ? null : item.productId,
+        variantId: item.variantId ?? null,
+        warehouseId,
+      });
 
-    if (level.available_stock < item.quantity) {
-      throw new Error(`Insufficient stock for ${item.productId}`);
+      if (level.available_stock < item.quantity) {
+        throw new Error(`Insufficient stock for ${item.productId}`);
+      }
+
+      const nextReserved = level.reserved_stock + item.quantity;
+      const { data: updated, error: updateError } = await supabase
+        .from('inventory_levels')
+        .update({
+          reserved_stock: nextReserved,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', level.id)
+        .eq('reserved_stock', level.reserved_stock)
+        .lte('reserved_stock', level.current_stock - item.quantity)
+        .select('id')
+        .maybeSingle();
+
+      if (updateError) throw new Error(updateError.message);
+      if (!updated) {
+        throw new Error(`Stock reservation conflict for ${item.productId}. Please retry.`);
+      }
+
+      await supabase.from('inventory_transactions').insert({
+        inventory_level_id: level.id,
+        order_id: orderId,
+        transaction_type: 'reserve',
+        quantity: item.quantity,
+        actor_id: actorId,
+        note: 'Reserved on order placement',
+      });
     }
-
-    const nextReserved = level.reserved_stock + item.quantity;
-    const { data: updated, error: updateError } = await supabase
-      .from('inventory_levels')
-      .update({
-        reserved_stock: nextReserved,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', level.id)
-      .eq('reserved_stock', level.reserved_stock)
-      .lte('reserved_stock', level.current_stock - item.quantity)
-      .select('id')
-      .maybeSingle();
-
-    if (updateError) throw new Error(updateError.message);
-    if (!updated) {
-      throw new Error(`Stock reservation conflict for ${item.productId}. Please retry.`);
-    }
-
-    await supabase.from('inventory_transactions').insert({
-      inventory_level_id: level.id,
-      order_id: orderId,
-      transaction_type: 'reserve',
-      quantity: item.quantity,
-      actor_id: actorId,
-      note: 'Reserved on order placement',
-    });
+  } catch (error) {
+    console.error('[reserveInventoryForOrder]', error);
+    captureException(error, { op: 'reserveInventoryForOrder', orderId, actorId });
+    throw error;
   }
 }
 
@@ -155,34 +162,40 @@ export async function deductInventoryForOrder(
   items: ReserveItem[],
   actorId: string,
 ): Promise<void> {
-  for (const item of items) {
-    const warehouseId =
-      item.warehouseId ?? (await requireDefaultWarehouseId(supabase));
-    const level = await getOrCreateInventoryLevel(supabase, {
-      productId: item.variantId ? null : item.productId,
-      variantId: item.variantId ?? null,
-      warehouseId,
-    });
+  try {
+    for (const item of items) {
+      const warehouseId =
+        item.warehouseId ?? (await requireDefaultWarehouseId(supabase));
+      const level = await getOrCreateInventoryLevel(supabase, {
+        productId: item.variantId ? null : item.productId,
+        variantId: item.variantId ?? null,
+        warehouseId,
+      });
 
-    const { error: updateError } = await supabase
-      .from('inventory_levels')
-      .update({
-        current_stock: Math.max(0, level.current_stock - item.quantity),
-        reserved_stock: Math.max(0, level.reserved_stock - item.quantity),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', level.id);
+      const { error: updateError } = await supabase
+        .from('inventory_levels')
+        .update({
+          current_stock: Math.max(0, level.current_stock - item.quantity),
+          reserved_stock: Math.max(0, level.reserved_stock - item.quantity),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', level.id);
 
-    if (updateError) throw new Error(updateError.message);
+      if (updateError) throw new Error(updateError.message);
 
-    await supabase.from('inventory_transactions').insert({
-      inventory_level_id: level.id,
-      order_id: orderId,
-      transaction_type: 'deduct',
-      quantity: item.quantity,
-      actor_id: actorId,
-      note: 'Deducted on order completion',
-    });
+      await supabase.from('inventory_transactions').insert({
+        inventory_level_id: level.id,
+        order_id: orderId,
+        transaction_type: 'deduct',
+        quantity: item.quantity,
+        actor_id: actorId,
+        note: 'Deducted on order completion',
+      });
+    }
+  } catch (error) {
+    console.error('[deductInventoryForOrder]', error);
+    captureException(error, { op: 'deductInventoryForOrder', orderId, actorId });
+    throw error;
   }
 }
 
@@ -191,37 +204,43 @@ export async function releaseInventoryForOrder(
   orderId: string,
   actorId: string,
 ): Promise<void> {
-  const { data: transactions } = await supabase
-    .from('inventory_transactions')
-    .select('inventory_level_id, quantity')
-    .eq('order_id', orderId)
-    .eq('transaction_type', 'reserve');
+  try {
+    const { data: transactions } = await supabase
+      .from('inventory_transactions')
+      .select('inventory_level_id, quantity')
+      .eq('order_id', orderId)
+      .eq('transaction_type', 'reserve');
 
-  for (const tx of transactions ?? []) {
-    const { data: level } = await supabase
-      .from('inventory_levels')
-      .select('reserved_stock')
-      .eq('id', tx.inventory_level_id)
-      .single();
+    for (const tx of transactions ?? []) {
+      const { data: level } = await supabase
+        .from('inventory_levels')
+        .select('reserved_stock')
+        .eq('id', tx.inventory_level_id)
+        .single();
 
-    if (!level) continue;
+      if (!level) continue;
 
-    await supabase
-      .from('inventory_levels')
-      .update({
-        reserved_stock: Math.max(0, level.reserved_stock - tx.quantity),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', tx.inventory_level_id);
+      await supabase
+        .from('inventory_levels')
+        .update({
+          reserved_stock: Math.max(0, level.reserved_stock - tx.quantity),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tx.inventory_level_id);
 
-    await supabase.from('inventory_transactions').insert({
-      inventory_level_id: tx.inventory_level_id,
-      order_id: orderId,
-      transaction_type: 'release',
-      quantity: tx.quantity,
-      actor_id: actorId,
-      note: 'Released on order rejection/cancellation',
-    });
+      await supabase.from('inventory_transactions').insert({
+        inventory_level_id: tx.inventory_level_id,
+        order_id: orderId,
+        transaction_type: 'release',
+        quantity: tx.quantity,
+        actor_id: actorId,
+        note: 'Released on order rejection/cancellation',
+      });
+    }
+  } catch (error) {
+    console.error('[releaseInventoryForOrder]', error);
+    captureException(error, { op: 'releaseInventoryForOrder', orderId, actorId });
+    throw error;
   }
 }
 

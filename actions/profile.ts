@@ -57,8 +57,25 @@ export async function getProfileFormDataAction(): Promise<ActionResult<ProfileFo
   }
 }
 
+/**
+ * Updates non-phone profile fields only.
+ * Phone changes must go through requestPhoneVerification + verifyPhoneAndBind.
+ */
 export async function updateProfileAction(input: unknown): Promise<ActionResult> {
   try {
+    if (
+      input &&
+      typeof input === 'object' &&
+      'phone' in input &&
+      (input as { phone?: unknown }).phone !== undefined
+    ) {
+      return {
+        success: false,
+        error:
+          'Phone number cannot be changed here. Request a verification code and confirm it first.',
+      };
+    }
+
     const parsed = updateProfileSchema.safeParse(input);
     if (!parsed.success) {
       return {
@@ -73,7 +90,6 @@ export async function updateProfileAction(input: unknown): Promise<ActionResult>
     const { error: authError } = await supabase.auth.updateUser({
       data: {
         full_name: payload.fullName,
-        phone: payload.phone,
         contact_email: payload.contactEmail || null,
       },
     });
@@ -82,7 +98,6 @@ export async function updateProfileAction(input: unknown): Promise<ActionResult>
 
     const profilePayload = {
       full_name: payload.fullName,
-      phone: payload.phone,
       contact_email: payload.contactEmail || null,
       billing_address: payload.billingAddress || null,
       vat_number: payload.vatNumber || null,

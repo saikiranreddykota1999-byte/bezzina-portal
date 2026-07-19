@@ -196,7 +196,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
     let paymentMethod = 'card';
     let paymentReference = '';
-    let paymentStatus: 'paid' | 'pending' = 'paid';
+    let paymentStatus: 'paid' | 'pending' | 'processing' = 'paid';
 
     if (payload.payment.method === 'stripe') {
       if (!isStripeEnabled) {
@@ -216,7 +216,7 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
 
       paymentMethod = 'stripe';
       paymentReference = verification.reference;
-      paymentStatus = 'paid';
+      paymentStatus = verification.paymentStatus;
     } else if (payload.payment.method === 'cash_on_pickup') {
       if (payload.fulfillmentMethod !== 'store_pickup') {
         return { success: false, error: 'Cash on pickup is only available for store pickup orders' };
@@ -236,6 +236,17 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
     } else {
       return { success: false, error: 'Unsupported payment method' };
     }
+
+    // Stripe `processing` is not paid and not fulfillable. COD remains fulfillable while pending.
+    const isStripeProcessing = paymentStatus === 'processing';
+    const isFulfillable =
+      !isStripeProcessing &&
+      (paymentStatus === 'paid' || payload.payment.method === 'cash_on_pickup');
+    const orderStatus = isFulfillable ? 'confirmed' : 'pending';
+    const omsStatus =
+      isFulfillable && payload.fulfillmentMethod === 'store_pickup'
+        ? 'approved'
+        : 'waiting_for_approval';
 
     if (paymentReference) {
       const { data: existingOrder } = await supabase
@@ -257,12 +268,9 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
     const orderInsert: Record<string, unknown> = {
       user_id: user!.id,
       order_number: orderNumber,
-      status: 'confirmed',
+      status: orderStatus,
       order_source: 'online',
-      oms_status:
-        payload.fulfillmentMethod === 'store_pickup'
-          ? 'approved'
-          : 'waiting_for_approval',
+      oms_status: omsStatus,
       timeline: [],
       fulfillment_method: payload.fulfillmentMethod,
       subtotal: totals.subtotal,
@@ -277,7 +285,10 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
           ? normalizeTimeValue(payload.pickup.pickupTime)
           : null,
       pickup_code: pickupCode,
-      pickup_status: payload.fulfillmentMethod === 'store_pickup' ? 'scheduled' : null,
+      pickup_status:
+        payload.fulfillmentMethod === 'store_pickup' && isFulfillable
+          ? 'scheduled'
+          : null,
       payment_status: paymentStatus,
       payment_method: paymentMethod,
       payment_reference: paymentReference,

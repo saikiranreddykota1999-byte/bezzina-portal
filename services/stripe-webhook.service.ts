@@ -1,5 +1,7 @@
 import type Stripe from 'stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { captureException } from '@/lib/monitoring/capture';
+import { isPaymentIntentSucceeded } from '@/lib/payment/stripe-intent-status';
 import { logServerError } from '@/lib/security/sanitize-error';
 
 function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
@@ -29,6 +31,11 @@ export async function claimWebhookEvent(
 
   if (error) {
     logServerError('claimWebhookEvent', error);
+    captureException(error, {
+      op: 'claimWebhookEvent',
+      eventType: event.type,
+      paymentIntentId,
+    });
     throw new Error('Failed to claim webhook event');
   }
 
@@ -62,31 +69,48 @@ export async function releaseWebhookEventClaim(eventId: string): Promise<void> {
 export async function reconcilePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent,
 ): Promise<{ reconciled: boolean; orderId?: string }> {
+  if (!isPaymentIntentSucceeded(paymentIntent.status)) {
+    return { reconciled: false };
+  }
+
   const admin = createAdminClient();
   const paymentIntentId = paymentIntent.id;
   const userId = paymentIntent.metadata?.user_id;
 
   const { data: existingOrder } = await admin
     .from('orders')
-    .select('id, payment_status, user_id')
+    .select('id, payment_status, user_id, fulfillment_method, status, oms_status')
     .eq('payment_reference', paymentIntentId)
     .maybeSingle();
 
   if (existingOrder) {
     if (existingOrder.payment_status !== 'paid') {
-      await admin
-        .from('orders')
-        .update({ payment_status: 'paid', payment_method: 'stripe' })
-        .eq('id', existingOrder.id);
+      const fulfillableUpdate: Record<string, unknown> = {
+        payment_status: 'paid',
+        payment_method: 'stripe',
+        status: 'confirmed',
+      };
+
+      if (existingOrder.fulfillment_method === 'store_pickup') {
+        fulfillableUpdate.oms_status = 'approved';
+        fulfillableUpdate.pickup_status = 'scheduled';
+      }
+
+      await admin.from('orders').update(fulfillableUpdate).eq('id', existingOrder.id);
     }
     return { reconciled: true, orderId: existingOrder.id };
   }
 
-  if (userId && paymentIntent.status === 'succeeded') {
-    logServerError(
-      'stripe_webhook_orphan_payment',
-      new Error(`PaymentIntent ${paymentIntentId} succeeded without matching order for user ${userId}`),
+  if (userId) {
+    const orphanError = new Error(
+      `PaymentIntent ${paymentIntentId} succeeded without matching order for user ${userId}`,
     );
+    logServerError('stripe_webhook_orphan_payment', orphanError);
+    captureException(orphanError, {
+      op: 'reconcilePaymentIntentSucceeded',
+      paymentIntentId,
+      userId,
+    });
   }
 
   return { reconciled: false };
@@ -128,6 +152,12 @@ export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<voi
     await finalizeWebhookEvent(event.id, metadata);
   } catch (error) {
     logServerError('handleStripeWebhookEvent', error);
+    captureException(error, {
+      op: 'handleStripeWebhookEvent',
+      eventId: event.id,
+      eventType: event.type,
+      paymentIntentId,
+    });
     await releaseWebhookEventClaim(event.id);
     throw error;
   }

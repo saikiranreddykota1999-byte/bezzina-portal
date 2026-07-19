@@ -1,0 +1,22 @@
+---
+description: Project architecture, React/Next.js App Router patterns
+alwaysApply: true
+---
+
+# Architecture
+
+- Follow the existing project structure.
+- Keep components focused on a single responsibility.
+- Separate UI, business logic, and data access.
+- Prefer composition over inheritance.
+- Avoid deeply nested components and large utility files.
+
+# React / Next.js
+
+- Prefer Server Components when possible.
+- Use Client Components only when browser APIs or React hooks require them.
+- Minimize `useEffect`. Avoid unnecessary state.
+- Prefer derived state over duplicated state.
+- Lazy-load heavy components. Dynamically import large libraries.
+- Optimize images with Next.js `Image`.
+- Avoid unnecessary re-renders.

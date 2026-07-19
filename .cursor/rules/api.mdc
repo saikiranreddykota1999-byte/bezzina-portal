@@ -1,0 +1,14 @@
+---
+description: API and server action development standards
+globs: "{actions,app/api,services}/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# API Development
+
+- Validate every request and response.
+- Never trust client input.
+- Return meaningful HTTP status codes.
+- Handle all exceptions gracefully.
+- Log unexpected errors.
+- Never expose stack traces.

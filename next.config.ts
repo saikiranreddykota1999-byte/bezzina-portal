@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -66,7 +67,8 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               `img-src ${cspImageSources}`,
               "font-src 'self' https://fonts.gstatic.com data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://maps.googleapis.com",
+              // Sentry ingest hosts required for client error reporting when DSN is set
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://maps.googleapis.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
               "frame-src 'self' https://js.stripe.com https://www.google.com https://maps.google.com https://*.google.com",
               "object-src 'none'",
               "base-uri 'self'",
@@ -93,4 +95,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  // Skip source-map upload when auth token is absent (local / CI without secrets).
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+});

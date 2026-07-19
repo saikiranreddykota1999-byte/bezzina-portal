@@ -12,6 +12,8 @@ import {
   toStripeAmount,
 } from '@/lib/stripe/config';
 import { getStripe } from '@/lib/stripe/server';
+import { captureException } from '@/lib/monitoring/capture';
+import { resolveOrderPaymentStatusFromIntent } from '@/lib/payment/stripe-intent-status';
 import { fulfillmentMethodSchema } from '@/lib/validators/pickup';
 import { orderItemSchema } from '@/lib/validators/checkout';
 import type { ActionResult } from '@/types/pickup';
@@ -149,6 +151,7 @@ export async function createPaymentIntentAction(
     };
   } catch (error) {
     logServerError('createPaymentIntentAction', error);
+    captureException(error, { op: 'createPaymentIntentAction' });
     return {
       success: false,
       error: toUserError(error),
@@ -161,17 +164,17 @@ export async function verifyStripePaymentIntent(
   expectedTotal: number,
   userId: string,
   cartFingerprint: string,
-): Promise<{ ok: true; reference: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; reference: string; paymentStatus: 'paid' | 'processing' }
+  | { ok: false; error: string }
+> {
   try {
     const stripe = getStripe();
     const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    if (
-      intent.status !== 'succeeded' &&
-      intent.status !== 'processing' &&
-      intent.status !== 'requires_capture'
-    ) {
-      return { ok: false, error: 'Payment is not complete. Please try again.' };
+    const statusResult = resolveOrderPaymentStatusFromIntent(intent.status);
+    if (!statusResult.ok) {
+      return { ok: false, error: statusResult.error };
     }
 
     if (intent.metadata.user_id !== userId) {
@@ -187,15 +190,24 @@ export async function verifyStripePaymentIntent(
 
     const expectedAmount = toStripeAmount(expectedTotal);
     const chargedAmount =
-      intent.status === 'succeeded' ? intent.amount_received : intent.amount;
+      statusResult.paymentStatus === 'paid' ? intent.amount_received : intent.amount;
 
     if (chargedAmount < expectedAmount) {
       return { ok: false, error: 'Payment amount does not match order total' };
     }
 
-    return { ok: true, reference: intent.id };
+    return {
+      ok: true,
+      reference: intent.id,
+      paymentStatus: statusResult.paymentStatus,
+    };
   } catch (error) {
     logServerError('verifyStripePaymentIntent', error);
+    captureException(error, {
+      op: 'verifyStripePaymentIntent',
+      paymentIntentId,
+      userId,
+    });
     return {
       ok: false,
       error: toUserError(error),

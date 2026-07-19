@@ -1,0 +1,16 @@
+---
+description: Testing standards for unit, API, UI, and E2E
+alwaysApply: true
+---
+
+# Testing
+
+Generate tests for:
+
+- Business logic
+- API routes
+- Critical UI components
+- Form validation
+- Authentication flows
+
+Prefer Playwright for E2E and Jest/Vitest for unit tests.

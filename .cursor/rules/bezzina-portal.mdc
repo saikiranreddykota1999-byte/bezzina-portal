@@ -1,0 +1,45 @@
+---
+description: Core Bezzina Portal principles, TypeScript, reviews, docs, and AI behavior
+alwaysApply: true
+---
+
+# Bezzina Portal — Core Standards
+
+## General Principles
+
+- Write production-ready code only.
+- Prioritize readability over cleverness.
+- Keep solutions simple unless complexity is justified.
+- Never duplicate logic. Reuse existing components and utilities.
+- Refactor when duplication appears.
+- Leave the codebase cleaner than you found it.
+
+## TypeScript
+
+- Never use `any`. Prefer strict typing.
+- Use interfaces for object contracts.
+- Use enums only when appropriate.
+- Narrow unknown types before use.
+- Prefer inference where it improves readability.
+
+## Code Reviews
+
+Before completing a task, verify:
+
+- No TypeScript errors or ESLint warnings
+- No unused imports, dead code, or duplicate logic
+- No `console.log`, leftover TODOs, or commented-out code
+
+## Documentation
+
+Document complex algorithms, public APIs, environment variables, and breaking changes. Avoid obvious comments.
+
+## AI Behavior
+
+1. Search the project for existing implementations before creating new ones.
+2. Reuse established patterns.
+3. Explain major architectural decisions.
+4. Suggest performance, accessibility, security, and SEO improvements where relevant.
+5. Highlight trade-offs when multiple approaches are valid.
+
+Never invent APIs, database tables, routes, or components. If information is missing, ask for clarification.

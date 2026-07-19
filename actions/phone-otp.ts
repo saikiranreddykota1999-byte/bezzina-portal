@@ -5,40 +5,62 @@ import type { ActionResult } from '@/types/action';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { assertCustomerOtpEligible } from '@/lib/auth/otp-eligibility';
+import { requireAuthenticatedUser } from '@/lib/auth/server-session';
+import { normalizePhone, phoneToSyntheticEmail } from '@/lib/otp/phone';
 import {
-  buildOtpForStorage,
-  hashOtpCode,
-  normalizePhone,
-  otpConfig,
-  phoneToSyntheticEmail,
-} from '@/lib/otp/phone';
+  consumePhoneOtpCode,
+  markPhoneOtpVerified,
+  phoneOtpDeliveryStatus,
+  sendPhoneOtpCode,
+} from '@/lib/otp/phone-otp-verify';
 import { sendPhoneOtpSchema, verifyPhoneOtpSchema } from '@/lib/validators/phone-otp';
-import { isSmsConfigured, sendOtpSms } from '@/services/sms.service';
 import { getProfileRole } from '@/lib/auth/get-profile-role';
+import { revalidatePath } from 'next/cache';
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-async function findUserIdByPhone(admin: AdminClient, phone: string): Promise<string | null> {
-  const { data: profile } = await admin
+/** Lookup by normalized phone. Unique index makes >1 rows impossible; 0 rows → null. */
+async function findUserIdByPhone(
+  admin: AdminClient,
+  phone: string,
+): Promise<string | null> {
+  const normalized = normalizePhone(phone);
+  if (!normalized) {
+    return null;
+  }
+
+  const { data, error } = await admin
     .from('profiles')
     .select('id')
-    .eq('phone', phone)
-    .maybeSingle();
+    .eq('phone', normalized)
+    .single();
 
-  return profile?.id ?? null;
+  if (error) {
+    // PostgREST: no rows
+    if (error.code === 'PGRST116') {
+      return null;
+    }
+    throw new Error(error.message);
+  }
+
+  return data?.id ?? null;
 }
 
 async function findUserIdBySyntheticEmail(
   admin: AdminClient,
   syntheticEmail: string,
 ): Promise<string | null> {
-  const { data: profile } = await admin
+  const { data, error } = await admin
     .from('profiles')
     .select('id')
     .eq('email', syntheticEmail)
     .maybeSingle();
 
-  return profile?.id ?? null;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.id ?? null;
 }
 
 async function ensurePhoneUser(
@@ -154,47 +176,16 @@ export async function sendPhoneOtpAction(
       }
     }
 
-    const { code, codeHash, expiresAt, sendWindowStart } = buildOtpForStorage(phone);
-
-    const { count } = await admin
-      .from('phone_otp_codes')
-      .select('*', { count: 'exact', head: true })
-      .eq('phone', phone)
-      .gte('created_at', sendWindowStart.toISOString());
-
-    if ((count ?? 0) >= otpConfig.MAX_SEND_PER_WINDOW) {
-      return {
-        success: false,
-        error: `Too many codes sent. Try again in ${otpConfig.SEND_WINDOW_MINUTES} minutes.`,
-      };
+    const delivery = await sendPhoneOtpCode(admin, phone);
+    if (!delivery.ok) {
+      return { success: false, error: delivery.error };
     }
-
-    const { error: insertError } = await admin.from('phone_otp_codes').insert({
-      phone,
-      code_hash: codeHash,
-      expires_at: expiresAt.toISOString(),
-    });
-
-    if (insertError) {
-      return { success: false, error: insertError.message };
-    }
-
-    const delivery = await sendOtpSms(phone, code);
-
-    if (!delivery.sent && process.env.NODE_ENV === 'production') {
-      return {
-        success: false,
-        error: 'SMS is not configured. Please use email login or contact support.',
-      };
-    }
-
-    const showDemoCode = !delivery.sent && process.env.NODE_ENV !== 'production';
 
     return {
       success: true,
       data: {
         channel: delivery.channel,
-        demoCode: showDemoCode ? code : undefined,
+        demoCode: delivery.demoCode,
       },
     };
   } catch (error) {
@@ -221,36 +212,9 @@ export async function verifyPhoneOtpAction(input: unknown): Promise<ActionResult
     }
 
     const admin = createAdminClient();
-    const codeHash = hashOtpCode(phone, parsed.data.code);
-
-    const { data: otpRow, error: otpError } = await admin
-      .from('phone_otp_codes')
-      .select('*')
-      .eq('phone', phone)
-      .is('verified_at', null)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (otpError) {
-      return { success: false, error: otpError.message };
-    }
-
-    if (!otpRow) {
-      return { success: false, error: 'Code expired or not found. Request a new one.' };
-    }
-
-    if (otpRow.attempts >= otpConfig.MAX_VERIFY_ATTEMPTS) {
-      return { success: false, error: 'Too many attempts. Request a new code.' };
-    }
-
-    if (otpRow.code_hash !== codeHash) {
-      await admin
-        .from('phone_otp_codes')
-        .update({ attempts: otpRow.attempts + 1 })
-        .eq('id', otpRow.id);
-      return { success: false, error: 'Incorrect code. Try again.' };
+    const consumed = await consumePhoneOtpCode(admin, phone, parsed.data.code);
+    if (!consumed.ok) {
+      return { success: false, error: consumed.error };
     }
 
     const { userId, email } = await ensurePhoneUser(admin, phone);
@@ -274,11 +238,7 @@ export async function verifyPhoneOtpAction(input: unknown): Promise<ActionResult
       return { success: false, error: sessionError.message };
     }
 
-    await admin
-      .from('phone_otp_codes')
-      .update({ verified_at: new Date().toISOString() })
-      .eq('id', otpRow.id);
-
+    await markPhoneOtpVerified(admin, consumed.otpRowId);
     await admin.from('profiles').update({ phone }).eq('id', userId);
 
     return { success: true };
@@ -290,9 +250,139 @@ export async function verifyPhoneOtpAction(input: unknown): Promise<ActionResult
   }
 }
 
+/**
+ * Send OTP to a phone before it can be bound to the authenticated profile.
+ * Does not update profiles.phone.
+ */
+export async function requestPhoneVerification(
+  phoneInput: string,
+): Promise<ActionResult<{ channel: 'sms' | 'demo'; demoCode?: string }>> {
+  try {
+    const parsed = sendPhoneOtpSchema.safeParse({ phone: phoneInput });
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues[0]?.message ?? 'Invalid phone number',
+      };
+    }
+
+    const phone = normalizePhone(parsed.data.phone);
+    if (!phone) {
+      return { success: false, error: 'Enter a valid phone number with country code' };
+    }
+
+    const { user } = await requireAuthenticatedUser();
+    const admin = createAdminClient();
+
+    const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
+    const { getClientIp } = await import('@/lib/security/rate-limit');
+    const ip = (await getClientIp()) ?? 'unknown';
+    const allowed = await checkPublicRateLimit(
+      'phone_verify_send',
+      `${user!.id}:${ip}:${phone}`,
+      5,
+      15,
+    );
+    if (!allowed) {
+      return { success: false, error: 'Too many OTP requests. Please try again later.' };
+    }
+
+    const ownerId = await findUserIdByPhone(admin, phone);
+    if (ownerId && ownerId !== user!.id) {
+      return {
+        success: false,
+        error: 'This phone number is already linked to another account.',
+      };
+    }
+
+    const delivery = await sendPhoneOtpCode(admin, phone);
+    if (!delivery.ok) {
+      return { success: false, error: delivery.error };
+    }
+
+    return {
+      success: true,
+      data: {
+        channel: delivery.channel,
+        demoCode: delivery.demoCode,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send verification code',
+    };
+  }
+}
+
+/**
+ * Verify OTP and bind phone to the current authenticated user only.
+ */
+export async function verifyPhoneAndBind(
+  phoneInput: string,
+  code: string,
+): Promise<ActionResult> {
+  try {
+    const parsed = verifyPhoneOtpSchema.safeParse({ phone: phoneInput, code });
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues[0]?.message ?? 'Invalid verification code',
+      };
+    }
+
+    const phone = normalizePhone(parsed.data.phone);
+    if (!phone) {
+      return { success: false, error: 'Invalid phone number' };
+    }
+
+    const { supabase, user } = await requireAuthenticatedUser();
+    const admin = createAdminClient();
+
+    const consumed = await consumePhoneOtpCode(admin, phone, parsed.data.code);
+    if (!consumed.ok) {
+      return { success: false, error: consumed.error };
+    }
+
+    const ownerId = await findUserIdByPhone(admin, phone);
+    if (ownerId && ownerId !== user!.id) {
+      return {
+        success: false,
+        error: 'This phone number is already linked to another account.',
+      };
+    }
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ phone })
+      .eq('id', user!.id);
+
+    if (profileError) {
+      if (profileError.code === '23505') {
+        return {
+          success: false,
+          error: 'This phone number is already linked to another account.',
+        };
+      }
+      return { success: false, error: profileError.message };
+    }
+
+    await supabase.auth.updateUser({
+      data: { phone },
+    });
+
+    await markPhoneOtpVerified(admin, consumed.otpRowId);
+    revalidatePath('/account/profile');
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to verify phone',
+    };
+  }
+}
+
 export async function getPhoneOtpStatus() {
-  return {
-    smsConfigured: isSmsConfigured(),
-    demoMode: !isSmsConfigured(),
-  };
+  return phoneOtpDeliveryStatus();
 }

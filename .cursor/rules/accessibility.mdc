@@ -1,0 +1,18 @@
+---
+description: WCAG 2.2 accessibility requirements
+globs: "**/*.{tsx,jsx,html}"
+alwaysApply: false
+---
+
+# Accessibility (WCAG 2.2)
+
+Always:
+
+- Use semantic HTML.
+- Every image must have alt text.
+- Every input requires a label.
+- Buttons must have accessible names.
+- Ensure keyboard navigation and visible focus states.
+- Use ARIA only when necessary.
+- Ensure sufficient color contrast.
+- Never rely on color alone.

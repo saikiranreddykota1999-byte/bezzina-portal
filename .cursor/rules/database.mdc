@@ -1,0 +1,13 @@
+---
+description: Database query and data-access standards
+globs: "{services,lib,supabase}/**/*.{ts,tsx,sql}"
+alwaysApply: false
+---
+
+# Database
+
+- Use parameterized queries.
+- Avoid N+1 queries.
+- Index frequently queried columns.
+- Use transactions where required.
+- Keep queries efficient.

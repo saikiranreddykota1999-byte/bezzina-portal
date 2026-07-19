@@ -1,0 +1,16 @@
+---
+description: SEO metadata and structured data standards
+globs: "app/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# SEO
+
+Every page should include:
+
+- Unique title and meta description
+- Canonical URL
+- Open Graph and Twitter Card tags
+- Structured data where appropriate
+- Logical heading hierarchy
+- Descriptive URLs

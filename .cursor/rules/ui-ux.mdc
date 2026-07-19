@@ -1,0 +1,41 @@
+---
+description: UI, UX, styling, forms, and component design
+globs: "**/*.{tsx,jsx,css}"
+alwaysApply: false
+---
+
+# Component Design
+
+- Keep components under 200 lines when practical.
+- Extract reusable UI into shared components.
+- Prefer controlled components for forms.
+- Separate presentation from business logic.
+- Use meaningful prop names.
+- Avoid prop drilling when context is more appropriate.
+
+# Styling
+
+- Follow the existing design system.
+- Maintain consistent spacing and typography.
+- Use responsive layouts.
+- Ensure dark mode compatibility if supported.
+- Avoid inline styles unless dynamic.
+
+# Forms
+
+Every form must:
+
+- Validate client-side and server-side
+- Display helpful error messages
+- Disable submit while processing
+- Prevent duplicate submissions
+- Show loading indicators
+- Preserve entered values on validation errors
+
+# UX
+
+Every feature should include loading, empty, error, and success states, plus a clear call-to-action.
+
+# Error Handling (UI)
+
+Never fail silently. Catch expected errors, show user-friendly messages, and provide recovery options.

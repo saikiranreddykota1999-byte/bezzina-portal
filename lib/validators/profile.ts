@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
+/** Profile fields that may be updated without OTP. Phone requires verifyPhoneAndBind. */
 export const updateProfileSchema = z.object({
   fullName: z.string().trim().min(1, 'Name is required').max(120),
-  phone: z.string().trim().min(8, 'Enter a valid phone number').max(32),
   contactEmail: z
     .string()
     .trim()

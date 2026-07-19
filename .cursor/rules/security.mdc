@@ -1,0 +1,31 @@
+---
+description: Security, authentication, and OWASP standards
+alwaysApply: true
+---
+
+# Security
+
+Follow OWASP Top 10.
+
+Never:
+
+- Expose secrets or hardcode credentials
+- Trust user input
+- Store sensitive information in localStorage
+- Leak server errors or stack traces
+
+Always:
+
+- Sanitize inputs and encode/escape outputs
+- Validate uploads and file types
+- Use secure cookies where applicable
+- Protect against CSRF where relevant
+- Implement rate limiting where appropriate
+
+# Authentication
+
+- Never expose authentication logic to the client.
+- Verify authorization for every protected action.
+- Support secure logout.
+- Handle expired sessions gracefully.
+- Avoid storing JWTs insecurely.
