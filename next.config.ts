@@ -22,8 +22,8 @@ const cspImageSources = [
 /** Dev tooling may need eval; production CSP drops unsafe-eval. */
 const scriptSrc =
   process.env.NODE_ENV === "production"
-    ? "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com"
-    : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com";
+    ? "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com https://challenges.cloudflare.com"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://maps.googleapis.com https://challenges.cloudflare.com";
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -68,8 +68,8 @@ const nextConfig: NextConfig = {
               `img-src ${cspImageSources}`,
               "font-src 'self' https://fonts.gstatic.com data:",
               // Sentry ingest hosts required for client error reporting when DSN is set
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://maps.googleapis.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
-              "frame-src 'self' https://js.stripe.com https://www.google.com https://maps.google.com https://*.google.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://maps.googleapis.com https://challenges.cloudflare.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+              "frame-src 'self' https://js.stripe.com https://challenges.cloudflare.com https://www.google.com https://maps.google.com https://*.google.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
