@@ -18,7 +18,6 @@ type TurnstileApi = {
     },
   ) => string;
   remove: (widgetId?: string) => void;
-  ready: (callback: () => void) => void;
 };
 
 declare global {
@@ -39,15 +38,9 @@ type TurnstileWidgetProps = {
 let turnstileScriptPromise: Promise<void> | null = null;
 
 function ensureTurnstileScript(): Promise<void> {
-  if (typeof window === 'undefined') {
-    return Promise.resolve();
-  }
-  if (window.turnstile) {
-    return Promise.resolve();
-  }
-  if (turnstileScriptPromise) {
-    return turnstileScriptPromise;
-  }
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (window.turnstile) return Promise.resolve();
+  if (turnstileScriptPromise) return turnstileScriptPromise;
 
   turnstileScriptPromise = new Promise<void>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(
@@ -61,7 +54,7 @@ function ensureTurnstileScript(): Promise<void> {
       existing.addEventListener('load', () => resolve(), { once: true });
       existing.addEventListener(
         'error',
-        () => reject(new Error('Turnstile script failed')),
+        () => reject(new Error('Turnstile script failed to load')),
         { once: true },
       );
       return;
@@ -72,7 +65,7 @@ function ensureTurnstileScript(): Promise<void> {
     script.async = true;
     script.dataset.bezzinaTurnstile = 'true';
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Turnstile script failed'));
+    script.onerror = () => reject(new Error('Turnstile script failed to load'));
     document.head.appendChild(script);
   }).catch((error) => {
     turnstileScriptPromise = null;
@@ -82,9 +75,17 @@ function ensureTurnstileScript(): Promise<void> {
   return turnstileScriptPromise;
 }
 
+async function waitForTurnstileApi(timeoutMs = 10000): Promise<TurnstileApi> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (window.turnstile) return window.turnstile;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error('Turnstile API not available');
+}
+
 /**
- * Cloudflare Turnstile widget. Renders nothing when siteKey is missing.
- * Failures are contained locally so the rest of the page keeps working.
+ * Cloudflare Turnstile widget. Failures stay local so the page never crashes.
  */
 export function TurnstileWidget({
   siteKey,
@@ -96,7 +97,6 @@ export function TurnstileWidget({
 }: TurnstileWidgetProps) {
   const reactId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<string | null>(null);
   const onTokenChangeRef = useRef(onTokenChange);
   const [failed, setFailed] = useState(false);
 
@@ -108,45 +108,30 @@ export function TurnstileWidget({
     if (!siteKey) return;
 
     let cancelled = false;
-
-    const clearWidget = () => {
-      if (widgetIdRef.current && window.turnstile) {
-        try {
-          window.turnstile.remove(widgetIdRef.current);
-        } catch {
-          // ignore
-        }
-        widgetIdRef.current = null;
-      }
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '';
-      }
-    };
+    let widgetId: string | null = null;
 
     const mount = async () => {
       try {
         await ensureTurnstileScript();
+        const api = await waitForTurnstileApi();
         if (cancelled) return;
 
-        await new Promise<void>((resolve) => {
-          const api = window.turnstile;
-          if (!api) {
-            resolve();
-            return;
-          }
-          api.ready(() => resolve());
-        });
-        if (cancelled || !window.turnstile || !containerRef.current) return;
+        // Retry a few times — Strict Mode / layout can briefly detach the node.
+        let el: HTMLDivElement | null = null;
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          el = containerRef.current;
+          if (el && el.isConnected) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          if (cancelled) return;
+        }
+        if (!el || !el.isConnected) {
+          throw new Error('Turnstile container missing');
+        }
 
-        clearWidget();
-
-        const size =
-          mode === 'compact' ? 'compact' : mode === 'invisible' ? 'invisible' : 'normal';
-
-        widgetIdRef.current = window.turnstile.render(containerRef.current, {
+        widgetId = api.render(el, {
           sitekey: siteKey,
           action,
-          size,
+          size: mode === 'compact' ? 'compact' : mode === 'invisible' ? 'invisible' : 'normal',
           appearance: mode === 'invisible' ? 'interaction-only' : 'always',
           theme: 'light',
           retry: 'auto',
@@ -154,6 +139,7 @@ export function TurnstileWidget({
           'expired-callback': () => onTokenChangeRef.current(null),
           'error-callback': () => onTokenChangeRef.current(null),
         });
+
         if (!cancelled) setFailed(false);
       } catch {
         if (!cancelled) {
@@ -167,13 +153,17 @@ export function TurnstileWidget({
 
     return () => {
       cancelled = true;
-      clearWidget();
+      if (widgetId && window.turnstile) {
+        try {
+          window.turnstile.remove(widgetId);
+        } catch {
+          // ignore
+        }
+      }
     };
   }, [siteKey, action, mode, resetKey]);
 
-  if (!siteKey) {
-    return null;
-  }
+  if (!siteKey) return null;
 
   return (
     <div className={className}>
