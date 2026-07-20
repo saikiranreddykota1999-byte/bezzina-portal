@@ -1,11 +1,12 @@
 'use client';
 
-import { ImagePlus, Loader2, MessageCircle, Send, X } from 'lucide-react';
+import { ImagePlus, Loader2, Send, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
 
 import { askBezzinaAction } from '@/actions/ask-bezzina';
+import { AskBezzinaAvatar } from '@/components/ask-bezzina/ask-bezzina-avatar';
 import {
   AskBezzinaMessageList,
   type ChatBubble,
@@ -139,17 +140,27 @@ export function AskBezzinaWidget() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="site-chrome fixed z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#0B3D91] text-white shadow-lg transition hover:bg-[#09407a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2 bottom-20 right-4 md:bottom-6 md:right-6"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={open ? titleId : undefined}
-      >
-        <MessageCircle className="h-6 w-6" aria-hidden="true" />
-        <span className="sr-only">Open Ask Bezzina</span>
-      </button>
+      {!open ? (
+        <div className="site-chrome fixed z-50 bottom-20 right-4 md:bottom-6 md:right-6">
+          <div className="ask-bezzina-tip pointer-events-none absolute bottom-full right-0 mb-2 hidden whitespace-nowrap rounded-full bg-[#071B35] px-3 py-1.5 text-xs font-medium text-white shadow-md sm:block">
+            Ready to help
+            <span
+              className="absolute -bottom-1 right-5 h-2 w-2 rotate-45 bg-[#071B35]"
+              aria-hidden="true"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="relative flex h-14 w-14 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2"
+            aria-haspopup="dialog"
+            aria-expanded={false}
+          >
+            <AskBezzinaAvatar size="md" attentive />
+            <span className="sr-only">Open Ask Bezzina — ready to help</span>
+          </button>
+        </div>
+      ) : null}
 
       {open ? (
         <div
@@ -168,21 +179,20 @@ export function AskBezzinaWidget() {
           className="site-chrome fixed z-[60] flex w-[min(100vw-1.5rem,24rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl bottom-20 right-3 max-h-[min(70vh,36rem)] md:bottom-6 md:right-6 md:max-h-[min(75vh,40rem)]"
         >
           <header className="flex items-center gap-3 border-b border-slate-200 bg-[#071B35] px-4 py-3 text-white">
-            <Image
-              src={company.logoUrl}
-              alt=""
-              width={36}
-              height={36}
-              className="rounded-md bg-white object-contain p-0.5"
-            />
+            <AskBezzinaAvatar size="sm" attentive={false} />
             <div className="min-w-0 flex-1">
               <h2 id={titleId} className="truncate text-sm font-semibold">
                 Ask {company.shortName}
               </h2>
-              <p className="truncate text-xs text-slate-300">
-                Identify parts · catalogue matches
-              </p>
+              <p className="truncate text-xs text-emerald-300/90">Online · ready to help</p>
             </div>
+            <Image
+              src={company.logoUrl}
+              alt=""
+              width={28}
+              height={28}
+              className="rounded-md bg-white object-contain p-0.5"
+            />
             <button
               type="button"
               onClick={() => setOpen(false)}
