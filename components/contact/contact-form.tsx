@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { submitContactEnquiryAction } from '@/actions/contact';
+import {
+  TurnstileWidget,
+  getBrowserTurnstileSiteKey,
+} from '@/components/security/turnstile-widget';
 import { brandClasses } from '@/lib/brand';
 
 const initialState = {
@@ -19,6 +23,9 @@ export function ContactForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
+  const siteKey = getBrowserTurnstileSiteKey();
 
   function updateField(field: keyof typeof initialState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -30,9 +37,20 @@ export function ContactForm() {
     setError('');
     setSuccess(false);
 
-    const result = await submitContactEnquiryAction(form);
+    if (siteKey && !turnstileToken) {
+      setPending(false);
+      setError('Please complete the bot check before sending.');
+      return;
+    }
+
+    const result = await submitContactEnquiryAction({
+      ...form,
+      turnstileToken: turnstileToken ?? '',
+    });
 
     setPending(false);
+    setTurnstileReset((value) => value + 1);
+    setTurnstileToken(null);
 
     if (!result.success) {
       setError(result.error);
@@ -162,6 +180,14 @@ export function ContactForm() {
           className={`${brandClasses.input} resize-y`}
         />
       </div>
+
+      <TurnstileWidget
+        siteKey={siteKey}
+        action="contact"
+        mode="visible"
+        resetKey={turnstileReset}
+        onTokenChange={setTurnstileToken}
+      />
 
       {error && (
         <p role="alert" className="text-sm font-medium text-red-600">

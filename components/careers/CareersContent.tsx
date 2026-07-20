@@ -5,6 +5,10 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Briefcase, CheckCircle2 } from 'lucide-react';
 import type { Vacancy } from '@/types/quote';
 import { submitJobApplication } from '@/actions/careers';
+import {
+  TurnstileWidget,
+  getBrowserTurnstileSiteKey,
+} from '@/components/security/turnstile-widget';
 import { RippleButton } from '@/components/ui/ripple-button';
 import { brandClasses } from '@/lib/brand';
 import { defaultTransition } from '@/lib/motion';
@@ -17,6 +21,9 @@ export function CareersContent({ vacancies }: { vacancies: Vacancy[] }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
+  const siteKey = getBrowserTurnstileSiteKey();
 
   function handleApplyClick(vacancyId: string) {
     setSelectedVacancy(vacancyId);
@@ -27,6 +34,12 @@ export function CareersContent({ vacancies }: { vacancies: Vacancy[] }) {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (siteKey && !turnstileToken) {
+      setLoading(false);
+      setError('Please complete the bot check before submitting.');
+      return;
+    }
 
     const form = e.currentTarget;
     const formData = new FormData(form);
@@ -41,9 +54,12 @@ export function CareersContent({ vacancies }: { vacancies: Vacancy[] }) {
       phone: formData.get('phone') || undefined,
       linkedinUrl: formData.get('linkedinUrl') || undefined,
       coverLetter: formData.get('coverLetter') || undefined,
+      turnstileToken: turnstileToken ?? '',
     };
 
     const result = await submitJobApplication(input, cvForm);
+    setTurnstileReset((value) => value + 1);
+    setTurnstileToken(null);
     if (result.success) {
       setSubmitted(true);
       form.reset();
@@ -204,6 +220,14 @@ export function CareersContent({ vacancies }: { vacancies: Vacancy[] }) {
               className="text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-[#E8EFF9] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#0B3D91]"
             />
           </div>
+
+          <TurnstileWidget
+            siteKey={siteKey}
+            action="careers"
+            mode="visible"
+            resetKey={turnstileReset}
+            onTokenChange={setTurnstileToken}
+          />
 
           {error && (
             <p className="text-sm text-red-600" role="alert">

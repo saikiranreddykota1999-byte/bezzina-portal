@@ -10,12 +10,18 @@ export function generateOtpCode(): string {
   return String(randomInt(100000, 1000000));
 }
 
+function requiresOtpSecret(): boolean {
+  if (process.env.NODE_ENV === 'production') return true;
+  const vercelEnv = process.env.VERCEL_ENV;
+  return vercelEnv === 'production' || vercelEnv === 'preview';
+}
+
 function getOtpPepper(): string {
   const secret = process.env.OTP_SECRET?.trim();
   if (secret) return secret;
 
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('OTP_SECRET must be set in production');
+  if (requiresOtpSecret()) {
+    throw new Error('OTP_SECRET must be set in production and Vercel preview');
   }
 
   console.warn(

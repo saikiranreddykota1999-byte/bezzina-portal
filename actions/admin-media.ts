@@ -45,7 +45,7 @@ export async function uploadMediaAssetAction(formData: FormData): Promise<Action
       return { success: false, error: 'No file provided' };
     }
 
-    const validation = validateUploadFile(file, 'media');
+    const validation = await validateUploadFile(file, 'media');
     if (!validation.valid) {
       return { success: false, error: validation.error };
     }

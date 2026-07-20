@@ -19,7 +19,7 @@ export async function uploadProductImage(
       return { success: false, error: 'No file provided' };
     }
 
-    const fileCheck = validateUploadFile(file, 'image');
+    const fileCheck = await validateUploadFile(file, 'image');
     if (!fileCheck.valid) {
       return { success: false, error: fileCheck.error };
     }
@@ -129,7 +129,7 @@ export async function uploadProduct360Frame(
       return { success: false, error: 'No file provided' };
     }
 
-    const fileCheck = validateUploadFile(file, 'image');
+    const fileCheck = await validateUploadFile(file, 'image');
     if (!fileCheck.valid) {
       return { success: false, error: fileCheck.error };
     }
@@ -243,7 +243,7 @@ export async function uploadProductDocument(
     if (!meta.success) return { success: false, error: meta.error.issues[0]?.message ?? 'Invalid metadata' };
     if (!(file instanceof File) || file.size === 0) return { success: false, error: 'No file provided' };
 
-    const fileCheck = validateUploadFile(file, 'document');
+    const fileCheck = await validateUploadFile(file, 'document');
     if (!fileCheck.valid) return { success: false, error: fileCheck.error };
 
     const { data: product } = await supabase.from('products').select('slug').eq('id', productId).single();

@@ -99,7 +99,16 @@ export async function submitQuoteRequest(
   try {
     const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
     const { getClientIp } = await import('@/lib/security/rate-limit');
+    const { assertTurnstileToken } = await import('@/lib/security/turnstile');
     const ip = (await getClientIp()) ?? 'unknown';
+
+    const turnstile = await assertTurnstileToken(parsed.data.turnstileToken, {
+      expectedAction: 'quote',
+    });
+    if (!turnstile.ok) {
+      return { success: false, error: turnstile.error };
+    }
+
     const rateKey = `${ip}:${parsed.data.email.toLowerCase()}`;
     const allowed = await checkPublicRateLimit('quote_submit', rateKey, 8, 15);
     if (!allowed) {

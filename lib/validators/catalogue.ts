@@ -99,6 +99,7 @@ export const jobApplicationSchema = z.object({
   phone: z.string().trim().max(32).optional(),
   linkedinUrl: z.string().trim().url().optional().or(z.literal('')),
   coverLetter: z.string().trim().max(5000).optional(),
+  turnstileToken: z.string().trim().max(2048).optional().or(z.literal('')),
 });
 
 export type ProductFormInput = z.infer<typeof productFormSchema>;

@@ -1,5 +1,6 @@
 import { GoogleGenAI, type Content, type Part } from '@google/genai';
 
+import { sanitizeAskBezzinaHistory } from '@/lib/ask-bezzina/history';
 import { buildAskBezzinaSystemPrompt } from '@/lib/ask-bezzina/system-prompt';
 import type {
   AskBezzinaHistoryMessage,
@@ -8,14 +9,13 @@ import type {
 import { askBezzinaIdentifySchema } from '@/lib/validators/ask-bezzina';
 
 const DEFAULT_MODEL = 'gemini-3.5-flash';
+/** Optional fallbacks — disabled by default to limit Gemini spend (set ASK_BEZZINA_MODEL_FALLBACKS=true). */
 const FALLBACK_MODELS = [
-  'gemini-3.5-flash',
   'gemini-flash-latest',
   'gemini-3.1-flash-lite',
-  'gemini-2.0-flash',
 ] as const;
 const MAX_SEARCH_QUERIES = 5;
-const MAX_ATTEMPTS_PER_MODEL = 2;
+const MAX_ATTEMPTS_PER_MODEL = process.env.ASK_BEZZINA_RETRIES === 'true' ? 2 : 1;
 
 function stripCodeFences(raw: string): string {
   const trimmed = raw.trim();
@@ -75,7 +75,10 @@ export function getAskBezzinaModel(): string {
 
 export function getAskBezzinaModels(): string[] {
   const preferred = getAskBezzinaModel();
-  return [preferred, ...FALLBACK_MODELS.filter((model) => model !== preferred)];
+  if (process.env.ASK_BEZZINA_MODEL_FALLBACKS === 'true') {
+    return [preferred, ...FALLBACK_MODELS.filter((model) => model !== preferred)].slice(0, 3);
+  }
+  return [preferred];
 }
 
 type IdentifyInput = {
@@ -128,28 +131,17 @@ function sleep(ms: number): Promise<void> {
 }
 
 function buildContents(input: IdentifyInput): Content[] {
-  const history = (input.history ?? []).slice(-6);
-  const contents: Content[] = [];
-
-  for (const entry of history) {
-    const role = entry.role === 'assistant' ? 'model' : 'user';
-    const last = contents[contents.length - 1];
-    if (last?.role === role) {
-      // Gemini requires alternating roles — merge consecutive same-role turns.
-      const prevText = last.parts?.[0] && 'text' in last.parts[0] ? last.parts[0].text : '';
-      last.parts = [{ text: `${prevText}\n${entry.content}`.trim() }];
-      continue;
-    }
-    contents.push({
-      role,
-      parts: [{ text: entry.content }],
-    });
-  }
-
-  const text =
+  const history = sanitizeAskBezzinaHistory(input.history, 6);
+  const currentText =
     input.message.trim() ||
     'Please identify this part from the photo and suggest catalogue search terms.';
 
+  const prior =
+    history.length > 0
+      ? `Earlier customer messages:\n${history.map((entry) => `- ${entry.content}`).join('\n')}\n\n`
+      : '';
+
+  const text = `${prior}Current request:\n${currentText}`;
   const userParts: Part[] = [{ text }];
   if (input.imageDataUrl) {
     const image = parseDataUrl(input.imageDataUrl);
@@ -163,15 +155,7 @@ function buildContents(input: IdentifyInput): Content[] {
     }
   }
 
-  const last = contents[contents.length - 1];
-  if (last?.role === 'user') {
-    const prevText = last.parts?.[0] && 'text' in last.parts[0] ? String(last.parts[0].text) : '';
-    last.parts = [{ text: `${prevText}\n${text}`.trim() }, ...userParts.slice(1)];
-  } else {
-    contents.push({ role: 'user', parts: userParts });
-  }
-
-  return contents;
+  return [{ role: 'user', parts: userParts }];
 }
 
 /**
@@ -229,9 +213,9 @@ export async function identifyPart(input: IdentifyInput): Promise<AskBezzinaIden
     : new Error('Ask Bezzina is temporarily unavailable. Please try again shortly.');
 }
 
-export async function fileToImageDataUrl(file: File): Promise<string> {
+export async function fileToImageDataUrl(file: File, contentType?: string): Promise<string> {
   const buffer = Buffer.from(await file.arrayBuffer());
-  const mime = file.type || 'image/jpeg';
+  const mime = contentType || file.type || 'image/jpeg';
   return `data:${mime};base64,${buffer.toString('base64')}`;
 }
 

@@ -1,3 +1,9 @@
+import {
+  detectFileMimeFromBytes,
+  readFileHead,
+  type DetectedFileKind,
+} from '@/lib/security/file-magic';
+
 type UploadRule = {
   allowedMimeTypes: readonly string[];
   allowedExtensions: readonly string[];
@@ -8,6 +14,12 @@ const IMAGE_RULE: UploadRule = {
   allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
   maxBytes: 5 * 1024 * 1024,
+};
+
+const ASK_BEZZINA_IMAGE_RULE: UploadRule = {
+  allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp'],
+  maxBytes: Number(process.env.ASK_BEZZINA_MAX_IMAGE_BYTES ?? 2 * 1024 * 1024),
 };
 
 const DOCUMENT_RULE: UploadRule = {
@@ -44,6 +56,7 @@ const MEDIA_RULE: UploadRule = {
 
 export const UPLOAD_RULES = {
   image: IMAGE_RULE,
+  askBezzinaImage: ASK_BEZZINA_IMAGE_RULE,
   document: DOCUMENT_RULE,
   cv: CV_RULE,
   media: MEDIA_RULE,
@@ -62,10 +75,36 @@ function hasDoubleExtension(fileName: string): boolean {
   return parts.length > 2;
 }
 
-export function validateUploadFile(
+function extensionMatchesMime(ext: string, mime: DetectedFileKind): boolean {
+  if (!mime) return false;
+  switch (mime) {
+    case 'image/jpeg':
+      return ext === '.jpg' || ext === '.jpeg';
+    case 'image/png':
+      return ext === '.png';
+    case 'image/webp':
+      return ext === '.webp';
+    case 'image/gif':
+      return ext === '.gif';
+    case 'application/pdf':
+      return ext === '.pdf';
+    case 'application/msword':
+      return ext === '.doc';
+    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      return ext === '.docx';
+    default:
+      return false;
+  }
+}
+
+/**
+ * Validate size, extension, declared MIME, and magic bytes.
+ * Declared MIME may be empty on some browsers — sniffed type is authoritative.
+ */
+export async function validateUploadFile(
   file: File,
   kind: UploadKind,
-): { valid: true; contentType: string } | { valid: false; error: string } {
+): Promise<{ valid: true; contentType: string } | { valid: false; error: string }> {
   const rule = UPLOAD_RULES[kind];
 
   if (!file || file.size === 0) {
@@ -88,11 +127,29 @@ export function validateUploadFile(
     return { valid: false, error: 'File type not allowed' };
   }
 
-  if (!rule.allowedMimeTypes.includes(file.type)) {
+  if (file.type && !rule.allowedMimeTypes.includes(file.type)) {
     return { valid: false, error: 'File type not allowed' };
   }
 
-  return { valid: true, contentType: file.type };
+  const head = await readFileHead(file);
+  const sniffed = detectFileMimeFromBytes(head);
+  if (!sniffed) {
+    return { valid: false, error: 'File type not allowed' };
+  }
+
+  if (!rule.allowedMimeTypes.includes(sniffed)) {
+    return { valid: false, error: 'File type not allowed' };
+  }
+
+  if (!extensionMatchesMime(ext, sniffed)) {
+    return { valid: false, error: 'File type not allowed' };
+  }
+
+  if (file.type && file.type !== sniffed) {
+    return { valid: false, error: 'File type not allowed' };
+  }
+
+  return { valid: true, contentType: sniffed };
 }
 
 export function sanitizeUploadFileName(fileName: string): string {

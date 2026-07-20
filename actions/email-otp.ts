@@ -185,6 +185,23 @@ export async function verifyEmailOtpAction(input: unknown): Promise<ActionResult
       return { success: false, error: 'Invalid email address' };
     }
 
+    const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
+    const { getClientIp } = await import('@/lib/security/rate-limit');
+    const ip = (await getClientIp()) ?? 'unknown';
+    const verifyIpAllowed = await checkPublicRateLimit('email_otp_verify_ip', ip, 30, 15);
+    if (!verifyIpAllowed) {
+      return { success: false, error: 'Too many verification attempts. Please try again later.' };
+    }
+    const verifyAllowed = await checkPublicRateLimit(
+      'email_otp_verify',
+      `${ip}:${email}`,
+      10,
+      15,
+    );
+    if (!verifyAllowed) {
+      return { success: false, error: 'Too many verification attempts. Please try again later.' };
+    }
+
     const admin = createAdminClient();
     const codeHash = hashOtpCode(email, parsed.data.code);
 

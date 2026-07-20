@@ -2,7 +2,6 @@
 
 import type { ActionResult } from '@/types/action';
 
-import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { requirePermission } from '@/lib/auth/server-session';
 import { createClient } from '@/lib/supabase/server';
@@ -11,6 +10,9 @@ import { checkPublicRateLimit } from '@/lib/auth/login-security';
 import { validateUploadFile, sanitizeUploadFileName } from '@/lib/security/upload-validation';
 import { productIdSchema } from '@/lib/security/bulk-ids';
 import { vacancySoftDeletePayload } from '@/lib/security/soft-delete';
+import { assertTurnstileToken } from '@/lib/security/turnstile';
+import { getClientIp } from '@/lib/security/rate-limit';
+import { logServerError, toUserError } from '@/lib/security/sanitize-error';
 import { jobApplicationSchema, vacancySchema } from '@/lib/validators/catalogue';
 import type { Vacancy } from '@/types/quote';
 
@@ -59,8 +61,14 @@ export async function submitJobApplication(
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
   }
 
-  const h = await headers();
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const turnstile = await assertTurnstileToken(parsed.data.turnstileToken, {
+    expectedAction: 'careers',
+  });
+  if (!turnstile.ok) {
+    return { success: false, error: turnstile.error };
+  }
+
+  const ip = (await getClientIp()) ?? 'unknown';
   const allowed = await checkPublicRateLimit('career_application', `${ip}:${parsed.data.email}`);
   if (!allowed) {
     return { success: false, error: 'Too many applications. Please try again later.' };
@@ -71,7 +79,7 @@ export async function submitJobApplication(
     return { success: false, error: 'CV/Resume file is required (PDF or DOC)' };
   }
 
-  const fileCheck = validateUploadFile(file, 'cv');
+  const fileCheck = await validateUploadFile(file, 'cv');
   if (!fileCheck.valid) {
     return { success: false, error: fileCheck.error };
   }
@@ -99,7 +107,10 @@ export async function submitJobApplication(
     cv_url: path,
   });
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    logServerError('submitJobApplication', error);
+    return { success: false, error: toUserError(error) };
+  }
   return { success: true };
 }
 

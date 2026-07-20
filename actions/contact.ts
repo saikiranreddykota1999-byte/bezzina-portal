@@ -7,7 +7,9 @@ import { contactEnquirySchema } from '@/lib/validators/contact';
 import { sendContactEnquiryEmail } from '@/services/contact-email.service';
 import { notifyStaff } from '@/services/notification.service';
 import { checkPublicRateLimit } from '@/lib/auth/login-security';
+import { getClientIp } from '@/lib/security/rate-limit';
 import { logServerError, toUserError } from '@/lib/security/sanitize-error';
+import { assertTurnstileToken } from '@/lib/security/turnstile';
 
 export async function submitContactEnquiryAction(
   input: unknown,
@@ -20,8 +22,17 @@ export async function submitContactEnquiryAction(
 
     const enquiry = parsed.data;
 
-    const h = await headers();
-    const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    const turnstile = await assertTurnstileToken(enquiry.turnstileToken, {
+      expectedAction: 'contact',
+    });
+    if (!turnstile.ok) {
+      return { success: false, error: turnstile.error };
+    }
+
+    const ip =
+      (await getClientIp()) ??
+      (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      'unknown';
     const allowed = await checkPublicRateLimit('contact_form', `${ip}:${enquiry.email}`);
     if (!allowed) {
       return { success: false, error: 'Too many requests. Please try again later.' };

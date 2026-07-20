@@ -12,6 +12,10 @@ import {
   AskBezzinaTypingIndicator,
   type ChatBubble,
 } from '@/components/ask-bezzina/ask-bezzina-message-list';
+import {
+  TurnstileWidget,
+  getBrowserTurnstileSiteKey,
+} from '@/components/security/turnstile-widget';
 import { company } from '@/config/company';
 import { useDialogA11y } from '@/hooks/use-dialog-a11y';
 import type { AskBezzinaHistoryMessage } from '@/lib/ask-bezzina/types';
@@ -40,6 +44,8 @@ export function AskBezzinaWidget() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -107,10 +113,11 @@ export function AskBezzinaWidget() {
       imagePreviewUrl: previewUrl ?? undefined,
     };
 
-    const history = toHistory(messages);
+    const history = toHistory(messages).filter((entry) => entry.role === 'user');
     const formData = new FormData();
     formData.set('message', trimmed);
     formData.set('history', JSON.stringify(history));
+    if (turnstileToken) formData.set('turnstileToken', turnstileToken);
     if (file) formData.set('image', file);
 
     setMessages((prev) => [...prev, userBubble]);
@@ -120,6 +127,8 @@ export function AskBezzinaWidget() {
 
     startTransition(async () => {
       const result = await askBezzinaAction(formData);
+      setTurnstileReset((value) => value + 1);
+      setTurnstileToken(null);
       if (!result.success) {
         setError(result.error);
         setMessages((prev) => [
@@ -280,6 +289,15 @@ export function AskBezzinaWidget() {
             fileInputRef={fileInputRef}
             canSend={Boolean(text.trim() || imageFile)}
           />
+          <div className="border-t border-slate-200/80 bg-white/70 px-3.5 py-2">
+            <TurnstileWidget
+              siteKey={getBrowserTurnstileSiteKey()}
+              action="ask_bezzina"
+              mode="compact"
+              resetKey={turnstileReset}
+              onTokenChange={setTurnstileToken}
+            />
+          </div>
         </div>
       ) : null}
     </>

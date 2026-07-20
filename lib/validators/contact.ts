@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { turnstileTokenSchema } from '@/lib/validators/turnstile';
 
 export const contactEnquirySchema = z.object({
   name: z.string().trim().min(2, 'Name is required').max(120),
@@ -7,6 +8,7 @@ export const contactEnquirySchema = z.object({
   company: z.string().trim().max(120).optional().or(z.literal('')),
   subject: z.string().trim().min(3, 'Subject is required').max(160),
   message: z.string().trim().min(10, 'Please provide more detail').max(4000),
+  turnstileToken: turnstileTokenSchema,
 });
 
 export type ContactEnquiryInput = z.infer<typeof contactEnquirySchema>;

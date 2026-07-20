@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { getQuoteCustomerPrefillAction, submitQuoteRequest } from '@/actions/quotes';
+import {
+  TurnstileWidget,
+  getBrowserTurnstileSiteKey,
+} from '@/components/security/turnstile-widget';
 import { buildMultiQuoteMessage, buildWhatsAppUrl } from '@/lib/whatsapp';
 import { RippleButton } from '@/components/ui/ripple-button';
 import type { QuoteCartItem } from '@/types/quote';
@@ -25,6 +29,9 @@ export function QuoteSubmitForm({ items, notes, onBack, onSuccess }: QuoteSubmit
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loadingPrefill, setLoadingPrefill] = useState(true);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
+  const siteKey = getBrowserTurnstileSiteKey();
 
   const whatsappHref = buildWhatsAppUrl(
     buildMultiQuoteMessage(
@@ -57,14 +64,22 @@ export function QuoteSubmitForm({ items, notes, onBack, onSuccess }: QuoteSubmit
     event.preventDefault();
     if (loadingPrefill || submitting) return;
 
+    if (siteKey && !turnstileToken) {
+      setError('Please complete the bot check before submitting.');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
 
     const result = await submitQuoteRequest(
       items,
-      { name, email, phone, companyName },
+      { name, email, phone, companyName, turnstileToken: turnstileToken ?? '' },
       notes,
     );
+
+    setTurnstileReset((value) => value + 1);
+    setTurnstileToken(null);
 
     if (result.success && result.data) {
       onSuccess(result.data.reference);
@@ -160,6 +175,14 @@ export function QuoteSubmitForm({ items, notes, onBack, onSuccess }: QuoteSubmit
             {error}
           </p>
         )}
+
+        <TurnstileWidget
+          siteKey={siteKey}
+          action="quote"
+          mode="visible"
+          resetKey={turnstileReset}
+          onTokenChange={setTurnstileToken}
+        />
 
         <div className="flex flex-col gap-3 pt-2 sm:flex-row">
           <RippleButton type="submit" className="flex-1" variant="primary">

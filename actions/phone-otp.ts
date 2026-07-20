@@ -189,10 +189,9 @@ export async function sendPhoneOtpAction(
       },
     };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to send OTP',
-    };
+    const { logServerError, toUserError } = await import('@/lib/security/sanitize-error');
+    logServerError('sendPhoneOtpAction', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 
@@ -211,6 +210,23 @@ export async function verifyPhoneOtpAction(input: unknown): Promise<ActionResult
       return { success: false, error: 'Invalid phone number' };
     }
 
+    const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
+    const { getClientIp } = await import('@/lib/security/rate-limit');
+    const ip = (await getClientIp()) ?? 'unknown';
+    const verifyIpAllowed = await checkPublicRateLimit('phone_otp_verify_ip', ip, 30, 15);
+    if (!verifyIpAllowed) {
+      return { success: false, error: 'Too many verification attempts. Please try again later.' };
+    }
+    const verifyAllowed = await checkPublicRateLimit(
+      'phone_otp_verify',
+      `${ip}:${phone}`,
+      10,
+      15,
+    );
+    if (!verifyAllowed) {
+      return { success: false, error: 'Too many verification attempts. Please try again later.' };
+    }
+
     const admin = createAdminClient();
     const consumed = await consumePhoneOtpCode(admin, phone, parsed.data.code);
     if (!consumed.ok) {
@@ -225,7 +241,9 @@ export async function verifyPhoneOtpAction(input: unknown): Promise<ActionResult
     });
 
     if (linkError || !linkData.properties?.hashed_token) {
-      return { success: false, error: linkError?.message ?? 'Failed to start session' };
+      const { logServerError, toUserError } = await import('@/lib/security/sanitize-error');
+      logServerError('verifyPhoneOtpAction.link', linkError);
+      return { success: false, error: toUserError(linkError) };
     }
 
     const supabase = await createClient();
@@ -235,7 +253,9 @@ export async function verifyPhoneOtpAction(input: unknown): Promise<ActionResult
     });
 
     if (sessionError) {
-      return { success: false, error: sessionError.message };
+      const { logServerError, toUserError } = await import('@/lib/security/sanitize-error');
+      logServerError('verifyPhoneOtpAction.session', sessionError);
+      return { success: false, error: toUserError(sessionError, 'auth') };
     }
 
     await markPhoneOtpVerified(admin, consumed.otpRowId);
@@ -243,10 +263,9 @@ export async function verifyPhoneOtpAction(input: unknown): Promise<ActionResult
 
     return { success: true };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to verify OTP',
-    };
+    const { logServerError, toUserError } = await import('@/lib/security/sanitize-error');
+    logServerError('verifyPhoneOtpAction', error);
+    return { success: false, error: toUserError(error) };
   }
 }
 
@@ -338,6 +357,19 @@ export async function verifyPhoneAndBind(
 
     const { supabase, user } = await requireAuthenticatedUser();
     const admin = createAdminClient();
+
+    const { checkPublicRateLimit } = await import('@/lib/auth/login-security');
+    const { getClientIp } = await import('@/lib/security/rate-limit');
+    const ip = (await getClientIp()) ?? 'unknown';
+    const verifyIpAllowed = await checkPublicRateLimit(
+      'phone_bind_verify_ip',
+      `${user!.id}:${ip}`,
+      20,
+      15,
+    );
+    if (!verifyIpAllowed) {
+      return { success: false, error: 'Too many verification attempts. Please try again later.' };
+    }
 
     const consumed = await consumePhoneOtpCode(admin, phone, parsed.data.code);
     if (!consumed.ok) {

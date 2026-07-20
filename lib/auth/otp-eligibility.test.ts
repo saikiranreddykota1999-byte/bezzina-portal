@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  STAFF_OTP_LOGIN_ERROR,
+  CUSTOMER_OTP_DENIED_ERROR,
   assertCustomerOtpEligible,
 } from '@/lib/auth/otp-eligibility';
 
@@ -11,7 +11,7 @@ describe('assertCustomerOtpEligible', () => {
     expect(assertCustomerOtpEligible(undefined)).toEqual({ ok: true });
   });
 
-  it('blocks portal staff roles', () => {
+  it('blocks portal staff with a uniform non-enumerating error', () => {
     for (const role of [
       'admin',
       'super_admin',
@@ -24,7 +24,7 @@ describe('assertCustomerOtpEligible', () => {
     ]) {
       expect(assertCustomerOtpEligible(role)).toEqual({
         ok: false,
-        error: STAFF_OTP_LOGIN_ERROR,
+        error: CUSTOMER_OTP_DENIED_ERROR,
       });
     }
   });

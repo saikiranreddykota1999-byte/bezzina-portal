@@ -8,23 +8,28 @@ import {
   isAskBezzinaConfigured,
   toAskBezzinaUserError,
 } from '@/lib/ask-bezzina/identify';
+import { sanitizeAskBezzinaHistory } from '@/lib/ask-bezzina/history';
+import {
+  assertAskBezzinaGeminiBudget,
+  assertAskBezzinaRequestBudget,
+} from '@/lib/ask-bezzina/limits';
 import { tryLocalFaqReply } from '@/lib/ask-bezzina/local-faq';
 import type { AskBezzinaHistoryMessage, AskBezzinaReply } from '@/lib/ask-bezzina/types';
-import { checkPublicRateLimit } from '@/lib/auth/login-security';
 import { captureException } from '@/lib/monitoring/capture';
-import { toProductSearchHit, type ProductSearchHit } from '@/lib/product-search';
+import { getClientIp } from '@/lib/security/rate-limit';
 import { logServerError } from '@/lib/security/sanitize-error';
+import { assertTurnstileToken } from '@/lib/security/turnstile';
 import { validateUploadFile } from '@/lib/security/upload-validation';
 import {
   ASK_BEZZINA_MAX_HISTORY,
   askBezzinaHistoryMessageSchema,
   askBezzinaRequestSchema,
 } from '@/lib/validators/ask-bezzina';
+import { toProductSearchHit, type ProductSearchHit } from '@/lib/product-search';
 import { searchProductsForQuery } from '@/services/product.service';
 import type { ActionResultWithData } from '@/types/action';
 
 const MAX_MATCHES = 6;
-const RATE_LIMIT_MAX = 15;
 
 const NOT_CONFIGURED_REPLY =
   'Ask Bezzina is not configured on this server yet. Please contact us via WhatsApp or the Contact page, or request a quote — our team can identify the part for you.';
@@ -43,7 +48,7 @@ function parseHistory(raw: FormDataEntryValue | null): AskBezzinaHistoryMessage[
         messages.push(result.data);
       }
     }
-    return messages;
+    return sanitizeAskBezzinaHistory(messages);
   } catch {
     return [];
   }
@@ -100,18 +105,22 @@ export async function askBezzinaAction(
   formData: FormData,
 ): Promise<ActionResultWithData<AskBezzinaReply>> {
   try {
-    const h = await headers();
-    const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-    const allowed = await checkPublicRateLimit('ask_bezzina', ip, RATE_LIMIT_MAX);
-    if (!allowed) {
-      return { success: false, error: 'Too many requests. Please try again later.' };
-    }
-
+    const ip = (await getClientIp()) ?? (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
     const messageRaw = formData.get('message');
     const message = typeof messageRaw === 'string' ? messageRaw : '';
     const history = parseHistory(formData.get('history'));
     const imageEntry = formData.get('image');
     const imageFile = imageEntry instanceof File && imageEntry.size > 0 ? imageEntry : null;
+    const turnstileRaw = formData.get('turnstileToken');
+    const turnstileToken = typeof turnstileRaw === 'string' ? turnstileRaw : '';
+
+    const budget = await assertAskBezzinaRequestBudget({
+      ip,
+      hasImage: Boolean(imageFile),
+    });
+    if (!budget.ok) {
+      return { success: false, error: budget.error };
+    }
 
     const requestParsed = askBezzinaRequestSchema.safeParse({
       message,
@@ -125,14 +134,16 @@ export async function askBezzinaAction(
       };
     }
 
+    let imageContentType: string | undefined;
     if (imageFile) {
-      const uploadCheck = validateUploadFile(imageFile, 'image');
+      const uploadCheck = await validateUploadFile(imageFile, 'askBezzinaImage');
       if (!uploadCheck.valid) {
         return { success: false, error: uploadCheck.error };
       }
+      imageContentType = uploadCheck.contentType;
     }
 
-    // Hours / contact / address — answer locally (works even when Gemini is busy).
+    // Hours / contact / address — answer locally (no Gemini / no Turnstile).
     if (!imageFile) {
       const localFaq = tryLocalFaqReply(requestParsed.data.message);
       if (localFaq) {
@@ -158,7 +169,21 @@ export async function askBezzinaAction(
       };
     }
 
-    const imageDataUrl = imageFile ? await fileToImageDataUrl(imageFile) : undefined;
+    const turnstile = await assertTurnstileToken(turnstileToken, {
+      expectedAction: 'ask_bezzina',
+    });
+    if (!turnstile.ok) {
+      return { success: false, error: turnstile.error };
+    }
+
+    const geminiBudget = await assertAskBezzinaGeminiBudget(ip);
+    if (!geminiBudget.ok) {
+      return { success: false, error: geminiBudget.error };
+    }
+
+    const imageDataUrl = imageFile
+      ? await fileToImageDataUrl(imageFile, imageContentType)
+      : undefined;
 
     const identified = await identifyPart({
       message: requestParsed.data.message,
