@@ -29,11 +29,24 @@ export async function submitContactEnquiryAction(
       return { success: false, error: turnstile.error };
     }
 
-    const ip =
-      (await getClientIp()) ??
-      (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      'unknown';
-    const allowed = await checkPublicRateLimit('contact_form', `${ip}:${enquiry.email}`);
+    let ip = 'unknown';
+    try {
+      ip =
+        (await getClientIp()) ??
+        (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ??
+        'unknown';
+    } catch (error) {
+      logServerError('submitContactEnquiryAction.ip', error);
+    }
+
+    let allowed = true;
+    try {
+      allowed = await checkPublicRateLimit('contact_form', `${ip}:${enquiry.email}`);
+    } catch (error) {
+      logServerError('submitContactEnquiryAction.rateLimit', error);
+      // Fail open for contact enquiries if rate-limit infra is down.
+      allowed = true;
+    }
     if (!allowed) {
       return { success: false, error: 'Too many requests. Please try again later.' };
     }

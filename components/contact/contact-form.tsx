@@ -37,7 +37,18 @@ export function ContactForm() {
     setError('');
     setSuccess(false);
 
-    if (siteKey && !turnstileToken) {
+    // Prefer React state; fall back to Cloudflare's hidden input if the callback raced.
+    const domToken =
+      typeof document !== 'undefined'
+        ? (
+            document.querySelector(
+              '[data-turnstile-action="contact"] input[name="cf-turnstile-response"]',
+            ) as HTMLInputElement | null
+          )?.value?.trim() ?? ''
+        : '';
+    const token = (turnstileToken ?? '').trim() || domToken;
+
+    if (siteKey && !token) {
       setPending(false);
       setError('Please complete the bot check before sending.');
       return;
@@ -45,7 +56,7 @@ export function ContactForm() {
 
     const result = await submitContactEnquiryAction({
       ...form,
-      turnstileToken: turnstileToken ?? '',
+      turnstileToken: token,
     });
 
     setPending(false);

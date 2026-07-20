@@ -1,5 +1,6 @@
 import { company } from '@/config/company';
 import type { ContactEnquiryInput } from '@/lib/validators/contact';
+import { logServerError } from '@/lib/security/sanitize-error';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim() ?? '';
 const CONTACT_EMAIL_FROM = process.env.OTP_EMAIL_FROM?.trim() ?? 'login@jbezzina.com';
@@ -39,26 +40,33 @@ export async function sendContactEnquiryEmail(
     <p>${enquiry.message.replace(/\n/g, '<br />')}</p>
   `;
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: CONTACT_EMAIL_FROM,
-      to: CONTACT_EMAIL_TO,
-      reply_to: enquiry.email,
-      subject,
-      text,
-      html,
-    }),
-  });
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: CONTACT_EMAIL_FROM,
+        to: CONTACT_EMAIL_TO,
+        reply_to: enquiry.email,
+        subject,
+        text,
+        html,
+      }),
+    });
 
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Contact email failed: ${detail.slice(0, 120)}`);
+    if (!response.ok) {
+      const detail = await response.text();
+      logServerError('sendContactEnquiryEmail', new Error(detail.slice(0, 200)));
+      // Keep the enquiry path alive — staff notification still happens in the action.
+      return { sent: false, channel: 'demo' };
+    }
+
+    return { sent: true, channel: 'email' };
+  } catch (error) {
+    logServerError('sendContactEnquiryEmail', error);
+    return { sent: false, channel: 'demo' };
   }
-
-  return { sent: true, channel: 'email' };
 }

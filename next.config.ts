@@ -68,7 +68,7 @@ const nextConfig: NextConfig = {
               `img-src ${cspImageSources}`,
               "font-src 'self' https://fonts.gstatic.com data:",
               // Sentry ingest hosts required for client error reporting when DSN is set
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://maps.googleapis.com https://challenges.cloudflare.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.resend.com https://maps.googleapis.com https://challenges.cloudflare.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
               "frame-src 'self' https://js.stripe.com https://challenges.cloudflare.com https://www.google.com https://maps.google.com https://*.google.com",
               "object-src 'none'",
               "base-uri 'self'",

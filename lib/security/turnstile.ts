@@ -90,14 +90,22 @@ export async function assertTurnstileToken(
 
     const payload = (await response.json()) as TurnstileSiteverifyResponse;
     if (!payload.success) {
+      const codes = payload['error-codes']?.join(',') ?? 'unknown';
+      logServerError('assertTurnstileToken.verify', new Error(codes));
       return { ok: false, error: TURNSTILE_FAILED_ERROR };
     }
 
+    // Only enforce action when Cloudflare returns one (some widget modes omit it).
     if (
       options?.expectedAction &&
       payload.action &&
+      payload.action.length > 0 &&
       payload.action !== options.expectedAction
     ) {
+      logServerError(
+        'assertTurnstileToken.action',
+        new Error(`expected=${options.expectedAction} got=${payload.action}`),
+      );
       return { ok: false, error: TURNSTILE_FAILED_ERROR };
     }
 
