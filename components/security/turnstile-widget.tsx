@@ -1,7 +1,7 @@
 'use client';
 
 import Script from 'next/script';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 type TurnstileApi = {
   render: (
@@ -33,20 +33,13 @@ type TurnstileWidgetProps = {
   siteKey: string | null | undefined;
   action: string;
   onTokenChange: (token: string | null) => void;
-  /** invisible = challenge only when needed; compact for tight footers */
   mode?: 'visible' | 'compact' | 'invisible';
   className?: string;
-  /** Bump to force a fresh challenge after a successful submit */
   resetKey?: number | string;
 };
 
-function getTurnstileApi(): TurnstileApi | undefined {
-  return typeof window !== 'undefined' ? window.turnstile : undefined;
-}
-
 /**
- * Cloudflare Turnstile widget. When siteKey is missing (local/dev), renders nothing
- * and reports a null token — server assertTurnstile allows the skip when not required.
+ * Cloudflare Turnstile widget. Renders nothing when siteKey is missing.
  */
 export function TurnstileWidget({
   siteKey,
@@ -60,61 +53,43 @@ export function TurnstileWidget({
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const onTokenChangeRef = useRef(onTokenChange);
-  const [scriptReady, setScriptReady] = useState(false);
+  const [loadTick, setLoadTick] = useState(0);
 
   useEffect(() => {
     onTokenChangeRef.current = onTokenChange;
   }, [onTokenChange]);
 
-  // Script.onLoad may not re-fire on client navigations if the file is already cached.
   useEffect(() => {
     if (!siteKey) return;
 
-    if (getTurnstileApi()) {
-      getTurnstileApi()?.ready(() => setScriptReady(true));
-      setScriptReady(true);
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      if (getTurnstileApi()) {
-        window.clearInterval(timer);
-        getTurnstileApi()?.ready(() => setScriptReady(true));
-        setScriptReady(true);
-      }
-    }, 200);
-
-    return () => window.clearInterval(timer);
-  }, [siteKey]);
-
-  const clearToken = useCallback(() => {
-    onTokenChangeRef.current(null);
-  }, []);
-
-  useEffect(() => {
-    if (!siteKey || !scriptReady || !containerRef.current) {
-      return;
-    }
-
-    const api = getTurnstileApi();
-    if (!api) return;
-
     let cancelled = false;
+    let attempts = 0;
 
-    const mount = () => {
-      if (cancelled || !containerRef.current || !getTurnstileApi()) return;
-
-      if (widgetIdRef.current) {
-        getTurnstileApi()?.remove(widgetIdRef.current);
+    const clearWidget = () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch {
+          // ignore remove races
+        }
         widgetIdRef.current = null;
       }
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+    };
 
-      // Clear any leftover DOM from a previous failed mount.
-      containerRef.current.innerHTML = '';
+    const tryMount = () => {
+      if (cancelled) return false;
+      const api = window.turnstile;
+      const el = containerRef.current;
+      if (!api || !el) return false;
+
+      clearWidget();
 
       const size = mode === 'compact' ? 'compact' : mode === 'invisible' ? 'invisible' : 'normal';
 
-      widgetIdRef.current = api.render(containerRef.current, {
+      widgetIdRef.current = api.render(el, {
         sitekey: siteKey,
         action,
         size,
@@ -122,21 +97,33 @@ export function TurnstileWidget({
         theme: 'light',
         retry: 'auto',
         callback: (token) => onTokenChangeRef.current(token),
-        'expired-callback': clearToken,
-        'error-callback': clearToken,
+        'expired-callback': () => onTokenChangeRef.current(null),
+        'error-callback': () => onTokenChangeRef.current(null),
       });
+
+      return true;
     };
 
-    api.ready(mount);
+    const mountWhenReady = () => {
+      if (cancelled) return;
+      if (tryMount()) return;
+
+      attempts += 1;
+      if (attempts > 40) return;
+      window.setTimeout(mountWhenReady, 250);
+    };
+
+    if (window.turnstile) {
+      window.turnstile.ready(mountWhenReady);
+    } else {
+      mountWhenReady();
+    }
 
     return () => {
       cancelled = true;
-      if (widgetIdRef.current && getTurnstileApi()) {
-        getTurnstileApi()?.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-      }
+      clearWidget();
     };
-  }, [siteKey, scriptReady, action, mode, clearToken, resetKey]);
+  }, [siteKey, action, mode, resetKey, loadTick]);
 
   if (!siteKey) {
     return null;
@@ -147,10 +134,7 @@ export function TurnstileWidget({
       <Script
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
-        onLoad={() => {
-          getTurnstileApi()?.ready(() => setScriptReady(true));
-          setScriptReady(true);
-        }}
+        onLoad={() => setLoadTick((value) => value + 1)}
       />
       <div
         ref={containerRef}
