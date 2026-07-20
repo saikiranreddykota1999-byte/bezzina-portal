@@ -216,32 +216,7 @@ html.dark [data-admin-portal] select {
   }
 }
 
-/* Ask Bezzina — blinking assistant eyes */
-@keyframes ask-bezzina-blink {
-  0%,
-  90%,
-  100% {
-    transform: scaleY(1);
-  }
-  93%,
-  97% {
-    transform: scaleY(0.08);
-  }
-}
-
-@keyframes ask-bezzina-glance {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  40% {
-    transform: translateX(1px);
-  }
-  70% {
-    transform: translateX(-1px);
-  }
-}
-
+/* Ask Bezzina — bolt + nut launcher mark */
 @keyframes ask-bezzina-pulse {
   0%,
   100% {
@@ -264,19 +239,6 @@ html.dark [data-admin-portal] select {
     opacity: 0.85;
     transform: translateY(-2px);
   }
-}
-
-.ask-bezzina-blink {
-  transform-origin: center;
-  animation: ask-bezzina-blink 3.6s ease-in-out infinite;
-}
-
-.ask-bezzina-eye-delay {
-  animation-delay: 0.12s;
-}
-
-.ask-bezzina-glance {
-  animation: ask-bezzina-glance 5.5s ease-in-out infinite;
 }
 
 .ask-bezzina-pulse {
@@ -365,9 +327,6 @@ html.dark [data-admin-portal] select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ask-bezzina-blink,
-  .ask-bezzina-eye-delay,
-  .ask-bezzina-glance,
   .ask-bezzina-pulse,
   .ask-bezzina-tip,
   .ask-bezzina-panel,
