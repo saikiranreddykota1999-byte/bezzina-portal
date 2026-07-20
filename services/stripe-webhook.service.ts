@@ -85,6 +85,12 @@ export async function reconcilePaymentIntentSucceeded(
 
   if (existingOrder) {
     if (existingOrder.payment_status !== 'paid') {
+      await applyStockForNewlyPaidOrder(
+        admin,
+        existingOrder.id,
+        existingOrder.user_id ?? userId ?? 'system',
+      );
+
       const fulfillableUpdate: Record<string, unknown> = {
         payment_status: 'paid',
         payment_method: 'stripe',
@@ -96,7 +102,17 @@ export async function reconcilePaymentIntentSucceeded(
         fulfillableUpdate.pickup_status = 'scheduled';
       }
 
-      await admin.from('orders').update(fulfillableUpdate).eq('id', existingOrder.id);
+      // Only one concurrent reconciler advances this order out of its prior status.
+      const { error: transitionError } = await admin
+        .from('orders')
+        .update(fulfillableUpdate)
+        .eq('id', existingOrder.id)
+        .eq('payment_status', existingOrder.payment_status);
+
+      if (transitionError) {
+        logServerError('reconcilePaymentIntentSucceeded.update', transitionError);
+        throw new Error(transitionError.message);
+      }
     }
     return { reconciled: true, orderId: existingOrder.id };
   }
@@ -114,6 +130,95 @@ export async function reconcilePaymentIntentSucceeded(
   }
 
   return { reconciled: false };
+}
+
+/**
+ * Applies catalogue decrement + OMS reserve when a previously non-paid order becomes paid.
+ * Idempotent via order timeline `stock_committed` marker and/or existing reserve txs.
+ */
+async function applyStockForNewlyPaidOrder(
+  admin: ReturnType<typeof createAdminClient>,
+  orderId: string,
+  actorId: string,
+): Promise<void> {
+  const { data: orderRow, error: orderError } = await admin
+    .from('orders')
+    .select('timeline')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (orderError) {
+    logServerError('applyStockForNewlyPaidOrder.order', orderError);
+    throw new Error(orderError.message);
+  }
+
+  const timeline = Array.isArray(orderRow?.timeline)
+    ? (orderRow.timeline as Array<Record<string, unknown>>)
+    : [];
+  if (timeline.some((entry) => entry?.type === 'stock_committed')) {
+    return;
+  }
+
+  const { data: existingReserve } = await admin
+    .from('inventory_transactions')
+    .select('id')
+    .eq('order_id', orderId)
+    .eq('transaction_type', 'reserve')
+    .limit(1);
+
+  if (existingReserve && existingReserve.length > 0) {
+    await admin
+      .from('orders')
+      .update({
+        timeline: [
+          ...timeline,
+          { type: 'stock_committed', at: new Date().toISOString(), source: 'existing_reserve' },
+        ],
+      })
+      .eq('id', orderId);
+    return;
+  }
+
+  const { data: orderItems, error: itemsError } = await admin
+    .from('order_items')
+    .select('product_id, quantity, name')
+    .eq('order_id', orderId);
+
+  if (itemsError) {
+    logServerError('applyStockForNewlyPaidOrder.items', itemsError);
+    throw new Error(itemsError.message);
+  }
+
+  const lines = (orderItems ?? [])
+    .filter((item) => Boolean(item.product_id) && (item.quantity ?? 0) > 0)
+    .map((item) => ({
+      productId: item.product_id as string,
+      quantity: item.quantity as number,
+      name: (item.name as string | null) ?? undefined,
+    }));
+
+  if (lines.length === 0) return;
+
+  const { decrementCatalogueStock } = await import('@/lib/checkout/stock');
+  const { tryReserveInventoryForOrder } = await import('@/services/inventory.service');
+
+  await decrementCatalogueStock(admin, lines);
+  await tryReserveInventoryForOrder(
+    admin,
+    orderId,
+    lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+    actorId,
+  );
+
+  await admin
+    .from('orders')
+    .update({
+      timeline: [
+        ...timeline,
+        { type: 'stock_committed', at: new Date().toISOString(), source: 'stripe_webhook' },
+      ],
+    })
+    .eq('id', orderId);
 }
 
 export async function handleStripeWebhookEvent(event: Stripe.Event): Promise<void> {

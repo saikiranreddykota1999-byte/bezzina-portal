@@ -1,6 +1,6 @@
 'use client';
 
-import { formatCardNumber, maskCardNumber } from '@/context/cards-context';
+import { formatCardNumber, maskCardNumber } from '@/lib/payment/card-format';
 
 type PaymentFormValues = {
   cardholderName: string;

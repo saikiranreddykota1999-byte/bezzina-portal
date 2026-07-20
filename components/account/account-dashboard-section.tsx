@@ -21,12 +21,6 @@ const ACCOUNT_LINKS: AccountDashboardLink[] = [
     variant: 'addresses',
   },
   {
-    title: 'Payment Cards',
-    href: '/account/cards',
-    description: 'Add and manage saved cards',
-    variant: 'payment-cards',
-  },
-  {
     title: 'Orders',
     href: '/account/orders',
     description: 'Order history and invoices',

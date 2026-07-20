@@ -348,33 +348,37 @@ export async function placeOrderAction(input: unknown): Promise<PlaceOrderResult
     const admin = createAdminClient();
     let stockDecremented = false;
 
-    try {
-      await decrementCatalogueStock(admin, stockLines);
-      stockDecremented = true;
+    // Only lock catalogue/OMS stock for fulfillable orders (paid or COD).
+    // Stripe `processing` waits for payment_intent.succeeded before stock moves.
+    if (isFulfillable) {
+      try {
+        await decrementCatalogueStock(admin, stockLines);
+        stockDecremented = true;
 
-      const { tryReserveInventoryForOrder } = await import('@/services/inventory.service');
-      await tryReserveInventoryForOrder(
-        admin,
-        order.id,
-        stockLines.map((line) => ({
-          productId: line.productId,
-          quantity: line.quantity,
-        })),
-        user!.id,
-      );
-    } catch (stockError) {
-      logServerError('placeOrderAction.stock', stockError);
-      if (stockDecremented) {
-        await restoreCatalogueStock(admin, stockLines);
+        const { tryReserveInventoryForOrder } = await import('@/services/inventory.service');
+        await tryReserveInventoryForOrder(
+          admin,
+          order.id,
+          stockLines.map((line) => ({
+            productId: line.productId,
+            quantity: line.quantity,
+          })),
+          user!.id,
+        );
+      } catch (stockError) {
+        logServerError('placeOrderAction.stock', stockError);
+        if (stockDecremented) {
+          await restoreCatalogueStock(admin, stockLines);
+        }
+        await compensateFailedOrder(admin, order.id);
+        return {
+          success: false,
+          error:
+            stockError instanceof Error && stockError.message.toLowerCase().includes('stock')
+              ? stockError.message
+              : 'Unable to reserve stock for this order. Please try again.',
+        };
       }
-      await compensateFailedOrder(admin, order.id);
-      return {
-        success: false,
-        error:
-          stockError instanceof Error && stockError.message.toLowerCase().includes('stock')
-            ? stockError.message
-            : 'Unable to reserve stock for this order. Please try again.',
-      };
     }
 
     if (payload.fulfillmentMethod === 'store_pickup') {

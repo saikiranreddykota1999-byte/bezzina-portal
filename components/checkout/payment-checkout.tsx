@@ -6,7 +6,6 @@ import { CreditCard, ShieldCheck } from 'lucide-react';
 import { createPaymentIntentAction } from '@/actions/stripe-payment';
 import { placeOrderAction } from '@/actions/pickup/customer';
 import { useCart } from '@/context/cart-context';
-import { useCards } from '@/context/cards-context';
 import { useCheckout } from '@/context/checkout-context';
 import { DemoModeBanner } from '@/components/account/demo-mode-banner';
 import {
@@ -30,10 +29,7 @@ import type { PlaceOrderInput } from '@/lib/validators/pickup';
 export function PaymentCheckout() {
   const router = useRouter();
   const { items, clearCart } = useCart();
-  const { cards, defaultCard } = useCards();
   const { fulfillmentMethod, pickup, deliveryAddress, clearCheckout } = useCheckout();
-  const [selectedCardId, setSelectedCardId] = useState(defaultCard?.id ?? '');
-  const [useInlinePayment, setUseInlinePayment] = useState(cards.length === 0);
   const [inlinePayment, setInlinePayment] = useState({ cardholderName: '', cardNumber: '' });
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -58,7 +54,6 @@ export function PaymentCheckout() {
     fulfillmentMethod,
     items.length,
   );
-  const selectedCard = cards.find((c) => c.id === selectedCardId) ?? defaultCard;
 
   const orderItems = useMemo(
     () =>
@@ -225,28 +220,17 @@ export function PaymentCheckout() {
       return;
     }
 
-    let payment: PlaceOrderInput['payment'];
-    if (useInlinePayment || cards.length === 0) {
-      const last4 = getCardLast4(inlinePayment.cardNumber);
-      if (!inlinePayment.cardholderName.trim() || last4.length !== 4) {
-        setError('Enter cardholder name and a valid card number.');
-        return;
-      }
-      payment = {
-        method: 'demo',
-        cardholderName: inlinePayment.cardholderName.trim(),
-        cardLast4: last4,
-      };
-    } else if (selectedCard) {
-      payment = {
-        method: 'demo',
-        cardholderName: selectedCard.cardholderName,
-        cardLast4: selectedCard.last4,
-      };
-    } else {
-      setError('Select a payment method.');
+    const last4 = getCardLast4(inlinePayment.cardNumber);
+    if (!inlinePayment.cardholderName.trim() || last4.length !== 4) {
+      setError('Enter cardholder name and a valid card number.');
       return;
     }
+
+    const payment: PlaceOrderInput['payment'] = {
+      method: 'demo',
+      cardholderName: inlinePayment.cardholderName.trim(),
+      cardLast4: last4,
+    };
 
     setProcessing(true);
     setError('');
@@ -299,15 +283,6 @@ export function PaymentCheckout() {
                 <CreditCard className="h-5 w-5 text-orange-800" />
                 <h2 className="font-semibold">Payment method</h2>
               </div>
-              {!stripeEnabled && demoPaymentsAllowed && cards.length > 0 && useOnlinePayment && (
-                <button
-                  type="button"
-                  onClick={() => setUseInlinePayment((v) => !v)}
-                  className="text-sm text-orange-800 hover:underline"
-                >
-                  {useInlinePayment ? 'Use saved card' : 'Enter card manually'}
-                </button>
-              )}
             </div>
 
             {isPickup && (
@@ -364,38 +339,7 @@ export function PaymentCheckout() {
               </div>
             ) : useOnlinePayment && demoPaymentsAllowed ? (
               <form onSubmit={handleDemoPay} className="mt-4 space-y-4">
-                {useInlinePayment || cards.length === 0 ? (
-                  <InlinePaymentForm values={inlinePayment} onChange={setInlinePayment} />
-                ) : (
-                  <ul className="space-y-2">
-                    {cards.map((card) => (
-                      <li key={card.id}>
-                        <label
-                          className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
-                            selectedCardId === card.id
-                              ? 'border-orange-400 bg-orange-50/50'
-                              : 'border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="card"
-                            value={card.id}
-                            checked={selectedCardId === card.id}
-                            onChange={() => setSelectedCardId(card.id)}
-                            className="text-orange-800"
-                          />
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              •••• •••• •••• {card.last4}
-                            </p>
-                            <p className="text-sm text-slate-500">{card.cardholderName}</p>
-                          </div>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <InlinePaymentForm values={inlinePayment} onChange={setInlinePayment} />
 
                 {error && (
                   <p className="text-sm text-red-600" role="alert">
