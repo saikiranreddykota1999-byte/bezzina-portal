@@ -1,6 +1,5 @@
 'use client';
 
-import Script from 'next/script';
 import { useEffect, useId, useRef, useState } from 'react';
 
 type TurnstileApi = {
@@ -18,7 +17,6 @@ type TurnstileApi = {
       retry?: 'auto' | 'never';
     },
   ) => string;
-  reset: (widgetId?: string) => void;
   remove: (widgetId?: string) => void;
   ready: (callback: () => void) => void;
 };
@@ -38,8 +36,55 @@ type TurnstileWidgetProps = {
   resetKey?: number | string;
 };
 
+let turnstileScriptPromise: Promise<void> | null = null;
+
+function ensureTurnstileScript(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return Promise.resolve();
+  }
+  if (window.turnstile) {
+    return Promise.resolve();
+  }
+  if (turnstileScriptPromise) {
+    return turnstileScriptPromise;
+  }
+
+  turnstileScriptPromise = new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[data-bezzina-turnstile="true"]',
+    );
+    if (existing) {
+      if (window.turnstile) {
+        resolve();
+        return;
+      }
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener(
+        'error',
+        () => reject(new Error('Turnstile script failed')),
+        { once: true },
+      );
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.dataset.bezzinaTurnstile = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Turnstile script failed'));
+    document.head.appendChild(script);
+  }).catch((error) => {
+    turnstileScriptPromise = null;
+    throw error;
+  });
+
+  return turnstileScriptPromise;
+}
+
 /**
  * Cloudflare Turnstile widget. Renders nothing when siteKey is missing.
+ * Failures are contained locally so the rest of the page keeps working.
  */
 export function TurnstileWidget({
   siteKey,
@@ -53,7 +98,7 @@ export function TurnstileWidget({
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const onTokenChangeRef = useRef(onTokenChange);
-  const [loadTick, setLoadTick] = useState(0);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     onTokenChangeRef.current = onTokenChange;
@@ -63,14 +108,13 @@ export function TurnstileWidget({
     if (!siteKey) return;
 
     let cancelled = false;
-    let attempts = 0;
 
     const clearWidget = () => {
       if (widgetIdRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
         } catch {
-          // ignore remove races
+          // ignore
         }
         widgetIdRef.current = null;
       }
@@ -79,51 +123,53 @@ export function TurnstileWidget({
       }
     };
 
-    const tryMount = () => {
-      if (cancelled) return false;
-      const api = window.turnstile;
-      const el = containerRef.current;
-      if (!api || !el) return false;
+    const mount = async () => {
+      try {
+        await ensureTurnstileScript();
+        if (cancelled) return;
 
-      clearWidget();
+        await new Promise<void>((resolve) => {
+          const api = window.turnstile;
+          if (!api) {
+            resolve();
+            return;
+          }
+          api.ready(() => resolve());
+        });
+        if (cancelled || !window.turnstile || !containerRef.current) return;
 
-      const size = mode === 'compact' ? 'compact' : mode === 'invisible' ? 'invisible' : 'normal';
+        clearWidget();
 
-      widgetIdRef.current = api.render(el, {
-        sitekey: siteKey,
-        action,
-        size,
-        appearance: mode === 'invisible' ? 'interaction-only' : 'always',
-        theme: 'light',
-        retry: 'auto',
-        callback: (token) => onTokenChangeRef.current(token),
-        'expired-callback': () => onTokenChangeRef.current(null),
-        'error-callback': () => onTokenChangeRef.current(null),
-      });
+        const size =
+          mode === 'compact' ? 'compact' : mode === 'invisible' ? 'invisible' : 'normal';
 
-      return true;
+        widgetIdRef.current = window.turnstile.render(containerRef.current, {
+          sitekey: siteKey,
+          action,
+          size,
+          appearance: mode === 'invisible' ? 'interaction-only' : 'always',
+          theme: 'light',
+          retry: 'auto',
+          callback: (token) => onTokenChangeRef.current(token),
+          'expired-callback': () => onTokenChangeRef.current(null),
+          'error-callback': () => onTokenChangeRef.current(null),
+        });
+        if (!cancelled) setFailed(false);
+      } catch {
+        if (!cancelled) {
+          setFailed(true);
+          onTokenChangeRef.current(null);
+        }
+      }
     };
 
-    const mountWhenReady = () => {
-      if (cancelled) return;
-      if (tryMount()) return;
-
-      attempts += 1;
-      if (attempts > 40) return;
-      window.setTimeout(mountWhenReady, 250);
-    };
-
-    if (window.turnstile) {
-      window.turnstile.ready(mountWhenReady);
-    } else {
-      mountWhenReady();
-    }
+    void mount();
 
     return () => {
       cancelled = true;
       clearWidget();
     };
-  }, [siteKey, action, mode, resetKey, loadTick]);
+  }, [siteKey, action, mode, resetKey]);
 
   if (!siteKey) {
     return null;
@@ -131,17 +177,17 @@ export function TurnstileWidget({
 
   return (
     <div className={className}>
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="afterInteractive"
-        onLoad={() => setLoadTick((value) => value + 1)}
-      />
       <div
         ref={containerRef}
         id={`turnstile-${reactId.replace(/:/g, '')}`}
         data-turnstile-action={action}
         className="min-h-[65px]"
       />
+      {failed ? (
+        <p className="mt-2 text-xs text-slate-500" role="status">
+          Bot check could not load. Refresh the page and try again.
+        </p>
+      ) : null}
     </div>
   );
 }
