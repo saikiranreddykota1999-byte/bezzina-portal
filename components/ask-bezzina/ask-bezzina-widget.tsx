@@ -1,14 +1,15 @@
 'use client';
 
-import { ImagePlus, Loader2, Send, X } from 'lucide-react';
+import { Clock3, MapPin, Phone, X } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
 
 import { askBezzinaAction } from '@/actions/ask-bezzina';
 import { AskBezzinaAvatar } from '@/components/ask-bezzina/ask-bezzina-avatar';
+import { AskBezzinaComposer } from '@/components/ask-bezzina/ask-bezzina-composer';
 import {
   AskBezzinaMessageList,
+  AskBezzinaTypingIndicator,
   type ChatBubble,
 } from '@/components/ask-bezzina/ask-bezzina-message-list';
 import { company } from '@/config/company';
@@ -16,6 +17,12 @@ import { useDialogA11y } from '@/hooks/use-dialog-a11y';
 import type { AskBezzinaHistoryMessage } from '@/lib/ask-bezzina/types';
 
 const MAX_HISTORY_FOR_REQUEST = 8;
+
+const QUICK_PROMPTS = [
+  { label: 'Hours', prompt: 'Business hours', icon: Clock3 },
+  { label: 'Contact', prompt: 'Phone & WhatsApp', icon: Phone },
+  { label: 'Location', prompt: 'Where are you?', icon: MapPin },
+] as const;
 
 function toHistory(messages: ChatBubble[]): AskBezzinaHistoryMessage[] {
   return messages
@@ -139,34 +146,28 @@ export function AskBezzinaWidget() {
     });
   }
 
-  function sendQuickPrompt(prompt: string) {
-    submitMessage(prompt, null, null);
-  }
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    submitMessage(text.trim(), imageFile, imagePreviewUrl);
-  }
-
   return (
     <>
       {!open ? (
         <div className="site-chrome fixed z-50 bottom-20 right-4 md:bottom-6 md:right-6">
-          <div className="ask-bezzina-tip pointer-events-none absolute bottom-full right-0 mb-2 hidden whitespace-nowrap rounded-full bg-[#071B35] px-3 py-1.5 text-xs font-medium text-white shadow-lg sm:block">
+          <div className="ask-bezzina-tip pointer-events-none absolute bottom-[calc(100%+10px)] right-0 hidden items-center gap-2 rounded-2xl border border-white/10 bg-[#071B35]/95 px-3.5 py-2 text-xs font-medium text-white shadow-[0_12px_40px_rgba(7,27,53,0.35)] backdrop-blur sm:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
             Ready to help
             <span
-              className="absolute -bottom-1 right-5 h-2 w-2 rotate-45 bg-[#071B35]"
+              className="absolute -bottom-1.5 right-6 h-3 w-3 rotate-45 border-b border-r border-white/10 bg-[#071B35]/95"
               aria-hidden="true"
             />
           </div>
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="relative flex h-14 w-14 items-center justify-center rounded-full shadow-xl shadow-[#0B3D91]/25 transition hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0B3D91] focus-visible:ring-offset-2"
+            className="group relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#0B3D91] to-[#071B35] p-[3px] shadow-[0_16px_40px_rgba(11,61,145,0.35)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_48px_rgba(11,61,145,0.42)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8A106] focus-visible:ring-offset-2"
             aria-haspopup="dialog"
             aria-expanded={false}
           >
-            <AskBezzinaAvatar size="md" attentive />
+            <span className="flex h-full w-full items-center justify-center rounded-full bg-[#071B35]/20 ring-1 ring-[#D8A106]/50">
+              <AskBezzinaAvatar size="md" attentive />
+            </span>
             <span className="sr-only">Open Ask Bezzina — ready to help</span>
           </button>
         </div>
@@ -174,7 +175,7 @@ export function AskBezzinaWidget() {
 
       {open ? (
         <div
-          className="site-chrome fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-[2px] md:bg-slate-900/20"
+          className="site-chrome fixed inset-0 z-[60] bg-[#071B35]/40 backdrop-blur-[3px] md:bg-[#071B35]/25"
           onClick={() => setOpen(false)}
           aria-hidden="true"
         />
@@ -186,160 +187,99 @@ export function AskBezzinaWidget() {
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="site-chrome fixed z-[60] flex w-[min(100vw-1.25rem,24rem)] flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(7,27,53,0.22)] bottom-20 right-3 max-h-[min(78vh,40rem)] md:bottom-6 md:right-6"
+          className="ask-bezzina-panel site-chrome fixed z-[60] flex w-[min(100vw-1rem,26rem)] flex-col overflow-hidden rounded-[28px] border border-white/40 bg-[#F4F7FB] shadow-[0_30px_90px_rgba(7,27,53,0.28)] bottom-20 right-2 max-h-[min(82vh,44rem)] md:bottom-6 md:right-6"
         >
-          <header className="relative overflow-hidden bg-gradient-to-br from-[#071B35] via-[#0B3D91] to-[#09407a] px-4 py-3.5 text-white">
-            <div className="absolute -right-6 -top-8 h-24 w-24 rounded-full bg-[#D8A106]/15" aria-hidden="true" />
+          <header className="relative overflow-hidden px-4 pb-4 pt-3.5 text-white">
+            <div
+              className="absolute inset-0 bg-[linear-gradient(135deg,#071B35_0%,#0B3D91_55%,#0a4aa8_100%)]"
+              aria-hidden="true"
+            />
+            <div
+              className="absolute inset-0 opacity-40"
+              style={{
+                backgroundImage:
+                  'radial-gradient(circle at 85% 20%, rgba(216,161,6,0.35), transparent 40%), radial-gradient(circle at 10% 90%, rgba(255,255,255,0.12), transparent 35%)',
+              }}
+              aria-hidden="true"
+            />
             <div className="relative flex items-center gap-3">
               <AskBezzinaAvatar size="sm" attentive />
               <div className="min-w-0 flex-1">
-                <h2 id={titleId} className="truncate text-sm font-semibold tracking-tight">
-                  Ask {company.shortName}
-                </h2>
-                <p className="flex items-center gap-1.5 truncate text-xs text-emerald-200">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-300" aria-hidden="true" />
-                  Online · ready to help
+                <div className="flex items-center gap-2">
+                  <h2 id={titleId} className="truncate text-[15px] font-semibold tracking-tight">
+                    Ask {company.shortName}
+                  </h2>
+                  <span className="hidden rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white/80 sm:inline">
+                    AI
+                  </span>
+                </div>
+                <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-emerald-200/95">
+                  <span className="relative flex h-2 w-2">
+                    <span className="ask-bezzina-online absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
+                  </span>
+                  Online · catalogue specialist
                 </p>
               </div>
               <Image
                 src={company.logoUrl}
                 alt=""
-                width={28}
-                height={28}
-                className="rounded-lg bg-white object-contain p-0.5"
+                width={30}
+                height={30}
+                className="rounded-xl bg-white object-contain p-0.5 shadow-sm"
               />
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-full p-1.5 text-white/90 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="rounded-xl p-2 text-white/85 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 aria-label="Close Ask Bezzina"
               >
-                <X className="h-5 w-5" aria-hidden="true" />
+                <X className="h-[18px] w-[18px]" aria-hidden="true" />
               </button>
             </div>
           </header>
 
-          <div className="flex-1 space-y-3 overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_40%)] px-3 py-3">
+          <div className="ask-bezzina-thread relative flex-1 space-y-3 overflow-y-auto px-3.5 py-4">
             <AskBezzinaMessageList messages={messages} />
+
             {messages.length === 0 ? (
-              <div className="flex flex-wrap gap-1.5 px-1">
-                {['Business hours', 'Phone & WhatsApp', 'Where are you?'].map((prompt) => (
+              <div className="grid grid-cols-3 gap-2">
+                {QUICK_PROMPTS.map(({ label, prompt, icon: Icon }) => (
                   <button
-                    key={prompt}
+                    key={label}
                     type="button"
-                    onClick={() => sendQuickPrompt(prompt)}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-[#0B3D91] hover:text-[#0B3D91]"
+                    onClick={() => submitMessage(prompt, null, null)}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl border border-white/80 bg-white/90 px-2 py-3 text-center shadow-[0_4px_14px_rgba(7,27,53,0.05)] transition hover:-translate-y-0.5 hover:border-[#0B3D91]/30 hover:shadow-[0_8px_20px_rgba(11,61,145,0.1)]"
                   >
-                    {prompt}
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0B3D91]/8 text-[#0B3D91]">
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-700">{label}</span>
                   </button>
                 ))}
               </div>
             ) : null}
-            {pending ? (
-              <p
-                className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs text-slate-500 shadow-sm ring-1 ring-slate-100"
-                role="status"
-              >
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0B3D91]" aria-hidden="true" />
-                Looking at your request…
-              </p>
-            ) : null}
+
+            {pending ? <AskBezzinaTypingIndicator /> : null}
             <div ref={listEndRef} />
           </div>
 
-          <div className="border-t border-slate-100 bg-white px-3 py-2.5">
-            <div className="mb-2 flex items-center justify-between gap-2 text-[11px] text-slate-500">
-              <span>Prefer a person?</span>
-              <span className="flex gap-2">
-                <Link href="/contact" className="font-semibold text-[#0B3D91] hover:underline">
-                  Contact
-                </Link>
-                <Link href="/quote" className="font-semibold text-[#0B3D91] hover:underline">
-                  Quote
-                </Link>
-              </span>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              {imagePreviewUrl ? (
-                <div className="mb-2 flex items-center gap-2 rounded-xl bg-slate-50 p-2 ring-1 ring-slate-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- blob preview */}
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Selected upload preview"
-                    className="h-11 w-11 rounded-lg object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => clearImage()}
-                    className="text-xs font-semibold text-slate-700 underline"
-                  >
-                    Remove photo
-                  </button>
-                </div>
-              ) : null}
-
-              <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-1.5 shadow-inner focus-within:border-[#0B3D91] focus-within:ring-2 focus-within:ring-[#0B3D91]/20">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="sr-only"
-                  id="ask-bezzina-image"
-                  onChange={(e) => handleFileChange(e.target.files)}
-                  disabled={pending}
-                />
-                <label
-                  htmlFor="ask-bezzina-image"
-                  className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-[#0B3D91] transition hover:bg-white"
-                  title="Attach photo"
-                >
-                  <ImagePlus className="h-5 w-5" aria-hidden="true" />
-                  <span className="sr-only">Attach photo</span>
-                </label>
-
-                <label htmlFor="ask-bezzina-message" className="sr-only">
-                  Message
-                </label>
-                <textarea
-                  id="ask-bezzina-message"
-                  ref={inputRef}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  rows={1}
-                  maxLength={1000}
-                  placeholder="Ask about hours, or describe a part…"
-                  className="max-h-28 min-h-10 flex-1 resize-none bg-transparent py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
-                  disabled={pending}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault();
-                      event.currentTarget.form?.requestSubmit();
-                    }
-                  }}
-                />
-
-                <button
-                  type="submit"
-                  disabled={pending || (!text.trim() && !imageFile)}
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0B3D91] text-white transition hover:bg-[#09407a] disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Send message"
-                >
-                  {pending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Send className="h-4 w-4" aria-hidden="true" />
-                  )}
-                </button>
-              </div>
-
-              {error ? (
-                <p className="mt-2 text-xs text-red-700" role="alert">
-                  {error}
-                </p>
-              ) : null}
-            </form>
-          </div>
+          <AskBezzinaComposer
+            text={text}
+            onTextChange={setText}
+            pending={pending}
+            error={error}
+            imagePreviewUrl={imagePreviewUrl}
+            onClearImage={() => clearImage()}
+            onFileChange={handleFileChange}
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitMessage(text.trim(), imageFile, imagePreviewUrl);
+            }}
+            inputRef={inputRef}
+            fileInputRef={fileInputRef}
+            canSend={Boolean(text.trim() || imageFile)}
+          />
         </div>
       ) : null}
     </>
