@@ -91,3 +91,11 @@ describe('isAskBezzinaConfigured', () => {
     expect(isAskBezzinaConfigured()).toBe(true);
   });
 });
+
+describe('toAskBezzinaUserError', () => {
+  it('maps high-demand / unavailable errors clearly', async () => {
+    const { toAskBezzinaUserError } = await import('@/lib/ask-bezzina/identify');
+    const err = Object.assign(new Error('high demand'), { status: 503 });
+    expect(toAskBezzinaUserError(err)).toMatch(/temporarily unavailable/i);
+  });
+});

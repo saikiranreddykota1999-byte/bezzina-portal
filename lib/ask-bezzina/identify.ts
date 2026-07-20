@@ -8,7 +8,14 @@ import type {
 import { askBezzinaIdentifySchema } from '@/lib/validators/ask-bezzina';
 
 const DEFAULT_MODEL = 'gemini-3.5-flash';
+const FALLBACK_MODELS = [
+  'gemini-3.5-flash',
+  'gemini-flash-latest',
+  'gemini-3.1-flash-lite',
+  'gemini-2.0-flash',
+] as const;
 const MAX_SEARCH_QUERIES = 5;
+const MAX_ATTEMPTS_PER_MODEL = 2;
 
 function stripCodeFences(raw: string): string {
   const trimmed = raw.trim();
@@ -66,6 +73,11 @@ export function getAskBezzinaModel(): string {
   return process.env.ASK_BEZZINA_MODEL?.trim() || DEFAULT_MODEL;
 }
 
+export function getAskBezzinaModels(): string[] {
+  const preferred = getAskBezzinaModel();
+  return [preferred, ...FALLBACK_MODELS.filter((model) => model !== preferred)];
+}
+
 type IdentifyInput = {
   message: string;
   history?: AskBezzinaHistoryMessage[];
@@ -84,22 +96,55 @@ function parseDataUrl(dataUrl: string): { mimeType: string; data: string } | nul
   return { mimeType, data };
 }
 
-/**
- * Call Gemini vision/chat and return structured identification + search queries.
- */
-export async function identifyPart(input: IdentifyInput): Promise<AskBezzinaIdentifyResult> {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured');
+function extractResponseText(response: {
+  text?: string;
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+}): string {
+  const direct = response.text?.trim();
+  if (direct) return direct;
+
+  const parts = response.candidates?.[0]?.content?.parts ?? [];
+  return parts
+    .map((part) => part.text?.trim() ?? '')
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = (error as { status?: unknown }).status;
+    return typeof status === 'number' ? status : undefined;
   }
+  return undefined;
+}
 
-  const ai = new GoogleGenAI({ apiKey });
+function isRetryableStatus(status: number | undefined): boolean {
+  return status === 429 || status === 503 || status === 500;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildContents(input: IdentifyInput): Content[] {
   const history = (input.history ?? []).slice(-6);
+  const contents: Content[] = [];
 
-  const contents: Content[] = history.map((entry) => ({
-    role: entry.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: entry.content }],
-  }));
+  for (const entry of history) {
+    const role = entry.role === 'assistant' ? 'model' : 'user';
+    const last = contents[contents.length - 1];
+    if (last?.role === role) {
+      // Gemini requires alternating roles — merge consecutive same-role turns.
+      const prevText = last.parts?.[0] && 'text' in last.parts[0] ? last.parts[0].text : '';
+      last.parts = [{ text: `${prevText}\n${entry.content}`.trim() }];
+      continue;
+    }
+    contents.push({
+      role,
+      parts: [{ text: entry.content }],
+    });
+  }
 
   const text =
     input.message.trim() ||
@@ -118,29 +163,91 @@ export async function identifyPart(input: IdentifyInput): Promise<AskBezzinaIden
     }
   }
 
-  contents.push({ role: 'user', parts: userParts });
-
-  const response = await ai.models.generateContent({
-    model: getAskBezzinaModel(),
-    contents,
-    config: {
-      systemInstruction: buildAskBezzinaSystemPrompt(),
-      temperature: 0.2,
-      maxOutputTokens: 1024,
-      responseMimeType: 'application/json',
-    },
-  });
-
-  const content = response.text?.trim();
-  if (!content) {
-    throw new Error('Ask Bezzina returned an empty response');
+  const last = contents[contents.length - 1];
+  if (last?.role === 'user') {
+    const prevText = last.parts?.[0] && 'text' in last.parts[0] ? String(last.parts[0].text) : '';
+    last.parts = [{ text: `${prevText}\n${text}`.trim() }, ...userParts.slice(1)];
+  } else {
+    contents.push({ role: 'user', parts: userParts });
   }
 
-  return parseIdentifyContent(content);
+  return contents;
+}
+
+/**
+ * Call Gemini vision/chat and return structured identification + search queries.
+ * Retries and falls back across models when the API is busy.
+ */
+export async function identifyPart(input: IdentifyInput): Promise<AskBezzinaIdentifyResult> {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  const contents = buildContents(input);
+  const models = getAskBezzinaModels();
+  let lastError: unknown;
+
+  for (const model of models) {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_MODEL; attempt += 1) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction: buildAskBezzinaSystemPrompt(),
+            temperature: 0.2,
+            maxOutputTokens: 2048,
+            responseMimeType: 'application/json',
+          },
+        });
+
+        const content = extractResponseText(response);
+        if (!content) {
+          throw new Error('Ask Bezzina returned an empty response');
+        }
+
+        return parseIdentifyContent(content);
+      } catch (error) {
+        lastError = error;
+        const status = getErrorStatus(error);
+        if (isRetryableStatus(status) && attempt < MAX_ATTEMPTS_PER_MODEL) {
+          await sleep(400 * attempt);
+          continue;
+        }
+        if (isRetryableStatus(status)) {
+          break; // try next model
+        }
+        throw error;
+      }
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Ask Bezzina is temporarily unavailable. Please try again shortly.');
 }
 
 export async function fileToImageDataUrl(file: File): Promise<string> {
   const buffer = Buffer.from(await file.arrayBuffer());
   const mime = file.type || 'image/jpeg';
   return `data:${mime};base64,${buffer.toString('base64')}`;
+}
+
+/** Map Gemini/API failures to clear customer-facing copy. */
+export function toAskBezzinaUserError(error: unknown): string {
+  const status = getErrorStatus(error);
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+  if (status === 429 || message.includes('quota') || message.includes('rate')) {
+    return 'Ask Bezzina is busy right now. Please wait a moment and try again, or contact us / WhatsApp.';
+  }
+  if (status === 503 || message.includes('high demand') || message.includes('unavailable')) {
+    return 'Ask Bezzina is temporarily unavailable. Please try again in a minute, or contact us / WhatsApp.';
+  }
+  if (message.includes('not configured') || message.includes('api_key')) {
+    return 'Ask Bezzina is not configured on this server yet. Please contact us via WhatsApp or the Contact page.';
+  }
+  return 'Something went wrong while reaching Ask Bezzina. Please try again, or contact us / WhatsApp.';
 }

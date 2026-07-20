@@ -6,12 +6,14 @@ import {
   fileToImageDataUrl,
   identifyPart,
   isAskBezzinaConfigured,
+  toAskBezzinaUserError,
 } from '@/lib/ask-bezzina/identify';
+import { tryLocalFaqReply } from '@/lib/ask-bezzina/local-faq';
 import type { AskBezzinaHistoryMessage, AskBezzinaReply } from '@/lib/ask-bezzina/types';
 import { checkPublicRateLimit } from '@/lib/auth/login-security';
 import { captureException } from '@/lib/monitoring/capture';
 import { toProductSearchHit, type ProductSearchHit } from '@/lib/product-search';
-import { logServerError, toUserError } from '@/lib/security/sanitize-error';
+import { logServerError } from '@/lib/security/sanitize-error';
 import { validateUploadFile } from '@/lib/security/upload-validation';
 import {
   ASK_BEZZINA_MAX_HISTORY,
@@ -71,8 +73,13 @@ function buildCustomerReply(
   summary: string,
   matchCount: number,
   confidence: 'high' | 'medium' | 'low',
+  searchedCatalogue: boolean,
 ): string {
   const parts = [summary.trim()];
+
+  if (!searchedCatalogue) {
+    return parts.join('\n\n');
+  }
 
   if (matchCount === 0) {
     parts.push(
@@ -125,6 +132,21 @@ export async function askBezzinaAction(
       }
     }
 
+    // Hours / contact / address — answer locally (works even when Gemini is busy).
+    if (!imageFile) {
+      const localFaq = tryLocalFaqReply(requestParsed.data.message);
+      if (localFaq) {
+        return {
+          success: true,
+          data: {
+            reply: buildCustomerReply(localFaq.summary, 0, localFaq.confidence, false),
+            matches: [],
+            configured: true,
+          },
+        };
+      }
+    }
+
     if (!isAskBezzinaConfigured()) {
       return {
         success: true,
@@ -144,8 +166,16 @@ export async function askBezzinaAction(
       imageDataUrl,
     });
 
-    const matches = await collectCatalogueMatches(identified.searchQueries);
-    const reply = buildCustomerReply(identified.summary, matches.length, identified.confidence);
+    const searchedCatalogue = identified.searchQueries.length > 0;
+    const matches = searchedCatalogue
+      ? await collectCatalogueMatches(identified.searchQueries)
+      : [];
+    const reply = buildCustomerReply(
+      identified.summary,
+      matches.length,
+      identified.confidence,
+      searchedCatalogue,
+    );
 
     return {
       success: true,
@@ -158,6 +188,6 @@ export async function askBezzinaAction(
   } catch (error) {
     logServerError('askBezzinaAction', error);
     captureException(error, { operation: 'askBezzinaAction' });
-    return { success: false, error: toUserError(error) };
+    return { success: false, error: toAskBezzinaUserError(error) };
   }
 }
